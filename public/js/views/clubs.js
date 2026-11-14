@@ -40,13 +40,17 @@ async function detail(view, id) {
     const c = d.club;
     view.innerHTML = `<header class="topbar">${back('#/kulupler')}<div class="center">${esc(c.name)}</div><span class="ib"></span></header>
       <section class="clb-hero">${clubIcon(c, 64, 'em')}<div class="grow"><b>${esc(c.name)}</b><small>${esc(c.desc)}</small>
-        <div class="clb-av">${d.sample.slice(0, 6).map((u) => `<img src="${esc(u.avatar)}" alt="">`).join('')}<span>${c.members} üye</span></div></div></section>
+        <div class="clb-av">${d.sample.slice(0, 6).map((u) => `<img src="${esc(u.avatar)}" alt="">`).join('')}<span>${c.members} üye</span></div><div class="clb-cup" hidden>${icon('trophy')}<span></span></div></div></section>
       <div class="clb-btns"><button class="btn ${c.joined ? '' : 'primary'} join">${c.joined ? `Üyesin ${icon('check')}` : 'Kulübe katıl'}</button><a class="btn ${c.joined ? 'primary' : ''}" href="#/genel/${esc(c.room)}">${icon('comment')} Kulüp sohbeti</a></div>
       ${c.joined ? `<form class="clb-f"><textarea class="field" rows="2" maxlength="1000" placeholder="${esc(c.name)} kulübüyle bir şey paylaş..."></textarea>
         <div class="clb-fx"><button type="button" class="ib pic" aria-label="Fotoğraf ekle">${icon('image')}</button><span class="grow pv"></span><button class="btn primary sm">Paylaş</button></div></form>` : ''}
       <div class="clb-list">${d.posts.length ? d.posts.map(post).join('') : `<div class="empty" style="padding:24px">Henüz paylaşım yok. ${c.joined ? 'İlk paylaşımı sen yap!' : 'Katıl ve ilk paylaşımı sen yap!'}</div>`}</div>
       ${d.more ? '<button class="btn block more" style="margin:12px 16px 30px;width:calc(100% - 32px)">Daha fazla</button>' : ''}`;
+    if (cup) showCup();
   };
+  // Kulüp Kupası: haftayı birinci bitiren kulübün sayfasında kupa görünür
+  let cup = null; const showCup = () => { const el = view.querySelector('.clb-cup'); if (!el || !cup?.cups) return; el.hidden = false; el.querySelector('span').textContent = cup.champion ? `Parti Kupası şampiyonu${cup.cups > 1 ? ` · ${cup.cups} kupa` : ''}` : `${cup.cups} Kulüp Kupası`; };
+  api(`/kupa/clubcup/${id}`).then((r) => { cup = r; showCup(); }).catch(() => {});
   paint();
   const reload = async () => { d = await api(`/clubs/${id}`); paint(); };
   view.addEventListener('click', async (e) => {

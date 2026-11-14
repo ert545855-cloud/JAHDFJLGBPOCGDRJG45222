@@ -217,6 +217,8 @@ export default async function profile(view, username) {
         : `<button class="btn ${u.isFollowing || u.requested ? '' : 'primary'} follow">${u.isFollowing ? 'Takiptesin' : u.requested ? 'İstek gönderildi' : (u.followsYou ? 'Sen de takip et' : 'Takip et')}</button>${u.role === 'official' ? '<a class="btn fal-go" href="#/destek">🎧 Destek</a>' : state.me.role === 'falci' ? '' : `<button class="btn msg">Mesaj</button>`}${u.matched || ['falci', 'official'].includes(u.role) || ['falci', 'official'].includes(state.me.role) ? '' : '<button class="btn sq smsg" aria-label="Süper mesaj" title="Süper mesaj">💌</button>'}`}
     </div>
     ${u.locked || u.blockedByMe ? '' : `<a class="sf-visit sf-vit" href="#/farm${self ? '' : `/${esc(u.id)}`}" hidden><canvas class="sf-vc" aria-hidden="true"></canvas><span><img src="/img/farm/icon.webp" alt=""><span><b>${self ? 'Çiftliğim' : 'Çiftliğini gez'}</b><small></small></span></span></a>`}
+    ${self || u.locked || u.blockedByMe ? '' : '<div class="mu-common" hidden></div>'}
+    ${u.locked || u.blockedByMe ? '' : `<a class="sf-visit k3-show" href="#/oyunlar" hidden>${icon('trophy')}<span><b>Parti Kupası</b><small></small></span></a>`}
     ${u.locked || u.blockedByMe ? '' : hlRowHtml(u.highlights, self)}
     ${(u.prompts || []).length ? `<div class="pqs">${promptCards(u, { reply: !self && !u.blockedByMe })}</div>` : self ? '<a class="pq-cta" href="#/edit">💬 Profil sorularını cevapla, sohbetler kendiliğinden başlasın</a>' : ''}
     ${self ? `<div class="me-links">
@@ -295,7 +297,9 @@ export default async function profile(view, username) {
     } catch (e) { toast(e.message); }
   };
   view.querySelector('.msg')?.addEventListener('click', () => openChatWith(u.id).catch((e) => toast(e.message)));
-  const sfv = view.querySelector('.sf-visit'); // SwipeFarm vitrini: çiftliği varsa küçük canlı görüntüsü
+  { const mc = view.querySelector('.mu-common'); if (mc) api(`/music/with/${u.id}`).then((r) => { if (!r.top.length) return; mc.innerHTML = `${icon('music')}<span>${r.common.length ? `<b>Ortak sanatçılarınız:</b> ${r.common.slice(0, 5).map(esc).join(', ')}` : `<b>Dinledikleri:</b> ${r.top.slice(0, 4).map(esc).join(', ')}`}</span>`; mc.hidden = false; }).catch(() => {}); } // müzik uyumu
+  { const ks = view.querySelector('.k3-show'); if (ks) api(`/kupa/of/${u.id}`).then((r) => { if (!r.games) return; ks.querySelector('small').textContent = [`${r.cups} kupa`, `${r.finals} final`, r.badges ? `${r.badges} rozet` : '', `${r.tier} lig`, r.elmas ? `${r.elmas} Elmas sezonu` : ''].filter(Boolean).join(' · '); ks.hidden = false; }).catch(() => {}); } // kupa vitrini
+  const sfv = view.querySelector('.sf-visit:not(.k3-show)'); // SwipeFarm vitrini: çiftliği varsa küçük canlı görüntüsü
   if (sfv) api(`/farm/peek/${u.id}`).then((r) => { const f = r.farm; if (!f || !sfv.isConnected) return;
     sfv.querySelector('small').textContent = `SwipeFarm · Seviye ${f.lvl}${r.badges ? ` · ${r.badges} rozet` : ''}${r.likes ? ` · ${r.likes} beğeni` : ''}`; sfv.hidden = false;
     import('../farmart.js').then((m) => m.lazyMini(sfv.querySelector('canvas'), f)).catch(() => {}); }).catch(() => {});

@@ -1552,7 +1552,7 @@ function cardOut(me, u, likedYou) {
   return {
     ...brief(u), age: shownAge(u), city: u.city, bio: u.bio, interests: u.interests || [], tags: tagsOf(u),
     distanceKm: distance(me, u), likedYou: eco.isPlus(me) ? likedYou : false,
-    boosted: (u.boostUntil || 0) > now(), tonight: (u.tonightUntil || 0) > now(),
+    boosted: (u.boostUntil || 0) > now(), tonight: (u.tonightUntil || 0) > now(), music: featureCtx.musicCommon?.(me, u) || [], // ortak sanatçılar
     photos: photos.length ? photos : [u.avatar],
     voice: u.voice || null, badges: (u.badges || []).filter((b) => !b.hidden).map(({ no, ...b }) => b), prompts: (u.prompts || []).map((p) => ({ ...p, q: socialMod.PROMPTS.find((x) => x[0] === p.id)?.[1] || '' })),
   };
@@ -2028,6 +2028,7 @@ require('./server/playkit')(app, featureCtx); // oyun altyapısı + server/play/
 require('./server/minigames')(app, featureCtx); // sohbet içi mini oyunlar: XOX, Dört Taş, TKM, Amiral Battı
 require('./server/kupa')(app, featureCtx); // Parti Kupası (3D)
 require('./server/farm')(app, featureCtx); // SwipeFarm: çiftlik oyunu
+require('./server/cifte')(app, featureCtx); // çifte buluşma (2'ye 2) ve müzik uyumu
 photomod(app, featureCtx); // fotoğraf denetimi (Sightengine)
 require('./server/engage')(app, featureCtx); // seriler, kulüpler, günün sorusu, seçki, karaoke… (en son yüklenir)
 gameOut = featureCtx.gameOut;
@@ -2358,6 +2359,7 @@ function purgeUser(id) {
     .forEach((p) => store.update('posts', p.id, { likes: p.likes.filter((x) => x !== id), comments: p.comments.filter((c) => c.userId !== id) }));
   store.filter('stories', (s) => s.userId === id).forEach((s) => store.del('stories', s.id));
   if (store.get('farms', id)) store.del('farms', id); // SwipeFarm çiftliği
+  store.filter('duos', (d) => d.a === id || d.b === id).forEach((d) => store.del('duos', d.id)); // çifte buluşma ikilisi
   ['highlights', 'notes', 'post_queue'].forEach((c) => store.filter(c, (x) => x.userId === id).forEach((x) => store.del(c, x.id)));
   ['follows', 'swipes', 'blocks'].forEach((c) => store.filter(c, (x) => x.from === id || x.to === id).forEach((x) => store.del(c, x.id)));
   store.filter('matches', (m) => m.users.includes(id)).forEach((m) => store.del('matches', m.id));

@@ -36,6 +36,7 @@ export default function edit(view) {
       <label>İlgi alanları<input class="field" name="interests" value="${esc((me.interests || []).join(', '))}" placeholder="Müzik, Kahve, Seyahat"></label>
       <div><div class="b" style="font-size:13px;margin-bottom:6px">Kaydırma fotoğrafları</div><div class="photos-edit"></div></div>
       <div><div class="b" style="font-size:13px;margin-bottom:6px">Sesli tanıtım</div><div class="voice-edit"></div></div>
+      <div><div class="b" style="font-size:13px;margin-bottom:6px">Müzik zevkin <span class="muted" style="font-weight:500">· ortak sanatçılar eşleşme kartında görünür</span></div><div class="mu-edit"></div></div>
       <div><div class="b" style="font-size:13px;margin-bottom:6px">Profil soruları <span class="muted" style="font-weight:500">· sohbete konu açar</span></div><div class="pq-edit"></div></div>
       <button class="btn primary block">Kaydet</button>
     </form>`;
@@ -49,6 +50,20 @@ export default function edit(view) {
   paintPhotos();
   voiceEditor(view.querySelector('.voice-edit'), voice, (v) => { voice = v; });
   promptsEditor(view.querySelector('.pq-edit'), prompts, (l) => { prompts = l; });
+  // Müzik uyumu: Spotify'dan en çok dinlenen sanatçılar ya da elle yazılan liste (anında kaydedilir)
+  const mu = view.querySelector('.mu-edit'); let M = { artists: [], spotify: false };
+  const paintMu = () => { mu.innerHTML = `<div class="mu-list">${M.artists.map((a, k) => `<span class="chip">${esc(a.n)}<button type="button" data-k="${k}" aria-label="Kaldır">${icon('close')}</button></span>`).join('') || '<span class="muted" style="font-size:13px">Henüz sanatçı yok.</span>'}</div>
+    ${M.artists.length < 15 ? '<div class="mu-add"><input class="field" maxlength="40" placeholder="Sanatçı ekle"><button type="button" class="btn sm mu-plus">Ekle</button></div>' : ''}
+    <button type="button" class="btn block mu-sp">${icon('music')} ${M.src === 'spotify' ? 'Spotify’dan yenile' : 'Spotify’ı bağla'}</button>${M.src === 'spotify' ? '<small class="muted">Liste Spotify’da en çok dinlediğin sanatçılardan alındı.</small>' : ''}`; };
+  const saveMu = async (list) => { try { M = await api('/music', { body: { artists: list.map((a) => a.n) } }); paintMu(); } catch (e) { toast(e.message); } };
+  api('/music').then((r) => { M = r; paintMu(); }).catch(() => paintMu());
+  mu.addEventListener('click', async (e) => {
+    const rm = e.target.closest('[data-k]'); if (rm) return saveMu(M.artists.filter((_, k) => k !== +rm.dataset.k));
+    if (e.target.closest('.mu-plus')) { const inp = mu.querySelector('input'); const v = inp.value.trim(); if (v.length < 2) return; return saveMu([...M.artists, { n: v }]); }
+    if (e.target.closest('.mu-sp')) { try { const r = await api('/music/spotify'); location.href = r.url; } catch (er) { toast(er.message); } }
+  });
+  mu.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.mu-add input')) { e.preventDefault(); mu.querySelector('.mu-plus').click(); } });
+  { const q = new URLSearchParams(location.search).get('spotify'); if (q) { toast(q === 'ok' ? 'Spotify bağlandı: sanatçıların eklendi.' : 'Spotify bağlantısı tamamlanamadı.'); history.replaceState(null, '', `${location.pathname}${location.hash}`); } }
   pe.onclick = async (e) => {
     const rm = e.target.closest('.rm');
     if (rm) { photos.splice(+rm.dataset.i, 1); paintPhotos(); return; }
