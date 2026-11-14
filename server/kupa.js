@@ -132,10 +132,11 @@ const HM = { small: hexMap(RINGS), big: hexMap(RINGS + 2) }; // kalabalık turda
 // Kostümler: lokumun lezzeti (renk) ve şapkası. Fiyat jeton; 0 = ücretsiz.
 const LOOKS = {
   colors: [['gul', 'Gül', 0], ['limon', 'Limon', 0], ['fistik', 'Fıstık', 0], ['portakal', 'Portakal', 0], ['nar', 'Nar', 10], ['nane', 'Nane', 10], ['bogurtlen', 'Böğürtlen', 15], ['lavanta', 'Lavanta', 10], ['deniz', 'Deniz', 15], ['cikolata', 'Çikolata', 15], ['gece', 'Gece', 22], ['altin', 'Altın', 38]],
-  hats: [['yok', 'Şapkasız', 0], ['parti', 'Parti şapkası', 12], ['cicek', 'Papatya', 15], ['sef', 'Aşçı kepi', 18], ['fes', 'Fes', 20], ['kulaklik', 'Kulaklık', 20], ['kovboy', 'Kovboy şapkası', 25], ['pervane', 'Pervaneli şapka', 28], ['tac', 'Taç', 30], ['hale', 'Hale', 45]],
+  hats: [['yok', 'Şapkasız', 0], ['parti', 'Parti şapkası', 12], ['cicek', 'Papatya', 15], ['sef', 'Aşçı kepi', 18], ['fes', 'Fes', 20], ['kulaklik', 'Kulaklık', 20], ['kovboy', 'Kovboy şapkası', 25], ['pervane', 'Pervaneli şapka', 28], ['tac', 'Taç', 30], ['hale', 'Hale', 45], ['elmas', 'Elmas tacı', -1]], // -1: satılmaz, Elmas lige çıkanlara sezon sonunda verilir
   trails: [['izsiz', 'İzsiz', 0], ['yildiz', 'Yıldız tozu', 22], ['kalp', 'Kalpler', 22], ['ates', 'Ateş', 35], ['gokkusagi', 'Gökkuşağı', 50]], // koşarken arkada kalan iz
+  dances: [['el', 'El sallama', 0], ['donus', 'Dönüş', 12], ['zipzip', 'Zıp zıp', 18], ['takla', 'Takla', 28]], // kazanınca oynatılan zafer dansı
 };
-const PRICE = new Map([...LOOKS.colors, ...LOOKS.hats, ...LOOKS.trails].map(([id, , p]) => [id, p]));
+const PRICE = new Map([...LOOKS.colors, ...LOOKS.hats, ...LOOKS.trails, ...LOOKS.dances].map(([id, , p]) => [id, p]));
 const BOT_NAMES = ['Tarçın', 'Vişne', 'Sakız', 'Badem', 'Kaymak', 'Safran', 'Susam', 'Fındık', 'Ceviz', 'Damla', 'Helva', 'Pekmez', 'Kestane', 'Zencefil', 'Karanfil', 'Anason', 'Kakule', 'Sumak'];
 const rnd = (a, b) => a + Math.random() * (b - a); const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const r2 = (n) => Math.round(n * 100) / 100;
@@ -144,7 +145,7 @@ module.exports = function kupa(app, ctx) {
   const { store, auth, io, notify, limited, eco, isBlocked } = ctx;
   const rooms = new Map(); const now = () => Date.now();
   const firstName = (u) => String(u.name || u.username || 'Oyuncu').split(' ')[0].slice(0, 14);
-  const lookOf = (uid) => { const w = store.get('kupa_looks', uid); return { color: w?.color || 'gul', hat: w?.hat || 'yok', trail: w?.trail || 'izsiz' }; };
+  const lookOf = (uid) => { const w = store.get('kupa_looks', uid); return { color: w?.color || 'gul', hat: w?.hat || 'yok', trail: w?.trail || 'izsiz', dance: w?.dance || 'el' }; };
   const humans = (r) => r.players.filter((p) => !p.bot);
   const alive = (r) => r.players.filter((p) => p.alive);
   const idx = (r, uid) => r.players.findIndex((p) => p.uid === uid);
@@ -154,7 +155,7 @@ module.exports = function kupa(app, ctx) {
     const mine = r.players.find((p) => p.uid === uid);
     return {
       id: r.id, status: r.status, host: r.host === uid, pub: r.pub, me: idx(r, uid), max: MAXP, now: now(), startAt: r.startAt || null,
-      players: r.players.map((p) => ({ id: p.uid || null, name: p.name, avatar: p.avatar, bot: !!p.bot, look: p.look, alive: p.alive, out: p.out, place: p.place || null, voice: !!p.voice })),
+      players: r.players.map((p) => ({ id: p.uid || null, name: p.name, avatar: p.avatar, bot: !!p.bot, look: p.look, alive: p.alive, out: p.out, place: p.place || null, voice: !!p.voice, duo: p.duo ?? null, duoAsk: p.duoReq && r.status === 'waiting' ? r.players.findIndex((x) => x.uid === p.duoReq) : null })), rule: r.rule || RULE(),
       round: r.round, rounds: r.plan?.length || 3, pick: r.pick || null, modes: WINTER() ? MODES : MODES.filter(([k]) => k !== 'kartopu'), mode: r.mode || null, title: r.mode ? TITLES[r.mode] : null, phase: r.phase || null, playAt: r.playAt || null, keep: r.keep || null,
       conf: confOf(r), st: r.st || null,
       spawn: r.spawn || null, result: r.result || null, at: mine && r.status === 'playing' && r.phase === 'play' && mine.alive ? [r2(mine.x), r2(mine.y), r2(mine.z)] : null,
@@ -175,7 +176,7 @@ module.exports = function kupa(app, ctx) {
 
   function addHuman(r, u) { r.players.push({ uid: u.id, name: firstName(u), avatar: u.avatar, look: lookOf(u.id), alive: true, out: false, x: 0, y: 0, z: 0, ry: 0, fl: 0 }); }
   function create(u, pub, pick) {
-    const r = { id: nanoid(8), host: u.id, pub, pick: TITLES[pick] ? pick : null, status: 'waiting', players: [], round: 0, at: now() };
+    const r = { id: nanoid(8), host: u.id, pub, pick: TITLES[pick] ? pick : null, status: 'waiting', players: [], round: 0, at: now(), nb: newbie(u.id), tier: tierIx(u.id) };
     addHuman(r, u); rooms.set(r.id, r);
     if (pub) { r.startAt = now() + WAIT_MS; r.tm = setTimeout(() => safe(r, () => start(r)), WAIT_MS); }
     return r;
@@ -196,7 +197,8 @@ module.exports = function kupa(app, ctx) {
     nextRound(r); lobby();
   }
   function nextRound(r) {
-    clear(r); r.round++; r.mode = r.plan[r.round - 1];
+    clear(r); r.round++; r.mode = r.plan[r.round - 1]; if (r.round === 1) r.rule = RULE();
+    if (!r.single && r.round >= r.plan.length) r.players.filter((p) => !p.out && !p.bot && p.uid).forEach((p) => stat(p.uid, (o) => { o.finals += 1; })); // finale kalanlar
     const cont = r.players.filter((p) => !p.out); const n = cont.length; const m = r.mode; const last = r.round >= r.plan.length; const big = n > 10;
     r.keep = last ? 1 : r.round === 1 ? Math.max(2, Math.ceil(r.n0 * (!TEAMS.has(r.plan[1]) ? 0.6 : r.n0 > 8 ? 0.5 : 0.75))) : Math.max(2, Math.ceil(r.n0 * 0.35));
     if (TEAMS.has(m)) r.keep = Math.ceil(n / 2); // kazanan takım tur atlar
@@ -267,6 +269,7 @@ module.exports = function kupa(app, ctx) {
     clear(r); r.phase = 'result';
     const through = r.players.map((p, i) => (p.alive ? i : -1)).filter((i) => i >= 0); const last = r.round >= r.plan.length;
     r.result = { through, round: r.round, last };
+    if (!r.single) through.map((i) => r.players[i]).filter((p) => !p.bot && p.uid).forEach((p) => stat(p.uid, (o) => { o.mw[r.mode] = (o.mw[r.mode] || 0) + 1; })); // kupada o modu geçenler
     push(r);
     r.tm = setTimeout(() => safe(r, () => (last || through.length <= 1 ? finish(r, through.map((i) => r.players[i])) : nextRound(r))), RESULT_MS);
   }
@@ -280,7 +283,11 @@ module.exports = function kupa(app, ctx) {
       order: r.players.map((p, i) => [p.place || 99, i]).sort((a, b) => a[0] - b[0]).map(([, i]) => i) };
     humans(r).forEach((p) => ctx.addXp?.(p.uid, 'oyun', win.includes(p) ? 2 : 1));
     // Lig puanı: kupada 1. 10, 2. 6, 3. 4, diğerleri 2; tek oyunda kazanan 4, diğerleri 1
-    r.result.pts = {}; humans(r).forEach((p) => { const pts = r.single ? (win.includes(p) ? 4 : 1) : p.place === 1 ? 10 : p.place === 2 ? 6 : p.place === 3 ? 4 : 2; r.result.pts[r.players.indexOf(p)] = addSeason(p.uid, pts, win.includes(p)); });
+    const raw = new Map(humans(r).map((p) => [p, r.single ? (win.includes(p) ? 4 : 1) : p.place === 1 ? 10 : p.place === 2 ? 6 : p.place === 3 ? 4 : 2]));
+    // İkili: iki arkadaşın puanı ortak sayılır (ikisinin ortalaması, yukarı yuvarlanır)
+    for (const p of humans(r)) { const q = p.duo != null ? r.players[p.duo] : null; if (q && !q.bot && q.uid && q.duo === r.players.indexOf(p) && raw.has(q) && !p.dz) { const sh = Math.ceil((raw.get(p) + raw.get(q)) / 2); raw.set(p, sh); raw.set(q, sh); p.dz = q.dz = 1; } }
+    r.result.pts = {}; humans(r).forEach((p) => { delete p.dz; r.result.pts[r.players.indexOf(p)] = addSeason(p.uid, raw.get(p), win.includes(p));
+      stat(p.uid, (o) => { o.games += 1; if (win.includes(p)) { if (r.single) o.mw[r.mode] = (o.mw[r.mode] || 0) + 1; else o.cups += 1; } }); });
     push(r); lobby();
   }
 
@@ -716,6 +723,37 @@ module.exports = function kupa(app, ctx) {
     lobby();
   }
 
+  // ---- İstatistik, görevler, kulüp kupası, seviyeye göre eşleştirme, haftalık kural ----
+  const statOf = (uid) => { const o = store.get('kupa_stats', uid) || { id: uid }; return { games: 0, cups: 0, finals: 0, ...o, mw: { ...(o.mw || {}) } }; };
+  const stat = (uid, fn) => { const o = statOf(uid); fn(o); store.put('kupa_stats', o); };
+  const newbie = (uid) => statOf(uid).games < 5; // ilk beş oyun: yeni başlayanlar kendi aralarında eşleşir
+  const tierIx = (uid) => TIERS.indexOf(tierOf(store.get('kupa_season', `${weekId()}:${uid}`)?.pts || 0));
+  const QUESTS = [['oyun5', '5 oyun oyna', (o) => o.games, 5, 'parti'], ['final3', '3 kez finale kal', (o) => o.finals, 3, 'kovboy'], ['sumo1', 'Sumo’yu kazan', (o) => o.mw.sumo || 0, 1, 'yildiz'],
+    ['halat3', 'Halat Çekme’de 3 kez kazan', (o) => o.mw.halat || 0, 3, 'kulaklik'], ['buz2', 'Buz Pisti’nde 2 kez kazan', (o) => o.mw.buz || 0, 2, 'deniz'], ['kupa1', 'Bir kupa kazan', (o) => o.cups, 1, 'tac'],
+    ['oyun30', '30 oyun oyna', (o) => o.games, 30, 'takla'], ['kupa5', '5 kupa kazan', (o) => o.cups, 5, 'hale']];
+  const lookName = (id) => [...LOOKS.colors, ...LOOKS.hats, ...LOOKS.trails, ...LOOKS.dances].find((x) => x[0] === id)?.[1] || id;
+  const grant = (uid, id) => { const w = store.get('kupa_looks', uid) || { id: uid, owned: [] }; const owned = w.owned || []; if (!owned.includes(id)) owned.push(id); store.put('kupa_looks', { ...w, id: uid, owned }); };
+  const questsOut = (uid) => { const o = statOf(uid); const done = o.q || {}; return QUESTS.map(([id, name, f, n, rw]) => ({ id, name, n, got: Math.min(n, f(o)), reward: { id: rw, name: lookName(rw) }, claimed: !!done[id] })); };
+  app.get('/api/kupa/quests', auth, (req, res) => { const o = statOf(req.user.id); res.json({ list: questsOut(req.user.id), stats: { games: o.games, cups: o.cups, finals: o.finals } }); });
+  app.post('/api/kupa/quests', auth, (req, res) => {
+    const q = QUESTS.find((x) => x[0] === req.body?.id); if (!q) return res.status(404).json({ error: 'Görev bulunamadı.' }); const o = statOf(req.user.id);
+    if ((o.q || {})[q[0]]) return res.status(400).json({ error: 'Bu ödülü aldın.' }); if (q[2](o) < q[3]) return res.status(400).json({ error: 'Bu görev henüz tamamlanmadı.' });
+    stat(req.user.id, (x) => { x.q = { ...(x.q || {}), [q[0]]: now() }; }); grant(req.user.id, q[4]); res.json({ list: questsOut(req.user.id), got: { id: q[4], name: lookName(q[4]) } });
+  });
+  // profildeki kupa vitrini
+  app.get('/api/kupa/of/:uid', auth, (req, res) => { const o = statOf(req.params.uid); const pts = store.get('kupa_season', `${weekId()}:${req.params.uid}`)?.pts || 0;
+    res.json({ games: o.games, cups: o.cups, finals: o.finals, badges: Object.keys(o.q || {}).length, tier: tierOf(pts)[1], elmas: o.elmas || 0 }); });
+  // Kulüp Kupası: kulüp puanı, üyelerin o haftaki lig puanlarının toplamı. Haftayı birinci bitiren kulübün sayfasında kupa görünür.
+  function clubBoard(w) { const by = new Map();
+    for (const x of store.filter('kupa_season', (y) => y.week === w && y.pts > 0)) for (const m of store.filter('club_members', (y) => y.uid === x.uid)) { const o = by.get(m.clubId) || { id: m.clubId, pts: 0, n: 0 }; o.pts += x.pts; o.n += 1; by.set(m.clubId, o); }
+    return [...by.values()].sort((a, b) => b.pts - a.pts).map((o) => ({ ...o, name: ctx.clubRoom?.(`k_${o.id}`)?.name || 'Kulüp' })); }
+  app.get('/api/kupa/clubcup', auth, (req, res) => { const w = weekId(); const mine = new Set(store.filter('club_members', (m) => m.uid === req.user.id).map((m) => m.clubId)); const meta = store.get('kupa_meta', 'club') || {};
+    res.json({ week: w, endsAt: weekEnd(w), top: clubBoard(w).slice(0, 15).map((c, k) => ({ ...c, rank: k + 1, mine: mine.has(c.id), cups: (meta.wins || {})[c.id] || 0 })), member: mine.size > 0, last: meta.last || null }); });
+  app.get('/api/kupa/clubcup/:cid', auth, (req, res) => { const meta = store.get('kupa_meta', 'club') || {}; res.json({ cups: (meta.wins || {})[req.params.cid] || 0, champion: meta.last?.id === req.params.cid, week: meta.last?.week || null }); });
+  // Haftalık özel kural: dört haftada bir çift hız, bir düşük yerçekimi; diğer haftalar kuralsız
+  const RULES = [null, { k: 'hiz', name: 'Çift hız haftası', sub: 'Herkes daha hızlı koşuyor.', sp: 1.4 }, null, { k: 'ay', name: 'Düşük yerçekimi haftası', sub: 'Zıplayışlar daha yüksek ve uzun.', g: 0.55 }];
+  const RULE = () => (process.env.KUPA_RULE ? RULES.find((x) => x?.k === process.env.KUPA_RULE) || null : RULES[Math.floor(Date.parse(`${weekId()}T00:00:00Z`) / (7 * 86400000)) % RULES.length]);
+
   // ---- Lig: haftalık sezon (İstanbul saatiyle pazartesi başlar). Haftanın ilk üçü jeton kazanır. ----
   const DAYMS = 86400000; const TIERS = [['bronz', 'Bronz', 0], ['gumus', 'Gümüş', 30], ['altin', 'Altın', 80], ['elmas', 'Elmas', 160]]; const PRIZE = [75, 50, 25]; const DAYCAP = 80; // 1 jeton = 1 TL
   const weekId = (t = now()) => { const d = new Date(t + 3 * 3600000); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - ((d.getUTCDay() + 6) % 7))).toISOString().slice(0, 10); };
@@ -733,6 +771,11 @@ module.exports = function kupa(app, ctx) {
     if (meta.week === w) return;
     const top = board(meta.week).slice(0, 3);
     top.forEach((x, k) => { eco.addCoins(x.uid, PRIZE[k], 'kupa_season', { week: meta.week, place: k + 1 }); notify(x.uid, { type: 'order', text: `🏆 Parti Kupası liginde haftayı ${k + 1}. bitirdin! ${PRIZE[k]} jeton hesabında.`, url: '/#/oyunlar', tag: 'kupa-lig' }); });
+    // sezon ödülü: haftayı Elmas ligde bitiren herkese Elmas tacı
+    board(meta.week).filter((x) => tierOf(x.pts)[0] === 'elmas').forEach((x) => { grant(x.uid, 'elmas'); stat(x.uid, (o) => { o.elmas = (o.elmas || 0) + 1; }); notify(x.uid, { type: 'game', text: 'Parti Kupası’nda haftayı Elmas ligde bitirdin. Sezon ödülün Elmas tacı kostümlerinde.', url: '/#/oyunlar', tag: 'kupa-elmas' }); });
+    // Kulüp Kupası: haftanın birincisi
+    const cb = clubBoard(meta.week)[0]; const cm = store.get('kupa_meta', 'club') || { id: 'club', wins: {} };
+    if (cb) store.put('kupa_meta', { ...cm, id: 'club', wins: { ...(cm.wins || {}), [cb.id]: ((cm.wins || {})[cb.id] || 0) + 1 }, last: { week: meta.week, id: cb.id, name: cb.name, pts: cb.pts } });
     store.put('kupa_meta', { id: 'season', week: w, last: { week: meta.week, top: top.map((x) => ({ uid: x.uid, pts: x.pts })) } });
   }
   const tSeason = setInterval(() => { try { settle(); } catch (e) { console.error('[kupa] lig', e); } }, 5 * 60000); tSeason.unref?.(); try { settle(); } catch (e) { console.error('[kupa] lig', e); }
@@ -765,12 +808,13 @@ module.exports = function kupa(app, ctx) {
     const id = String(req.body?.id || ''); if (!PRICE.has(id)) return res.status(404).json({ error: 'Kostüm bulunamadı.' });
     const w = store.get('kupa_looks', req.user.id) || { id: req.user.id, owned: [] };
     const price = PRICE.get(id); const owned = w.owned || [];
+    if (price < 0 && !owned.includes(id)) return res.status(403).json({ error: 'Bu kostüm satılmaz: haftayı Elmas ligde bitirenlere verilir.' });
     if (price > 0 && !owned.includes(id)) {
       if (!req.body?.buy) return res.status(402).json({ error: 'Bu kostümü önce almalısın.', price });
       if (!eco.spend(req.user.id, price, 'kupa_look', { ref: id })) return res.status(402).json({ error: `Yeterli jetonun yok. Bu kostüm ${price} jeton.` });
       owned.push(id);
     }
-    const slot = LOOKS.hats.some(([h]) => h === id) ? 'hat' : LOOKS.trails.some(([h]) => h === id) ? 'trail' : 'color';
+    const slot = LOOKS.hats.some(([h]) => h === id) ? 'hat' : LOOKS.trails.some(([h]) => h === id) ? 'trail' : LOOKS.dances.some(([h]) => h === id) ? 'dance' : 'color';
     store.put('kupa_looks', { ...w, id: req.user.id, owned, [slot]: id });
     const r = roomOfUser(req.user.id); const p = r?.players.find((x) => x.uid === req.user.id); if (p) { p.look = lookOf(req.user.id); push(r); }
     res.json({ ...LOOKS, owned, ...lookOf(req.user.id), coins: store.get('users', req.user.id)?.coins || 0 });
@@ -779,7 +823,8 @@ module.exports = function kupa(app, ctx) {
     const u = req.user; const cur = roomOfUser(u.id); const want = req.body?.mode;
     if (cur) { if (want !== undefined && cur.host === u.id && cur.status === 'waiting') { cur.pick = TITLES[want] ? String(want) : null; push(cur); } return res.json({ id: cur.id }); }
     if (limited(`kupa:${u.id}`, 40, 3600000)) return res.status(429).json({ error: 'Biraz yavaş 🙂' });
-    if (req.body?.quick) { const r = [...rooms.values()].find((x) => x.pub && x.status === 'waiting' && x.players.length < MAXP); if (r) { addHuman(r, u); push(r); lobby(); return res.json({ id: r.id }); } }
+    if (req.body?.quick) { const nb = newbie(u.id); const ti = tierIx(u.id); // yeni başlayanlar kendi aralarında; diğerleri ligine en yakın odaya
+      const r = [...rooms.values()].filter((x) => x.pub && x.status === 'waiting' && x.players.length < MAXP && !!x.nb === nb).sort((a, b) => Math.abs((a.tier || 0) - ti) - Math.abs((b.tier || 0) - ti))[0]; if (r) { addHuman(r, u); push(r); lobby(); return res.json({ id: r.id }); } }
     const r = create(u, !!req.body?.quick, String(req.body?.mode || '')); lobby(); res.json({ id: r.id });
   });
   app.get('/api/kupa/:id', auth, (req, res) => { const r = getR(req, res); if (r) res.json(view(r, req.user.id)); });
@@ -805,6 +850,25 @@ module.exports = function kupa(app, ctx) {
     const m = String(req.body?.mode || ''); r.pick = TITLES[m] ? m : null; push(r); res.json(view(r, req.user.id));
   });
   app.post('/api/kupa/:id/leave', auth, (req, res) => { const r = rooms.get(req.params.id); if (r) leave(r, req.user.id); res.json({ ok: true }); });
+  // İkili: bekleme odasında iki oyuncu karşılıklı isterse eş olur; lig puanları ortak sayılır
+  app.post('/api/kupa/:id/duo', auth, (req, res) => {
+    const r = getR(req, res); if (!r) return; const i = idx(r, req.user.id); if (i < 0) return res.status(403).json({ error: 'Önce odaya katıl.' }); if (r.status !== 'waiting') return res.status(409).json({ error: 'İkili, oyun başlamadan kurulur.' });
+    const me = r.players[i]; const unpair = (p) => { const q = p.duo != null ? r.players[p.duo] : null; if (q) q.duo = null; p.duo = null; p.duoReq = null; };
+    if (req.body?.off) { unpair(me); push(r); return res.json({ ok: true }); }
+    const j = r.players.findIndex((p) => p.uid && p.uid === String(req.body?.userId || '')); const q = r.players[j]; if (!q || q.bot || j === i) return res.status(404).json({ error: 'Oyuncu odada değil.' });
+    if (q.duo != null && q.duo !== i) return res.status(409).json({ error: 'Bu oyuncunun eşi var.' });
+    if (q.duoReq === req.user.id) { unpair(me); me.duo = j; q.duo = i; me.duoReq = q.duoReq = null; } else { unpair(me); me.duoReq = q.uid; }
+    push(r); res.json({ ok: true, paired: me.duo === j });
+  });
+  // "Kupada kapışalım": sohbetteki kişiye meydan okuma. Oda yoksa açılır; davet sohbete (yoksa bildirime) düşer.
+  app.post('/api/kupa/challenge/:uid', auth, (req, res) => {
+    const to = store.get('users', req.params.uid); if (!to || to.id === req.user.id || isBlocked(req.user.id, to.id)) return res.status(404).json({ error: 'Kişi bulunamadı.' });
+    if (limited(`kch:${req.user.id}`, 12, 3600000)) return res.status(429).json({ error: 'Biraz yavaş.' });
+    let r = roomOfUser(req.user.id); if (r && r.status === 'playing') return res.status(409).json({ error: 'Önce oynadığın oyunu bitir.' }); if (!r) { r = create(req.user, false, ''); lobby(); }
+    const url = `/#/oyun/kupa/${r.id}`; const chat = store.get('chats', [req.user.id, to.id].sort().join('_')); const text = `Kupada kapışalım! Parti Kupası odam açık, gel: ${url}`;
+    if (chat && ctx.sendMessage) ctx.sendMessage(chat, req.user.id, { text }); notify(to.id, { type: 'game', fromId: req.user.id, text: `${req.user.username} sana meydan okuyor: Kupada kapışalım!`, url, tag: `kupa-${r.id}` });
+    res.json({ id: r.id });
+  });
   app.post('/api/kupa/:id/invite', auth, (req, res) => {
     const r = getR(req, res); if (!r) return;
     if (idx(r, req.user.id) < 0) return res.status(403).json({ error: 'Önce odaya katıl.' });
