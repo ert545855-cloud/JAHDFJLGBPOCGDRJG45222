@@ -29,7 +29,7 @@ const TIPS = { cubuk: 'Çubuğun üstünden zıpla, platformdan düşme!', zemin
 // Oyun seçicideki açıklamalar (tek oyun olarak oynandığında kimin kazandığı)
 const INFO = { kupa: 'On oyundan karışık üç tur. Her turda elenenler olur, finali kazanan kupayı alır.', cubuk: 'Dönen çubuğun üstünden zıpla. Son kalan kazanır.', zemin: 'Bastığın karo çöker. Son kalan kazanır.',
   kosu: 'Engelli parkuru ilk bitiren kazanır.', kuyruk: 'Süre bitince kuyruğu olanlar kazanır.', sumo: 'Daralan platformda rakibini aşağı it. Son kalan kazanır.', doner: 'Hızlanan döner tablada tutun. Son kalan kazanır.', bayrak: 'İki takım: rakip bayrağı kendi üssüne getiren puan alır. Üç kez getiren kazanır.', renk: 'Söylenen renge koş, diğer karolar düşer. Son kalan kazanır.',
-  lav: 'Lav yükselirken zirveye ilk çıkan kazanır.', futbol: 'İki takım, dev top. Çok gol atan takım kazanır.', bomba: 'Bomba patladığında elinde olan elenir. Son kalan kazanır.', sakla: 'Ebeden saklan. Süre bitene kadar bulunmayanlar kazanır.',
+  lav: 'Lav yükselirken zirveye ilk çıkan kazanır.', futbol: 'İki takım, bir top. Topu sür, “Şut”a basılı tutup bırakarak vur. Çok gol atan takım kazanır.', bomba: 'Bomba patladığında elinde olan elenir. Son kalan kazanır.', sakla: 'Ebeden saklan. Süre bitene kadar bulunmayanlar kazanır.',
   hafiza: 'Deseni ezberle, ışıklar sönünce doğru karoda dur. Son kalan kazanır.', buz: 'Kaygan pistte rakibini dışarı it. Son kalan kazanır.', halat: 'İki takım halat çeker. Tempoya uyan takım kazanır.',
   sandalye: 'Müzik durunca boş halkaya koş. Her turda halka azalır.', kartopu: 'Kışa özel takım oyunu: kar topuyla en çok isabet eden takım kazanır.' };
 const TRACK = { w: 4.5, floors: [[5, -41], [-59, -124]], plats: [{ z: -44, amp: 2.2, w: 0.9, ph: 0 }, { z: -50, amp: 2.2, w: 1.1, ph: 2 }, { z: -56, amp: 2.2, w: 0.8, ph: 4 }],
@@ -296,7 +296,7 @@ export default async function kupa(view, id) {
       arena.add(mesh(new T.BoxGeometry(hx * 2, 0.02, 0.16), flat(0xfffaf2), 0, 0.014, 0));
       [-1, 1].forEach((x) => arena.add(mesh(new T.BoxGeometry(0.4, 0.9, hz * 2 + 0.8), board, x * (hx + 0.2), 0.45, 0)));
       dyn.flags = [0, 1].map((t) => { const g = new T.Group(); g.add(mesh(new T.CylinderGeometry(0.06, 0.06, 2.7, 8), lam(0xfffaf2), 0, 1.35, 0)); const cloth = mesh(new T.BoxGeometry(1.3, 0.8, 0.05), lam(TEAM[t][0]), 0.68, 2.25, 0); g.add(cloth); const knob = mesh(ball, lam(0xffe066), 0, 2.75, 0); knob.scale.setScalar(0.12); g.add(knob); g.userData.cloth = cloth; arena.add(g); return g; });
-    } else if (m === 'futbol') { // duvarlı saha, iki kale, dev top
+    } else if (m === 'futbol') { // duvarlı saha, iki kale, top
       const { hx, hz, goal, br } = c; const board = lam(0xfff1dc);
       arena.add(mesh(new T.BoxGeometry(hx * 2 + 1.2, 1, hz * 2 + 1.2), lam(0x8fdca4), 0, -0.5, 0));
       for (let i = -2; i <= 2; i++) if (i % 2) arena.add(mesh(new T.BoxGeometry(hx * 2, 0.02, hz * 0.4), lam(0x9fe5b2), 0, 0.006, i * hz * 0.4));
@@ -312,7 +312,7 @@ export default async function kupa(view, id) {
       [['#ff6fa5', 30, 34, 20], ['#4aa8ff', 96, 86, 22], ['#ffd43b', 158, 36, 19], ['#9b6bdf', 220, 88, 21], ['#4aa8ff', 226, 22, 12], ['#ff6fa5', 150, 104, 13], ['#ffd43b', 40, 102, 12], ['#9b6bdf', 94, 20, 11]].forEach(([f, cx, cy, r]) => { x.fillStyle = f; x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill(); });
       dyn.ball = mesh(new T.SphereGeometry(br, 28, 20), new T.MeshLambertMaterial({ map: new T.CanvasTexture(cv) }), 0, br, 0); arena.add(dyn.ball);
       dyn.bsh = lay(mesh(new T.CircleGeometry(br * 0.92, 24), flat(0x000000, { transparent: true, opacity: 0.2, depthWrite: false }), 0, 0.02, 0)); arena.add(dyn.bsh);
-      dyn.bs = { x: 0, z: 0, vx: 0, vz: 0, sx: 0, sz: 0, svx: 0, svz: 0, own: 0, fr: 0 };
+      dyn.bs = { x: 0, z: 0, vx: 0, vz: 0, sx: 0, sz: 0, svx: 0, svz: 0, own: 0, fr: 0, mine: 0 };
     } else if (m === 'sakla') { // çitle çevrili bahçe: duvarlar, sandıklar, çalılar; ebe ve görüş ışığı
       const H = c.h; arena.add(mesh(new T.BoxGeometry(H * 2 + 1.6, 1, H * 2 + 1.6), lam(0xb9e2a6), 0, -0.5, 0));
       const inst = (geo, mat, list, put) => { const im = new T.InstancedMesh(geo, mat, list.length); list.forEach((it, k) => { d.rotation.set(0, 0, 0); d.scale.set(1, 1, 1); put(it, k); d.updateMatrix(); im.setMatrixAt(k, d.matrix); }); arena.add(im); return im; }; // aynı türden parçalar tek çizim
@@ -414,10 +414,21 @@ export default async function kupa(view, id) {
   }
   // Futbol: topa değince vuruşu hemen göster (asıl top sunucuda; kısa süre kendi tahminime güvenirim)
   function kick(nowMs) {
-    const b = dyn.bs; const c = v.conf; if (!b || nowMs < b.fr || me.y > 1.6) return; const dx = b.x - me.x; const dz = b.z - me.z; const d = Math.hypot(dx, dz); const min = c.br + 0.5; if (d >= min || d < 0.001) return;
+    const b = dyn.bs; const c = v.conf; if (!b || nowMs < b.fr || me.y > 1.6 || nowMs < b.mine) return; const dx = b.x - me.x; const dz = b.z - me.z; const d = Math.hypot(dx, dz); const min = c.br + (c.pr || 0.5); if (d >= min || d < 0.001) return;
     const nx = dx / d; const nz = dz / d; const rel = (me.vx - b.vx) * nx + (me.vz - b.vz) * nz;
     if (rel > 0) { b.vx += nx * rel * c.k + me.vx * c.c; b.vz += nz * rel * c.k + me.vz * c.c; const sp = Math.hypot(b.vx, b.vz); if (sp > c.vmax) { b.vx *= c.vmax / sp; b.vz *= c.vmax / sp; } b.own = nowMs + 380; if (rel > 2) { sfx.play('kick', Math.min(1, rel / 8), 160); if (rel > 5) buzz(15); } }
     b.x = me.x + nx * min; b.z = me.z + nz * min;
+  }
+  // Şut: düğmeye basılı tutulan süre gücü belirler. Yön: baktığın yön; hücum ettiğin kaleye kabaca bakıyorsan kaleye doğru hafifçe düzeltilir.
+  const shot = { down: 0 };
+  function shootNow(nowMs) {
+    const b = dyn.bs; const c = v.conf; const held = shot.down ? (nowMs - shot.down) / 1000 : 0; shot.down = 0; if (!b || nowMs < b.fr || nowMs - (shot.at || 0) < c.scd) return;
+    const d = Math.hypot(b.x - me.x, b.z - me.z); if (d > c.reach) { sfx.play('jump', 0.4, 60); return; }
+    const pw = Math.min(1, held / 0.7); let a = me.ry; const gz = myTeam() ? c.hz : -c.hz; const ga = Math.atan2(-b.x, gz - b.z); // kale ortasına doğru
+    let diff = ((ga - a + Math.PI * 3) % (Math.PI * 2)) - Math.PI; if (Math.abs(diff) < 0.6) a += diff * 0.6; // kaleye yakın bakıyorsan nişanı yardımcı düzeltir
+    shot.at = nowMs; state.socket?.emit('k3:shot', [+a.toFixed(3), +pw.toFixed(2)]);
+    const sp = c.s0 + (c.s1 - c.s0) * pw; Object.assign(b, { vx: Math.sin(a) * sp, vz: Math.cos(a) * sp, own: nowMs + 500, mine: nowMs + 200 }); // sunucu onaylayana kadar kendi tahminim
+    sfx.play('kick', 0.5 + pw * 0.5, 160); buzz(12 + Math.round(pw * 10)); feel(0.08 + pw * 0.12);
   }
   function autopilot(t) { // yalnızca yerel deneme için (localStorage k3auto=1); yönler dünya eksenindedir
     inp.x = 0; inp.z = 0; inp.jump = false; const m = v.mode; const c = v.conf;
@@ -444,8 +455,9 @@ export default async function kupa(view, id) {
       if (me.ground) { if (d < 3.3) ap.back = true; else if (d >= 3.95) ap.back = false; } go(nx.x, nx.z, ap.back && me.ground ? -1 : 1);
       if (me.ground && !ap.back && d <= 4.35 && (me.vx * (nx.x - me.x) + me.vz * (nx.z - me.z)) / d > 4.8) inp.jump = true; }
     else if (m === 'sakla') { let best = null; let bd = -1; [[12.6, 13], [-12.6, 13], [12.6, -13], [-12.6, -13], [0, 12], [0, -12]].forEach(([x, z]) => { const d = Math.min(...dyn.ebes.map((e) => Math.hypot(e.x - x, e.z - z))); if (d > bd) { bd = d; best = [x, z]; } }); const d = Math.hypot(best[0] - me.x, best[1] - me.z); if (d > 0.5) go(best[0], best[1], Math.min(1, d)); }
-    else if (m === 'futbol') { const b = dyn.bs; const gz = myTeam() ? c.hz : -c.hz; let gx = -b.x; let gq = gz - b.z; const gl = Math.hypot(gx, gq) || 1; gx /= gl; gq /= gl; const px = b.x - gx * 1.9; const pz = b.z - gq * 1.9;
-      if ((me.x - b.x) * gx + (me.z - b.z) * gq < -0.6 && Math.hypot(me.x - px, me.z - pz) < 2.2) go(b.x + gx * 2, b.z + gq * 2); else go(px, pz); }
+    else if (m === 'futbol') { const b = dyn.bs; const gz = myTeam() ? c.hz : -c.hz; let gx = -b.x; let gq = gz - b.z; const gl = Math.hypot(gx, gq) || 1; gx /= gl; gq /= gl; const px = b.x - gx * 0.95; const pz = b.z - gq * 0.95;
+      if ((me.x - b.x) * gx + (me.z - b.z) * gq < -0.3 && Math.hypot(me.x - px, me.z - pz) < 1.2) go(b.x + gx * 1.2, b.z + gq * 1.2); else go(px, pz);
+      if (Math.hypot(b.x - me.x, b.z - me.z) < c.reach && Math.abs(gz - b.z) < 11 && !shot.down) { shot.down = performance.now() - 500; shot.fire = true; } }
   }
   // Bakış yönü (yatay): lavda kuleye doğru döner, futbolda hücum edilen kaleye bakar. Kumanda bu yöne göredir.
   function look(px, pz) {
@@ -465,7 +477,8 @@ export default async function kupa(view, id) {
     const g0 = ground(t); const k = me.stun > 0 ? 0.8 : g0?.ice ? 1.7 : me.ground ? 12 : 5; const l = Math.hypot(wx, wz); if (l > 1) { wx /= l; wz /= l; }
     const sp = SPEED * (v.rule?.sp || 1) * (m === 'bomba' && hasBomb(v.me) ? 1.1 : 1); // haftalık kural: çift hız // bombayı taşıyan biraz hızlanır
     me.vx += (wx * sp - me.vx) * Math.min(1, k * dt); me.vz += (wz * sp - me.vz) * Math.min(1, k * dt); me.stun = Math.max(0, me.stun - dt);
-    const act = inp.jump || keys.has(' '); inp.jump = false;
+    const act = m === 'futbol' ? false : inp.jump || keys.has(' '); inp.jump = false; // futbolda düğme zıplatmaz, şut çeker
+    if (m === 'futbol') { const jb = $('.k3-jump'); if (shot.down && t > 0) jb.style.setProperty('--pw', `${Math.round(Math.min(1, (nowMs - shot.down) / 700) * 100)}%`); else jb.style.removeProperty('--pw'); if (shot.fire) { shot.fire = false; shootNow(nowMs); } }
     if (m === 'kartopu') { // "At": en yakın rakibe doğru kar topu (isabet ve bekleme süresi sunucuda)
       if (act && t > 0 && nowMs - rope.last > c.cd && !((me.frz || 0) > nowMs)) { rope.last = nowMs; let best = null; let bd = 99; const mt = myTeam();
         chars.forEach((ch, i) => { if (i === v.me || !v.players[i]?.alive || v.st?.teams?.[i] === mt) return; const d = Math.hypot(ch.g.position.x - me.x, ch.g.position.z - me.z); if (d < bd) { bd = d; best = ch.g.position; } });
@@ -580,7 +593,7 @@ export default async function kupa(view, id) {
   function hud() {
     const playing = v.status === 'playing'; $('.k3-round').textContent = playing ? (v.rounds > 1 ? `${v.round}. tur · ${v.title}` : v.title) : 'Parti Kupası';
     const left = $('.k3-left'); left.hidden = !playing; if (playing) setLeft(leftText(v.playAt ? (srv() - v.playAt) / 1000 : 0)); else leftStr = '';
-    const ctl = playing && v.phase !== 'final' && iAmIn(); $('.k3-joy').hidden = !ctl; $('.k3-zone').hidden = !ctl; const jb = $('.k3-jump'); jb.hidden = !ctl; const jl = SU(v.mode) ? 'İt' : v.mode === 'halat' ? 'Çek' : v.mode === 'kartopu' ? 'At' : 'Zıpla'; if (jb.dataset.l !== jl) { jb.dataset.l = jl; jb.textContent = jl; } if (!SU(v.mode)) jb.classList.remove('cd'); if (v.mode === 'halat') { $('.k3-joy').hidden = true; $('.k3-zone').hidden = true; }
+    const ctl = playing && v.phase !== 'final' && iAmIn(); $('.k3-joy').hidden = !ctl; $('.k3-zone').hidden = !ctl; const jb = $('.k3-jump'); jb.hidden = !ctl; const jl = SU(v.mode) ? 'İt' : v.mode === 'halat' ? 'Çek' : v.mode === 'kartopu' ? 'At' : v.mode === 'futbol' ? 'Şut' : 'Zıpla'; if (jb.dataset.l !== jl) { jb.dataset.l = jl; jb.textContent = jl; } if (!SU(v.mode)) jb.classList.remove('cd'); if (v.mode === 'halat') { $('.k3-joy').hidden = true; $('.k3-zone').hidden = true; }
     if (!playing || (!RK(v.mode) && v.mode !== 'halat' && v.mode !== 'sandalye')) { $('.k3-call').hidden = true; callKey = ''; }
     if (!playing || v.mode !== 'sakla') wrap.classList.remove('seen');
     const over = $('.k3-over');
@@ -721,9 +734,14 @@ export default async function kupa(view, id) {
       if (ck && mem && s.phase === 0) call.querySelector('s').style.transform = `scaleX(${Math.max(0, Math.min(1, (s.cy[1] - tt) / 3)).toFixed(3)})`;
       if (ck && s.phase === 1) call.querySelector('s').style.transform = `scaleX(${Math.max(0, (s.cy[2] - tt) / (s.cy[2] - s.cy[1])).toFixed(3)})`; }
     if (playing && dyn.lava) { const y = Math.min(lavaY(c, tt), c.n * c.step - 0.9) + Math.sin(nowMs / 420) * 0.05; dyn.lava.position.y = y; dyn.glow.position.y = y + 0.04; dyn.glow.material.opacity = 0.32 + Math.sin(nowMs / 300) * 0.1; }
-    if (playing && dyn.ball) { const b = dyn.bs; const fr = c.fr ** (dt * 20); const lx = c.hx - c.br; b.sx = Math.max(-lx, Math.min(lx, b.sx + b.svx * dt)); b.sz += b.svz * dt; b.svx *= fr; b.svz *= fr;
-      if (nowMs < b.own) { b.x += b.vx * dt; b.z += b.vz * dt; b.vx *= fr; b.vz *= fr; if (Math.abs(b.x) > lx) { b.x = Math.sign(b.x) * lx; b.vx *= -c.wall; } if (Math.abs(b.z) > c.hz - c.br && Math.abs(b.x) >= c.goal - 0.2) { b.z = Math.sign(b.z) * (c.hz - c.br); b.vz *= -c.wall; } }
-      else { const k = Math.min(1, dt * 12); b.x += (b.sx - b.x) * k; b.z += (b.sz - b.z) * k; b.vx = b.svx; b.vz = b.svz; }
+    if (playing && dyn.ball) { const b = dyn.bs; const fr = c.fr ** (dt * 20); const lx = c.hx - c.br; const lz = c.hz - c.br;
+      // sunucunun son bildirdiği top, aradaki süre kadar ileri sarılır (sahanın içinde kalır)
+      b.sx += b.svx * dt; b.sz += b.svz * dt; b.svx *= fr; b.svz *= fr; if (Math.abs(b.sx) > lx) { b.sx = Math.sign(b.sx) * lx; b.svx *= -c.wall; } if (Math.abs(b.sz) > lz && (Math.abs(b.sx) >= c.goal - 0.2 || Math.abs(b.sz) > c.hz + 1)) { b.sz = Math.sign(b.sz) * (Math.abs(b.sx) >= c.goal - 0.2 ? lz : c.hz + 1); b.svz = 0; }
+      // görünen top kendi hızıyla akar ve sunucuya yavaşça çekilir: güncelleme gelince sıçramaz
+      b.x += b.vx * dt; b.z += b.vz * dt; b.vx *= fr; b.vz *= fr; if (Math.abs(b.x) > lx) { b.x = Math.sign(b.x) * lx; b.vx *= -c.wall; } if (Math.abs(b.z) > lz && Math.abs(b.x) >= c.goal - 0.2) { b.z = Math.sign(b.z) * lz; b.vz *= -c.wall; }
+      const ex = b.sx - b.x; const ez = b.sz - b.z; const err = Math.hypot(ex, ez);
+      if (err > 6) { b.x = b.sx; b.z = b.sz; b.vx = b.svx; b.vz = b.svz; } // çok uzaksa (ör. santra) doğrudan yerine
+      else { const own = nowMs < b.own; const kp = Math.min(1, dt * (own ? 1.5 : 5)); const kv = Math.min(1, dt * (own ? 1 : 6)); b.x += ex * kp; b.z += ez * kp; b.vx += (b.svx - b.vx) * kv; b.vz += (b.svz - b.vz) * kv; }
       const o = dyn.ball; const dx = b.x - o.position.x; const dz = b.z - o.position.z; const dist = Math.hypot(dx, dz); if (dist > 1e-4 && dist < 3) o.rotateOnWorldAxis(tmpV.set(dz / dist, 0, -dx / dist), dist / c.br); // yuvarlanma
       o.position.x = b.x; o.position.z = b.z; dyn.bsh.position.x = b.x; dyn.bsh.position.z = b.z; }
     if (playing && dyn.ebes) { // ebeler ve görüş ışıkları
@@ -775,8 +793,9 @@ export default async function kupa(view, id) {
   zone.addEventListener('pointerdown', (e) => { if (jid !== null) return; jid = e.pointerId; zone.setPointerCapture?.(jid); jo = toLocal(e.clientX, e.clientY); const b = wrap.getBoundingClientRect(); const o = toLocal(b.left, b.top); const o2 = toLocal(b.right, b.bottom); // joystick parmağın altında belirir
     joy.style.left = `${jo.x - Math.min(o.x, o2.x) - 66}px`; joy.style.top = `${jo.y - Math.min(o.y, o2.y) - 66}px`; joy.style.bottom = 'auto'; jmove(e); });
   zone.addEventListener('pointermove', jmove); zone.addEventListener('pointerup', jend); zone.addEventListener('pointercancel', jend); zone.addEventListener('lostpointercapture', jend);
-  $('.k3-jump').addEventListener('pointerdown', (e) => { e.preventDefault(); inp.jump = true; });
-  const kd = (e) => { if (e.target.closest?.('input, textarea')) return; keys.add(e.key.toLowerCase()); if (e.key === ' ') { e.preventDefault(); if (!e.repeat) inp.jump = true; } }; const ku = (e) => { keys.delete(e.key.toLowerCase()); if (!keys.size) { inp.x = 0; inp.z = 0; } };
+  $('.k3-jump').addEventListener('pointerdown', (e) => { e.preventDefault(); if (v?.mode === 'futbol') { shot.down = performance.now(); return; } inp.jump = true; });
+  const shotUp = () => { if (v?.mode === 'futbol' && shot.down) shot.fire = true; }; $('.k3-jump').addEventListener('pointerup', shotUp); $('.k3-jump').addEventListener('pointercancel', shotUp); $('.k3-jump').addEventListener('pointerleave', shotUp);
+  const kd = (e) => { if (e.target.closest?.('input, textarea')) return; keys.add(e.key.toLowerCase()); if (e.key === ' ') { e.preventDefault(); if (!e.repeat) { if (v?.mode === 'futbol') shot.down = performance.now(); else inp.jump = true; } } }; const ku = (e) => { if (e.key === ' ' && v?.mode === 'futbol' && shot.down) shot.fire = true; keys.delete(e.key.toLowerCase()); if (!keys.size) { inp.x = 0; inp.z = 0; } };
   window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
   wrap.addEventListener('click', async (e) => {
     if (e.target.closest('.k3-x')) { if (v.status === 'playing' && !(await ask('Oyundan çık', 'Çıkarsan bu kupadan elenirsin. Emin misin?', 'Çık', { danger: true }))) return; await api(`/kupa/${id}/leave`, { body: {} }).catch(() => {}); leaveTo('#/oyunlar'); return; }
@@ -805,6 +824,7 @@ export default async function kupa(view, id) {
     else if (ev.t === 'snow' && T && arena && v.mode === 'kartopu') { const m = mesh(new T.SphereGeometry(0.22, 10, 8), lam(0xffffff), ev.x, 0.95, ev.z); arena.add(m); balls.push({ id: ev.id, x: ev.x, z: ev.z, dx: ev.dx, dz: ev.dz, at: performance.now(), m }); if (balls.length > 40) balls[0].dead = true; }
     else if (ev.t === 'snowhit' && st) { st.score = ev.s; const b = balls.find((x) => x.id === ev.id); if (b) b.dead = true; const ch = chars[ev.i]; if (ch) puff(ch.g.position.x, 0.6, ch.g.position.z, 1.2, 0xffffff);
       if (ev.i === v.me) { me.frz = performance.now() + v.conf.frz * 1000; sfx.play('bad'); feel(0.3, 90); banner('Vuruldun!', 'Kısa süre donuksun.', 1400); } else if (ev.by === v.me) { sfx.play('good'); } else sfx.play('pop', 0.6); }
+    else if (ev.t === 'shot' && dyn.bs) { const b = dyn.bs; Object.assign(b, { sx: ev.x, sz: ev.z, svx: ev.vx, svz: ev.vz }); if (ev.i !== v.me) { b.vx = ev.vx; b.vz = ev.vz; b.own = performance.now() + 300; sfx.play('kick', 0.7, 160); } }
     else if (ev.t === 'goal' && st) { st.score = ev.s; if (dyn.bs) Object.assign(dyn.bs, { x: 0, z: 0, vx: 0, vz: 0, sx: 0, sz: 0, svx: 0, svz: 0, own: 0, fr: performance.now() + 2200 });
       const s = v.spawn?.[v.me]; if (s && iAmIn()) Object.assign(me, { x: s[0], z: s[2], vx: 0, vz: 0 }); banner(ev.team === myTeam() ? 'Gol! 🎉' : 'Gol yedik!', `${TEAM[0][1]} ${ev.s[0]} – ${ev.s[1]} ${TEAM[1][1]}`, 1700); feel(0.25, 80, 'whistle'); }
     else if (ev.t === 'ot' && st) { st.ot = 1; banner('Uzatma!', v.mode === 'bayrak' ? 'Bayrağı ilk getiren kazanır. Kimse getiremezse bayrağı üssünden daha uzakta olan takım kaybeder.' : 'İlk gol kazandırır. Gol olmazsa top kimin sahasındaysa o takım kaybeder.', 3200); }
