@@ -125,6 +125,7 @@ export default async function kupa(view, id) {
     const g = new T.Group();
     if (k === 'parti') { g.add(mesh(new T.ConeGeometry(0.2, 0.46, 14), lam(0xff4f9a), 0, 0.23, 0)); const pom = mesh(ball, lam(0xffe066), 0, 0.48, 0); pom.scale.setScalar(0.07); g.add(pom); g.rotation.z = -0.22; g.position.x = 0.12; }
     else if (k === 'fes') { g.add(mesh(new T.CylinderGeometry(0.17, 0.22, 0.28, 16), lam(0xc62828), 0, 0.14, 0)); g.add(mesh(new T.CylinderGeometry(0.015, 0.015, 0.22, 6), dark, 0.14, 0.2, 0)); }
+    else if (k === 'elmas') { g.add(mesh(new T.CylinderGeometry(0.25, 0.23, 0.12, 10, 1, true), lam(0x5fd6f0, { side: T.DoubleSide }), 0, 0.06, 0)); for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2; g.add(mesh(new T.ConeGeometry(0.06, 0.2, 4), lam(0xe8fbff), Math.cos(a) * 0.23, 0.22, Math.sin(a) * 0.23)); } } // sezon ödülü
     else if (k === 'tac') { g.add(mesh(new T.CylinderGeometry(0.25, 0.23, 0.12, 10, 1, true), lam(0xf5c542, { side: T.DoubleSide }), 0, 0.06, 0)); for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2; g.add(mesh(new T.ConeGeometry(0.06, 0.16, 6), lam(0xf5c542), Math.cos(a) * 0.23, 0.2, Math.sin(a) * 0.23)); } }
     else if (k === 'kulaklik') { const band = mesh(new T.TorusGeometry(0.52, 0.035, 8, 20, Math.PI), dark, 0, -0.42, 0); g.add(band); [-1, 1].forEach((s) => { const c = mesh(new T.CylinderGeometry(0.15, 0.15, 0.1, 14), lam(0x19c2b8), s * 0.54, -0.42, 0); c.rotation.z = Math.PI / 2; g.add(c); }); }
     else if (k === 'cicek') { for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; const pt = mesh(ball, lam(0xffffff), Math.cos(a) * 0.12, 0.08, Math.sin(a) * 0.12); pt.scale.set(0.09, 0.03, 0.09); g.add(pt); } const mid = mesh(ball, lam(0xffc93c), 0, 0.1, 0); mid.scale.setScalar(0.07); g.add(mid); g.position.x = 0.16; g.rotation.z = -0.3; }
@@ -462,7 +463,7 @@ export default async function kupa(view, id) {
     }
     if (m === 'halat' || (m === 'kartopu' && (me.frz || 0) > nowMs)) { wx = 0; wz = 0; } // halat çekerken yürünmez; kar topu yiyen kısa süre donar
     const g0 = ground(t); const k = me.stun > 0 ? 0.8 : g0?.ice ? 1.7 : me.ground ? 12 : 5; const l = Math.hypot(wx, wz); if (l > 1) { wx /= l; wz /= l; }
-    const sp = SPEED * (m === 'bomba' && hasBomb(v.me) ? 1.1 : 1); // bombayı taşıyan biraz hızlanır
+    const sp = SPEED * (v.rule?.sp || 1) * (m === 'bomba' && hasBomb(v.me) ? 1.1 : 1); // haftalık kural: çift hız // bombayı taşıyan biraz hızlanır
     me.vx += (wx * sp - me.vx) * Math.min(1, k * dt); me.vz += (wz * sp - me.vz) * Math.min(1, k * dt); me.stun = Math.max(0, me.stun - dt);
     const act = inp.jump || keys.has(' '); inp.jump = false;
     if (m === 'kartopu') { // "At": en yakın rakibe doğru kar topu (isabet ve bekleme süresi sunucuda)
@@ -481,7 +482,7 @@ export default async function kupa(view, id) {
       if (act) me.jbuf = 0.13; else me.jbuf = Math.max(0, me.jbuf - dt); me.air = me.ground ? 0 : me.air + dt;
       if (me.jbuf > 0 && me.stun <= 0 && (me.ground || (me.air < 0.12 && !me.jumped && me.vy <= 0))) { me.vy = JUMP; me.ground = false; me.jumped = true; me.jbuf = 0; sfx.play('jump', 0.8, 120); }
     }
-    const py = me.y; me.vy -= G * dt; me.y += me.vy * dt;
+    const py = me.y; me.vy -= G * (v.rule?.g || 1) * dt; me.y += me.vy * dt; // haftalık kural: düşük yerçekimi
     if (m === 'lav') { // kulenin çevresinde kutupsal hareket: "sağa" basılı tutunca yarıçap sabit kalır, basamak sırası kaçmaz
       const r0 = Math.hypot(me.x, me.z) || 1; const ux = me.x / r0; const uz = me.z / r0; const vr = me.vx * ux + me.vz * uz; const vt = -me.vx * uz + me.vz * ux;
       const pull = me.y < c.n * c.step - 0.5 ? (c.rad - r0) * 1.6 * (1 - Math.min(1, Math.abs(auto ? 1 : inp.z) * 1.6)) : 0; // içe-dışa basılmıyorsa basamak hattına doğru hafifçe çeker
@@ -588,9 +589,11 @@ export default async function kupa(view, id) {
     if (v.status === 'waiting') {
       over.hidden = false; over.className = 'k3-over side';
       over.innerHTML = `<div class="k3-card"><h2>Parti Kupası</h2>${game}<p>${esc(INFO[v.pick || 'kupa'])} Boş yerlere bot oturur.</p>
-        <div class="k3-pl">${v.players.map((p, i) => `<span class="${i === v.me ? 'me' : ''}"><i style="background:${hex(COLORS[p.look?.color] || COLORS.gul)}"></i>${esc(i === v.me ? 'Sen' : p.name)}${p.voice ? ' 🎙' : ''}</span>`).join('')}</div>
+        ${v.rule ? `<p class="k3-rule"><b>${esc(v.rule.name)}</b> ${esc(v.rule.sub)}</p>` : ''}
+        <div class="k3-pl">${v.players.map((p, i) => { const mine = v.players[v.me]; const tag = p.bot || i === v.me ? (i === v.me && mine.duo != null ? ' · eşli' : '') : mine.duo === i ? ' · eşin' : p.duoAsk === v.me ? ' · ikili olmak istiyor' : mine.duoAsk === i ? ' · yanıt bekleniyor' : ''; return `<span class="${i === v.me ? 'me' : ''} ${!p.bot && i !== v.me ? 'duo-c' : ''} ${mine.duo === i ? 'duo' : ''}" ${!p.bot && i !== v.me ? `data-duo="${esc(p.id)}" role="button"` : ''}><i style="background:${hex(COLORS[p.look?.color] || COLORS.gul)}"></i>${esc(i === v.me ? 'Sen' : p.name)}${p.voice ? ' 🎙' : ''}${tag}</span>`; }).join('')}</div>
+        ${v.players.filter((p) => !p.bot).length > 1 ? '<small class="k3-cnt">İkili olmak için bir oyuncunun adına dokun: lig puanlarınız ortak sayılır.</small>' : ''}
         <small class="k3-cnt">${v.players.length}/${v.max} oyuncu${v.startAt ? ` · <b class="k3-auto"></b>` : ''}</small>
-        <div class="k3-btns">${v.host ? '<button class="btn primary k3-start">Hemen başlat</button>' : '<span class="muted">Odayı açan başlatacak…</span>'}<button class="btn k3-ward">Kostümler</button><button class="btn k3-lig">Lig</button><button class="btn k3-inv">${icon('userPlus')} Davet et</button></div></div>`;
+        <div class="k3-btns">${v.host ? '<button class="btn primary k3-start">Hemen başlat</button>' : '<span class="muted">Odayı açan başlatacak…</span>'}<button class="btn k3-ward">Kostümler</button><button class="btn k3-lig">Lig</button><button class="btn k3-quests">Görevler</button><button class="btn k3-club">Kulüp Kupası</button><button class="btn k3-inv">${icon('userPlus')} Davet et</button></div></div>`;
     } else if (v.status === 'ended') {
       const res = v.result || {}; const o = res.order || []; const wins = res.winners || [res.winner]; const won = wins.includes(v.me); const w = v.players[res.winner]; const mine = v.players[v.me]?.place; const wn = esc((w?.name || '').replace(' (bot)', ''));
       const head = res.single ? (won ? 'Kazandın! 🏆' : wins.length > 1 ? (TM(res.mode) && v.st?.teams ? `${TEAM[v.st.teams[wins[0]] || 0][1]} takım kazandı` : 'Oyun bitti') : `${wn} kazandı`) : won ? 'Kupa senin!' : `Kupayı ${wn} kazandı`;
@@ -600,7 +603,7 @@ export default async function kupa(view, id) {
     : `<div class="k3-rank">${o.slice(0, 3).map((i, k) => `<span class="${i === v.me ? 'me' : ''}"><b>${k + 1}.</b>${esc(nm(i))}</span>`).join('')}</div>${mine && mine > 3 ? `<small class="k3-cnt">Sen ${mine}. oldun</small>` : ''}`}
         ${game}
         ${res.pts?.[v.me] ? `<small class="k3-cnt k3-pts">+${res.pts[v.me]} lig puanı</small>` : ''}
-        <div class="k3-btns">${v.host ? '<button class="btn primary k3-start">Yeniden oyna</button>' : ''}<button class="btn k3-ward">Kostümler</button><button class="btn k3-lig">Lig</button><button class="btn k3-x">Çık</button>${v.host ? '' : '<span class="muted">Odayı açan yeniden başlatabilir.</span>'}</div></div>`;
+        <div class="k3-btns">${v.host ? '<button class="btn primary k3-start">Yeniden oyna</button>' : ''}<button class="btn k3-ward">Kostümler</button><button class="btn k3-lig">Lig</button><button class="btn k3-quests">Görevler</button><button class="btn k3-club">Kulüp Kupası</button><button class="btn k3-x">Çık</button>${v.host ? '' : '<span class="muted">Odayı açan yeniden başlatabilir.</span>'}</div></div>`;
     } else over.hidden = true;
   }
   function openModes() { // oda sahibi: kupa ya da tek oyun
@@ -631,13 +634,30 @@ export default async function kupa(view, id) {
       ${L.top.length ? `<ol class="k3-lgl">${L.top.map((x) => `<li class="${x.me ? 'me' : ''}"><em>${x.rank}</em><img src="${esc(x.user.avatar)}" alt=""><b>${esc(x.user.username)}</b><i style="background:${MED[x.tier]}"></i><span>${x.pts}</span></li>`).join('')}</ol>` : '<p class="muted" style="text-align:center;margin:18px 0">Bu hafta henüz kimse puan almadı. İlk sen ol!</p>'}
       ${L.last.length ? `<p class="muted k3-lgn">Geçen haftanın ilk üçü: ${L.last.map((x) => `${x.rank}. ${esc(x.user.username)}`).join(' · ')}</p>` : ''}</div>`);
   }
+  async function openQuests() {
+    let q; try { q = await api('/kupa/quests'); } catch (e) { return toast(e.message); }
+    const html = () => `<div class="k3-w k3-qs"><p class="muted">${q.stats.games} oyun · ${q.stats.finals} final · ${q.stats.cups} kupa</p>${q.list.map((x) => `<div class="k3-q ${x.claimed ? 'done' : ''}"><span class="grow"><b>${esc(x.name)}</b><small>Ödül: ${esc(x.reward.name)}</small><i><u style="width:${Math.round((x.got / x.n) * 100)}%"></u></i></span>${x.claimed ? '<small>Alındı</small>' : `<button class="btn ${x.got >= x.n ? 'primary' : ''}" data-q="${x.id}" ${x.got >= x.n ? '' : 'disabled'}>${x.got}/${x.n}${x.got >= x.n ? ' · Al' : ''}</button>`}</div>`).join('')}<p class="muted" style="font-size:12.5px">Ödüller kostüm mağazasına eklenir. Kazandığın kupalar ve rozetler profilinde görünür.</p></div>`;
+    sheet('Görevler ve rozetler', html(), { onMount(sh) { sh.addEventListener('click', async (e) => { const b = e.target.closest('[data-q]'); if (!b) return;
+      try { const r = await api('/kupa/quests', { body: { id: b.dataset.q } }); q.list = r.list; const box = sh.querySelector('.k3-qs'); if (box) box.outerHTML = html(); toast(`Ödülün kostümlerinde: ${r.got.name}`); } catch (er) { toast(er.message); } }); } });
+  }
+  async function openClubCup() {
+    let c; try { c = await api('/kupa/clubcup'); } catch (e) { return toast(e.message); }
+    const d = Math.max(0, c.endsAt - Date.now()); const left = d > 86400000 ? `${Math.floor(d / 86400000)} gün` : `${Math.max(1, Math.round(d / 3600000))} saat`;
+    sheet('Kulüp Kupası', `<div class="k3-w"><p class="muted">Kulübün puanı, üyelerinin bu haftaki lig puanlarının toplamıdır. Haftayı birinci bitiren kulübün sayfasında kupa görünür. Bitmesine ${left}.</p>
+      ${c.top.length ? c.top.map((x) => `<a class="k3-q ${x.mine ? 'mine' : ''}" href="#/kulup/${esc(x.id)}"><b class="k3-rk">${x.rank}</b><span class="grow"><b>${esc(x.name)}</b><small>${x.n} oyuncu${x.cups ? ` · ${x.cups} kupa` : ''}</small></span><b>${x.pts}</b></a>`).join('') : '<p class="muted">Bu hafta henüz puan toplayan kulüp yok.</p>'}
+      ${c.last ? `<p class="muted k3-lgn">Geçen haftanın şampiyonu: ${esc(c.last.name)}</p>` : ''}${c.member ? '' : '<p class="muted">Kulübün için puan toplamak üzere önce bir kulübe katıl.</p>'}</div>`);
+  }
+  // zafer dansı: oyun bitince kazananların karakteri seçtiği hareketi yapar
+  function dance(ch, kind, ms) { if (!ch?.g?.visible) return; const g = ch.g; const t = ms / 1000;
+    if (kind === 'donus') g.rotation.y = t * 5; else if (kind === 'zipzip') g.position.y = Math.abs(Math.sin(t * 6)) * 0.7; else if (kind === 'takla') { g.rotation.x = (t * 5) % (Math.PI * 2); g.position.y = 0.6 + Math.abs(Math.sin(t * 2.5)) * 0.5; } else g.rotation.z = Math.sin(t * 5) * 0.18; }
   async function openWardrobe() {
     let w; try { w = await api('/kupa/wardrobe'); } catch (e) { return toast(e.message); }
     const html = () => `<div class="k3-w"><p class="muted">Jetonun: <b>${w.coins}</b></p><h3>Lezzet</h3><div class="k3-wg">${w.colors.map(([k, n, p]) => `<button data-id="${k}" class="${w.color === k ? 'on' : ''}"><i style="background:${hex(COLORS[k])}"></i><b>${esc(n)}</b><small>${w.color === k ? 'Üzerinde' : !p || w.owned.includes(k) ? 'Giy' : `${p} jeton`}</small></button>`).join('')}</div>
-      <h3>Şapka</h3><div class="k3-wg">${w.hats.map(([k, n, p]) => `<button data-id="${k}" class="${w.hat === k ? 'on' : ''}"><i class="em">${k === 'fes' ? '<svg viewBox="0 0 40 40" width="34" height="34"><path d="M11 30 14 12h12l3 18z" fill="#c62828"/><path d="M20 12c5 1 8 4 9 9" fill="none" stroke="#2a1d3a" stroke-width="1.6" stroke-linecap="round"/><circle cx="29.5" cy="22.5" r="2" fill="#2a1d3a"/></svg>' : HAT_EMOJI[k] || '🎩'}</i><b>${esc(n)}</b><small>${w.hat === k ? 'Üzerinde' : !p || w.owned.includes(k) ? 'Giy' : `${p} jeton`}</small></button>`).join('')}</div>
-      <h3>İz</h3><div class="k3-wg">${(w.trails || []).map(([k, n, p]) => `<button data-id="${k}" class="${w.trail === k ? 'on' : ''}"><i class="em">${TRAIL_EMOJI[k] || '✨'}</i><b>${esc(n)}</b><small>${w.trail === k ? 'Üzerinde' : !p || w.owned.includes(k) ? 'Tak' : `${p} jeton`}</small></button>`).join('')}</div></div>`;
+      <h3>Şapka</h3><div class="k3-wg">${w.hats.map(([k, n, p]) => `<button data-id="${k}" class="${w.hat === k ? 'on' : ''}"><i class="em">${k === 'fes' ? '<svg viewBox="0 0 40 40" width="34" height="34"><path d="M11 30 14 12h12l3 18z" fill="#c62828"/><path d="M20 12c5 1 8 4 9 9" fill="none" stroke="#2a1d3a" stroke-width="1.6" stroke-linecap="round"/><circle cx="29.5" cy="22.5" r="2" fill="#2a1d3a"/></svg>' : k === 'elmas' ? '<svg viewBox="0 0 40 40" width="34" height="34"><path d="M8 30l4-14 8 7 8-7 4 14z" fill="#5fd6f0" stroke="#1c8fb0" stroke-width="2" stroke-linejoin="round"/><circle cx="20" cy="12" r="3" fill="#e8fbff" stroke="#1c8fb0" stroke-width="1.5"/></svg>' : HAT_EMOJI[k] || '🎩'}</i><b>${esc(n)}</b><small>${w.hat === k ? 'Üzerinde' : w.owned.includes(k) || !p ? 'Giy' : p < 0 ? 'Elmas lig ödülü' : `${p} jeton`}</small></button>`).join('')}</div>
+      <h3>İz</h3><div class="k3-wg">${(w.trails || []).map(([k, n, p]) => `<button data-id="${k}" class="${w.trail === k ? 'on' : ''}"><i class="em">${TRAIL_EMOJI[k] || '✨'}</i><b>${esc(n)}</b><small>${w.trail === k ? 'Üzerinde' : !p || w.owned.includes(k) ? 'Tak' : `${p} jeton`}</small></button>`).join('')}</div>
+      <h3>Zafer dansı</h3><div class="k3-wg">${(w.dances || []).map(([k, n, p]) => `<button data-id="${k}" class="${w.dance === k ? 'on' : ''}"><i class="em k3-dn">${icon('trophy')}</i><b>${esc(n)}</b><small>${w.dance === k ? 'Seçili' : !p || w.owned.includes(k) ? 'Seç' : `${p} jeton`}</small></button>`).join('')}</div><p class="muted" style="font-size:12.5px">Zafer dansı, kazandığında karakterinin yaptığı harekettir.</p></div>`;
     sheet('Kostüm mağazası', html(), { onMount(sh) { wardrobe = sh; sh.addEventListener('click', async (e) => {
-      const b = e.target.closest('[data-id]'); if (!b) return; const k = b.dataset.id; const it = [...w.colors, ...w.hats, ...(w.trails || [])].find((x) => x[0] === k); const need = it[2] > 0 && !w.owned.includes(k);
+      const b = e.target.closest('[data-id]'); if (!b) return; const k = b.dataset.id; const it = [...w.colors, ...w.hats, ...(w.trails || []), ...(w.dances || [])].find((x) => x[0] === k); const need = it[2] > 0 && !w.owned.includes(k);
       if (need && !(await ask(`${it[1]} · ${it[2]} jeton`, 'Bu kostümü jetonla almak istiyor musun?', 'Satın al'))) return;
       try { w = await api('/kupa/wardrobe', { body: { id: k, buy: need } }); const box = document.querySelector('.k3-w'); if (box) box.outerHTML = html(); if (need) toast('Kostüm alındı 🎉'); v.players[v.me].look = { color: w.color, hat: w.hat, trail: w.trail }; buildChars(); hud(); } catch (er) { toast(er.message); }
     }); }, onClose() { wardrobe = null; } });
@@ -666,6 +686,7 @@ export default async function kupa(view, id) {
       p.x += (ch.t[0] - p.x) * k; p.y += (ch.t[1] - p.y) * k; p.z += (ch.t[2] - p.z) * k; let d = ch.t[3] - ch.g.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); ch.g.rotation.y += d * k;
       if (ch.pfl === 1 && ch.fl !== 1 && ch.fl !== 2) ch.ld = 0.7; ch.pfl = ch.fl; // başkaları da inince basılır
       animate(ch, dt, Math.min(SPEED, sp), ch.fl === 1, ch.fl === 2, ch.fl === 3); ch.sh.visible = ch.fl !== 1 && ch.fl !== 2 && p.y > -0.3; if (!v.players[i].alive && nowMs - ch.seen > 900) ch.g.visible = false; });
+    if (v.status === 'ended') (v.result?.winners || []).forEach((i) => dance(chars[i], v.players[i]?.look?.dance, nowMs));
     // Kuyruk ve takım halkası; kameraya çok yakın karakterin isim etiketi ekranı kaplamasın
     chars.forEach((ch, i) => { if (ch.g.visible) { const k = Math.max(0.42, Math.min(1, cam.position.distanceTo(ch.g.position) / 7.5)); ch.lbl.scale.set(2.3 * k, 0.575 * k, 1); } ch.tail.visible = m === 'kuyruk' && !!v.st?.tails?.includes(i); if (ch.tail.visible) ch.tail.rotation.z = Math.sin(nowMs / 110 + ch.ph) * 0.22; const tm = TM(m) ? v.st?.teams?.[i] : null; ch.ring.visible = tm != null; if (tm != null) ch.ring.material.color.setHex(TEAM[tm][0]); });
     // Hareketli engeller
@@ -760,6 +781,9 @@ export default async function kupa(view, id) {
   wrap.addEventListener('click', async (e) => {
     if (e.target.closest('.k3-x')) { if (v.status === 'playing' && !(await ask('Oyundan çık', 'Çıkarsan bu kupadan elenirsin. Emin misin?', 'Çık', { danger: true }))) return; await api(`/kupa/${id}/leave`, { body: {} }).catch(() => {}); leaveTo('#/oyunlar'); return; }
     if (e.target.closest('.k3-start')) { try { apply(await api(`/kupa/${id}/start`, { body: {} })); } catch (er) { toast(er.message); } return; }
+    if (e.target.closest('.k3-quests')) return openQuests();
+    if (e.target.closest('.k3-club')) return openClubCup();
+    { const dz = e.target.closest('[data-duo]'); if (dz && v.status === 'waiting') { const mine = v.players[v.me]; const i = v.players.findIndex((p) => p.id === dz.dataset.duo); return api(`/kupa/${v.id}/duo`, { body: mine.duo === i ? { off: 1 } : { userId: dz.dataset.duo } }).then((r) => toast(mine.duo === i ? 'İkili bozuldu.' : r.paired ? 'İkili oldunuz: lig puanlarınız ortak.' : 'İkili isteği gönderildi.')).catch((er) => toast(er.message)); } }
     if (e.target.closest('.k3-ward')) return openWardrobe();
     if (e.target.closest('.k3-lig')) return openLeague();
     if (e.target.closest('.k3-mode')) { if (v.host) openModes(); return; }

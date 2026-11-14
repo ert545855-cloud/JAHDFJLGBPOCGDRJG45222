@@ -4146,3 +4146,15 @@ html.land-game #fx-layer { display: none; }
 .sf-vit > span { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 10px; padding: 18px 12px 9px; background: linear-gradient(transparent, rgba(20,50,10,.72)); color: #fff; }
 .sf-vit > span img { width: 36px; height: 36px; border-radius: 10px; } .sf-vit > span > span { display: grid; } .sf-vit b { font-size: 15px; } .sf-vit small { font-size: 12px; opacity: .9; }
 .shm-img.farm { aspect-ratio: 16 / 10; background: radial-gradient(120% 90% at 50% 20%, #a8e06a, #5fae3e 75%); } .shm-img.farm > img { object-fit: contain; padding: 8px; }
+
+/* Parti Kupası: profil vitrini, kulüp kupası, sohbetten meydan okuma */
+.sf-visit.k3-show { background: linear-gradient(90deg, #fff1c9, #fff8e6); color: #7a5200; } .sf-visit.k3-show > svg { width: 30px; height: 30px; margin: 7px; flex: none; }
+.clb-cup { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 3px 10px 3px 6px; border-radius: 999px; background: #fff1c9; color: #7a5200; font-size: 12.5px; font-weight: 700; } .clb-cup[hidden] { display: none; } .clb-cup svg { width: 16px; height: 16px; }
+/* Parti Kupası: haftalık kural, ikili, görevler, kulüp kupası */
+.k3-rule { margin: 0 0 8px; padding: 7px 10px; border-radius: 12px; background: rgba(255, 210, 74, .18); font-size: 13px; line-height: 1.4; } .k3-rule b { color: #ffd24a; }
+.k3-pl span.duo-c { cursor: pointer; outline: 1px dashed rgba(255, 255, 255, .35); } .k3-pl span.duo { background: #ffd24a; color: #2b1640; outline: 0; }
+.k3-q { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--surface); color: var(--text); text-decoration: none; }
+.k3-q .grow { display: grid; gap: 3px; min-width: 0; } .k3-q small { font-size: 12px; color: var(--muted); } .k3-q.done { opacity: .6; } .k3-q.mine { outline: 2px solid var(--brand, #e23e6d); }
+.k3-q i { display: block; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; } .k3-q i u { display: block; height: 100%; background: #ffd24a; text-decoration: none; }
+.k3-q .btn { flex: none; min-width: 64px; } .k3-rk { width: 26px; text-align: center; font-size: 16px; }
+.k3-dn svg { width: 28px; height: 28px; color: #e2a400; }
