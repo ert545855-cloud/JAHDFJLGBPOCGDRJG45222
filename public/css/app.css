@@ -3922,6 +3922,7 @@ html.land-game #fx-layer { display: none; }
 .k3-jump:active { transform: translateY(5px); box-shadow: 0 2px 0 #c98a12, 0 6px 12px rgba(40, 10, 60, .45); }
 .k3-joy[hidden], .k3-jump[hidden], .k3-over[hidden], .k3-banner[hidden], .k3-chip[hidden], .k3-call[hidden] { display: none; }
 .k3-jump.cd { opacity: .5; }
+.k3-jump { background-image: linear-gradient(to top, rgba(226, 62, 109, .55) var(--pw, 0%), transparent var(--pw, 0%)); } /* futbolda şut gücü */
 /* Ekranın sol yarısı: dokunulan yerde beliren joystick */
 .k3-zone { position: absolute; left: 0; top: calc(56px + var(--safe-t, 0px)); bottom: 0; width: 55%; z-index: 5; touch-action: none; }
 .k3-zone[hidden] { display: none; }

@@ -57,7 +57,7 @@ const renkTile = (x, z) => { const h = (RENK.n * RENK.size) / 2; const c = Math.
 const LAV = { n: 30, rad: 5.4, step: 1.2, da: -(Math.PI * 2) / 6.5, pad: 2.2, top: 2.6, base: 8, col: 3.6, t0: 12, v0: 0.4, acc: 0.008, vmax: 0.7 }; // lav zirveye ~70 sn'de varır
 const lavaY = (t) => { const q = Math.max(0, t - LAV.t0); const tc = (LAV.vmax - LAV.v0) / LAV.acc; return -1.5 + (q < tc ? LAV.v0 * q + 0.5 * LAV.acc * q * q : LAV.v0 * tc + 0.5 * LAV.acc * tc * tc + LAV.vmax * (q - tc)); };
 const padAt = (i) => ({ x: Math.cos(i * LAV.da) * LAV.rad, z: Math.sin(i * LAV.da) * LAV.rad, y: i * LAV.step });
-const FUT = { hx: 7.5, hz: 12, goal: 3.4, br: 1.15, k: 1.1, c: 0.1, vmax: 11, fr: 0.975, wall: 0.5 }; // k, c: vuruş katsayıları (istemci de aynısını kullanır)
+const FUT = { hx: 7.5, hz: 12, goal: 3.4, br: 0.45, pr: 0.5, k: 0.85, c: 0.15, vmax: 9, fr: 0.975, wall: 0.5, reach: 1.6, scd: 650, s0: 9, s1: 18 }; // br: top yarıçapı, pr: oyuncu yarıçapı; k, c: sürüş katsayıları; s0-s1: şut hızı (istemci de aynısını kullanır)
 
 // Saklambaç: duvarlı bahçe. Ebe sunucudadır; görüş konisine giren ve arada engel olmayan oyuncuyu bulur.
 // range / half: koninin boyu ve yarım açısı, spot: görüşte kalınca bulunma süresi (sn), wait: ebenin sayma süresi
@@ -573,30 +573,43 @@ module.exports = function kupa(app, ctx) {
     }
     const rank = r.fr.get(p) ?? 0;
     const chase = () => { // topun arkasına geç, sonra kaleye sür
-      let gx = b.aim - B.x; let gq = gz - B.z; const gl = Math.hypot(gx, gq) || 1; gx /= gl; gq /= gl; const bx = B.x - gx * 1.9; const bz = B.z - gq * 1.9;
+      let gx = b.aim - B.x; let gq = gz - B.z; const gl = Math.hypot(gx, gq) || 1; gx /= gl; gq /= gl; const bx = B.x - gx * 0.95; const bz = B.z - gq * 0.95;
       const stuck = Math.abs(bx) > F.hx - 0.7 || Math.abs(bz) > F.hz - 0.7; // top duvar dibinde: arkasına geçilemez, doğrudan üstüne git
-      if (stuck || ((p.x - B.x) * gx + (p.z - B.z) * gq < -0.4 && Math.hypot(p.x - bx, p.z - bz) < 2.4)) { tx = B.x + gx * 2; tz = B.z + gq * 2; } else { tx = bx; tz = bz; }
+      if (stuck || ((p.x - B.x) * gx + (p.z - B.z) * gq < -0.2 && Math.hypot(p.x - bx, p.z - bz) < 1.3)) { tx = B.x + gx * 1.2; tz = B.z + gq * 1.2; } else { tx = bx; tz = bz; }
     };
     if (b.role === 'kaleci' && !r.ot) { sp = 4.2; if (dBall < 3.4 && Math.abs(B.z - own) < 6) chase(); else { tx = Math.max(-F.goal, Math.min(F.goal, B.x * 0.45)); tz = own * 0.86; } } // uzatmada kaleci de oyuna katılır
     else if (rank >= 2 && b.role === 'forvet') { tx = b.lane; tz = Math.max(-F.hz + 2, Math.min(F.hz - 2, B.z + Math.sign(gz) * 4.5)); } // topun önünde, kendi koridorunda pas bekler
     else if (rank >= 2 || (b.role === 'orta' && !inOwnHalf && dBall > 5)) { sp = 5; tx = B.x * 0.6 + (rank >= 2 ? b.lane * 0.4 : 0); tz = B.z + (own - B.z) * 0.45; } // topla kendi kalesi arasında bekler
     else chase();
     steer(p, tx, tz, sp * (b.pace || 1), dt); p.x = Math.max(-F.hx + 0.4, Math.min(F.hx - 0.4, p.x)); p.z = Math.max(-F.hz + 0.4, Math.min(F.hz - 0.4, p.z));
+    // Şut: kaleye yakınken kaleye, kendi kalesine yakınken uzağa (uzaklaştırma). Topun arkasındaysa ve bekleme süresi geçtiyse.
+    if (dBall < F.reach && now() >= B.fr && t >= (b.shotT || 0)) { const toGoal = Math.abs(gz - B.z); const behind = (B.x - p.x) * (b.aim - B.x) + (B.z - p.z) * (gz - B.z) > 0;
+      if ((toGoal < 10 && behind) || Math.abs(own - B.z) < 5) { b.shotT = t + rnd(1.1, 2); const ax = (toGoal < 10 ? b.aim : rnd(-F.hx, F.hx) * 0.6) + rnd(-1, 1); shoot(r, p, Math.atan2(ax - B.x, gz - B.z), toGoal < 10 ? rnd(0.65, 1) : rnd(0.5, 0.8)); } }
   }
+  // Şut: top oyuncunun erişimindeyse verilen yöne ve güce göre fırlar. Herkese hemen duyurulur (istemciler topu ışınlamadan kendi tahminiyle sürdürür).
+  function shoot(r, p, a, pw) {
+    const F = r.fut; const B = r.ball; if (!B || now() < B.fr || (p.y || 0) > 1.6) return false; const n = now(); if (n - (p.shotAt || 0) < F.scd) return false;
+    const [px, pz] = posOf(p); if (Math.hypot(B.x - px, B.z - pz) > F.reach) return false;
+    p.shotAt = n; const v = F.s0 + (F.s1 - F.s0) * Math.max(0, Math.min(1, pw)); B.vx = Math.sin(a) * v; B.vz = Math.cos(a) * v; B.sv = v; B.kick = n; B.by = p;
+    cast(r, 'k3:ev', { t: 'shot', i: r.players.indexOf(p), x: r2(B.x), z: r2(B.z), vx: r2(B.vx), vz: r2(B.vz) }); return true;
+  }
+  // İnsan oyuncunun konumu en son bildirdiği andan bu yana hızıyla ileri sarılır: top, eski konuma göre itilip ileri geri sıçramaz
+  const posOf = (p) => { if (p.bot) return [p.x, p.z]; const k = Math.min(0.15, Math.max(0, (now() - (p.seen || 0)) / 1000)); return [p.x + (p.ex || 0) * k, p.z + (p.ez || 0) * k]; };
   function futTick(r, t, dt) {
-    const F = r.fut; const B = r.ball; if (now() < B.fr) return; const min = F.br + 0.5;
+    const F = r.fut; const B = r.ball; if (now() < B.fr) return; const min = F.br + F.pr;
     for (let q = 0; q < 2; q++) {
       const h = dt / 2; let ix = 0; let iz = 0; let cx = 0; let cz = 0; let n = 0; let tm = 0; // aynı anda değen herkesin itişi birlikte hesaplanır (sıraya göre taraf tutmaz)
       for (const p of alive(r)) {
-        const dx = B.x - p.x; const dz = B.z - p.z; const d = Math.hypot(dx, dz); if (d >= min || d < 0.001 || p.y > 1.6) continue;
+        const [px, pz] = posOf(p); const dx = B.x - px; const dz = B.z - pz; const d = Math.hypot(dx, dz); if (d >= min || d < 0.001 || p.y > 1.6) continue;
         const [vx, vz] = vel(p); const nx = dx / d; const nz = dz / d; const rel = (vx - B.vx) * nx + (vz - B.vz) * nz;
         if (rel > 0) { ix += nx * rel * F.k + vx * F.c; iz += nz * rel * F.k + vz * F.c; }
-        cx += p.x + nx * min; cz += p.z + nz * min; n++; tm |= 1 << p.team;
+        if (now() - (B.kick || 0) < 180 && B.by === p) continue; // şutu atan, top ayağından çıkarken onu yeniden itmez
+        const ov = min - d; const mv = Math.min(ov, 0.15); cx += nx * mv; cz += nz * mv; if (ov > mv) { ix += nx * Math.min(ov - mv, 1.2) * 5; iz += nz * Math.min(ov - mv, 1.2) * 5; } n++; tm |= 1 << p.team; // derin temas: yer değiştirme yerine itiş (top akarak çıkar)
       }
-      if (n) { B.vx += ix; B.vz += iz; B.x = cx / n; B.z = cz / n; }
-      if (tm === 3 && now() > (B.loose || 0)) { B.loose = now() + 700; B.vx += rnd(-2.5, 2.5); B.vz += (Math.random() < 0.5 ? -1 : 1) * rnd(5, 8); } // iki takım arasında sıkışan top bir yana fırlar
-      const sp = Math.hypot(B.vx, B.vz); if (sp > F.vmax) { B.vx *= F.vmax / sp; B.vz *= F.vmax / sp; }
-      B.x += B.vx * h; B.z += B.vz * h; B.vx *= F.fr; B.vz *= F.fr;
+      if (n) { B.vx += ix; B.vz += iz; B.x += cx / n; B.z += cz / n; } // top yalnızca değdiği kadar dışarı itilir (yerinden sıçratılmaz)
+      if (tm === 3 && now() > (B.loose || 0)) { B.loose = now() + 700; B.vx += rnd(-1.5, 1.5); } // iki takım arasında sıkışan top hafifçe yana kayar
+      const cap = Math.max(F.vmax, B.sv || 0); const sp = Math.hypot(B.vx, B.vz); if (sp > cap) { B.vx *= cap / sp; B.vz *= cap / sp; }
+      B.x += B.vx * h; B.z += B.vz * h; B.vx *= F.fr; B.vz *= F.fr; B.sv = (B.sv || 0) * F.fr;
       if (Math.abs(B.x) > F.hx - F.br) { B.x = Math.sign(B.x) * (F.hx - F.br); B.vx *= -F.wall; }
       if (Math.abs(B.z) > F.hz - F.br) {
         if (Math.abs(B.x) < F.goal - 0.2) { if (Math.abs(B.z) > F.hz + 0.3) return goal(r, B.z < 0 ? 0 : 1); }
@@ -605,7 +618,7 @@ module.exports = function kupa(app, ctx) {
     }
   }
   function goal(r, team) {
-    r.st.score[team]++; Object.assign(r.ball, { x: 0, z: 0, vx: 0, vz: 0, fr: now() + 2200 });
+    r.st.score[team]++; Object.assign(r.ball, { x: 0, z: 0, vx: 0, vz: 0, sv: 0, by: null, fr: now() + 2200 });
     alive(r).forEach((p) => { const sp = r.spawn[r.players.indexOf(p)]; if (p.bot && p.b && sp) { p.x = sp[0]; p.z = sp[2]; p.b.vx = 0; p.b.vz = 0; } }); // santra: herkes yerine
     cast(r, 'k3:ev', { t: 'goal', team, s: r.st.score }); if (r.ot) futEnd(r);
   }
@@ -907,6 +920,7 @@ module.exports = function kupa(app, ctx) {
       if (process.env.KUPA_DEBUG) console.log('[kupa] itiş', me.name, '→', q.name, d.toFixed(2));
       me.hitAt = n; q.b.vx += (dx / d) * 7.5; q.b.vz += (dz / d) * 7.5; q.b.push = 0.35; q.b.dash = 0;
     });
+    socket.on('k3:shot', (s) => { if (room && me?.alive && room.phase === 'play' && room.mode === 'futbol' && room.ball && Array.isArray(s) && s.every((x) => Number.isFinite(+x))) shoot(room, me, +s[0], +s[1]); });
     socket.on('k3:snow', (a) => { if (room && me?.alive && room.phase === 'play' && room.mode === 'kartopu' && Number.isFinite(+a)) snow(room, me, +a); });
     socket.on('k3:pull', () => { if (room && me?.alive && room.phase === 'play' && room.mode === 'halat' && room.hal) pull(room, me); });
     socket.on('k3:tile', (i) => { if (room && me?.alive && room.phase === 'play' && room.mode === 'zemin' && room.hm.tiles[i]) touch(room, i); });
