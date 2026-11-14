@@ -4158,3 +4158,28 @@ html.land-game #fx-layer { display: none; }
 .k3-q i { display: block; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; } .k3-q i u { display: block; height: 100%; background: #ffd24a; text-decoration: none; }
 .k3-q .btn { flex: none; min-width: 64px; } .k3-rk { width: 26px; text-align: center; font-size: 16px; }
 .k3-dn svg { width: 28px; height: 28px; color: #e2a400; }
+
+/* müzik uyumu */
+.card-mu { display: inline-flex; align-items: center; gap: 6px; margin: 4px 0; padding: 4px 10px 4px 8px; border-radius: 999px; background: rgba(30, 215, 96, .9); color: #062b14; font-size: 13px; font-weight: 650; max-width: 100%; }
+.card-mu svg { width: 15px; height: 15px; flex: none; } .card-mu span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mu-common { display: flex; align-items: center; gap: 8px; margin: 10px 16px 0; padding: 9px 12px; border-radius: 14px; background: color-mix(in srgb, #1ed760 14%, var(--surface)); font-size: 13.5px; } .mu-common[hidden] { display: none; } .mu-common svg { width: 18px; height: 18px; color: #12a24a; flex: none; }
+.mu-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; } .mu-list .chip { display: inline-flex; align-items: center; gap: 4px; padding-right: 4px; } .mu-list .chip button { width: 20px; height: 20px; padding: 0; border: 0; background: none; color: var(--muted); } .mu-list .chip svg { width: 14px; height: 14px; }
+.mu-edit { display: grid; gap: 8px; } .mu-add { display: flex; gap: 8px; } .mu-add input { flex: 1; min-width: 0; }
+/* çifte buluşma */
+.cfb-chip { text-decoration: none; } .cfb-chip svg { width: 15px; height: 15px; }
+.cf { padding: 12px 16px 90px; display: grid; gap: 12px; }
+.cf-intro { display: grid; gap: 12px; justify-items: center; text-align: center; padding-top: 12px; } .cf-intro h2 { margin: 0; } .cf-intro p { margin: 0; line-height: 1.45; }
+.cf-ic { display: grid; place-items: center; width: 72px; height: 72px; border-radius: 24px; background: color-mix(in srgb, var(--brand, #e23e6d) 16%, var(--surface)); color: var(--brand, #e23e6d); } .cf-ic svg { width: 36px; height: 36px; }
+.cf-inv, .cf-me, .cf-f { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 16px; background: var(--surface); text-align: left; border: 0; color: var(--text); font: inherit; }
+.cf-inv .grow, .cf-me .grow, .cf-f .grow { display: grid; min-width: 0; } .cf-inv small, .cf-me small, .cf-f small { color: var(--muted); font-size: 12.5px; } .cf-f:disabled { opacity: .5; }
+.cf-av { border-radius: 50%; object-fit: cover; flex: none; } .cf-pair { display: flex; } .cf-pair .cf-av + .cf-av { margin-left: -12px; box-shadow: 0 0 0 2px var(--bg); }
+.cf-fl { display: grid; gap: 6px; padding: 0 16px 18px; } .cf-note { margin: 0; font-size: 12.5px; text-align: center; }
+.cf-ms { display: flex; gap: 6px; overflow-x: auto; } .cf-m { display: inline-flex; align-items: center; gap: 6px; flex: none; padding: 7px 12px; border-radius: 999px; background: var(--surface); color: var(--text); text-decoration: none; font-size: 13px; font-weight: 600; } .cf-m svg { width: 16px; height: 16px; }
+.cf-card { position: relative; border-radius: 24px; overflow: hidden; background: var(--surface); box-shadow: 0 10px 30px rgba(0, 0, 0, .18); transition: transform .22s, opacity .22s; }
+.cf-card.go-r { transform: translateX(120%) rotate(12deg); opacity: 0; } .cf-card.go-l { transform: translateX(-120%) rotate(-12deg); opacity: 0; }
+.cf-two { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; } .cf-p { position: relative; aspect-ratio: 3 / 4.4; } .cf-p img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cf-pi { position: absolute; inset: auto 0 0 0; padding: 30px 10px 10px; background: linear-gradient(transparent, rgba(0, 0, 0, .72)); color: #fff; display: grid; gap: 2px; } .cf-pi b { font-size: 17px; } .cf-pi small { font-weight: 500; } .cf-pi span { font-size: 12px; line-height: 1.3; opacity: .9; }
+.cf-city { display: flex; align-items: center; gap: 4px; padding: 10px 14px 0; font-size: 13px; color: var(--muted); } .cf-city svg { width: 15px; height: 15px; }
+.cf-act { display: flex; justify-content: center; gap: 28px; padding: 12px 0 16px; } .cf-act button { width: 62px; height: 62px; border-radius: 50%; border: 0; display: grid; place-items: center; background: var(--bg); box-shadow: 0 4px 14px rgba(0, 0, 0, .14); }
+.cf-act svg { width: 28px; height: 28px; } .cf-no { color: #8a8f99; } .cf-yes { color: var(--brand, #e23e6d); }
+.cf-match { display: grid; gap: 12px; justify-items: center; text-align: center; padding: 0 16px 20px; } .cf-match p { margin: 0; }

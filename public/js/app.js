@@ -41,6 +41,7 @@ const routes = [
   [/^\/me$/, 'profile', { tab: 'me' }],
   [/^\/u\/([\w.]+)$/, 'profile', { tab: 'me' }],
   [/^\/edit$/, 'edit', { tabs: false }],
+  [/^\/cifte$/, 'cifte', { tabs: false }],
   [/^\/settings$/, 'settings', { tabs: false }],
   [/^\/fal(?:\/(\w+))?$/, 'fal', { tab: 'home' }],
   [/^\/create(?:\/(\w+))?$/, 'create', { tabs: false }],

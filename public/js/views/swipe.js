@@ -14,7 +14,7 @@ export default async function swipe(view) {
       <button class="ib soft flt" aria-label="Filtreler">${icon('sliders')}</button>
     </header>
     <div class="swipe-wrap">
-      <div class="tn-row"><button class="tn-chip" type="button" aria-pressed="false"><i></i><span>Bu akşam müsaitim</span></button><span class="tn-pass" hidden></span></div>
+      <div class="tn-row"><button class="tn-chip" type="button" aria-pressed="false"><i></i><span>Bu akşam müsaitim</span></button><a class="tn-chip cfb-chip" href="#/cifte">${icon('users')}<span>Çifte buluşma</span></a><span class="tn-pass" hidden></span></div>
       <div class="deck" aria-live="polite"><div class="spinner" style="margin-top:30vh"></div></div>
       <div class="swipe-btns">
         <button class="sm undo" aria-label="Geri al" style="color:#f5b400">${icon('undo')}</button>
@@ -51,6 +51,7 @@ export default async function swipe(view) {
         ${(u.badges || []).length ? `<div class="badges sm">${u.badges.slice(0, 3).map((b) => `<span class="badge">${b.em} ${esc(b.name)}</span>`).join('')}</div>` : ''}
         ${u.bio ? `<p>${esc(u.bio)}</p>` : ''}
         ${u.prompts?.[0] ? `<div class="card-pq"><small>${esc(u.prompts[0].q)}</small>${esc(u.prompts[0].a)}</div>` : ''}
+        ${u.music?.length ? `<div class="card-mu">${icon('music')}<span>Ortak: ${u.music.slice(0, 3).map(esc).join(', ')}${u.music.length > 3 ? ` +${u.music.length - 3}` : ''}</span></div>` : ''}
         ${u.voice ? `<div class="card-voice">${voiceChip(u.voice)}</div>` : ''}
         ${u.interests?.length ? `<div class="chips">${u.interests.map((t) => `<span class="chip">${esc(t)}</span>`).join('')}</div>` : ''}
       </div>
