@@ -1,0 +1,101 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, android-apk]
+    paths:
+      - 'store/android/**'
+      - 'scripts/android/**'
+      - '.github/workflows/android.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      OUT: android-build
+      KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+      KS_SECRET: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Android projesini üret
+        run: |
+          exec > >(tee -a "$GITHUB_WORKSPACE/build.log") 2>&1
+          mkdir -p /tmp/bw && cd /tmp/bw && npm init -y >/dev/null && npm i --no-audit --no-fund @bubblewrap/core@^1
+          cd "$GITHUB_WORKSPACE"
+          NODE_PATH=/tmp/bw/node_modules node scripts/android/generate.js "$OUT" "${{ github.run_number }}"
+
+      - name: İmza anahtarı
+        run: |
+          exec > >(tee -a "$GITHUB_WORKSPACE/build.log") 2>&1
+          if [ -n "$KS_B64" ] && [ -n "$KS_SECRET" ]; then
+            echo "$KS_B64" | base64 -d > "$OUT/android.keystore"
+            PASS="$KS_SECRET"; KIND=kalici
+          else
+            PASS=$(openssl rand -hex 16)
+            keytool -genkeypair -keystore "$OUT/android.keystore" -alias swipeup -keyalg RSA -keysize 2048 \
+              -validity 10000 -storepass "$PASS" -keypass "$PASS" -dname "CN=SwipeUp, O=SwipeUp, C=TR"
+            KIND=gecici
+          fi
+          echo "::add-mask::$PASS"
+          echo "KS_PASS=$PASS" >> "$GITHUB_ENV"
+          echo "KEY_KIND=$KIND" >> "$GITHUB_ENV"
+          echo "Anahtar: $KIND"
+
+      - name: Derle
+        run: |
+          exec > >(tee -a "$GITHUB_WORKSPACE/build.log") 2>&1
+          cd "$OUT"
+          chmod +x gradlew
+          ./gradlew --no-daemon --stacktrace assembleRelease bundleRelease
+
+      - name: İmzala
+        run: |
+          exec > >(tee -a "$GITHUB_WORKSPACE/build.log") 2>&1
+          cd "$OUT"
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/zipalign" -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          "$BT/apksigner" sign --ks android.keystore --ks-pass env:KS_PASS --ks-key-alias swipeup \
+            --key-pass env:KS_PASS --out "$GITHUB_WORKSPACE/SwipeUp.apk" aligned.apk
+          jarsigner -keystore android.keystore -storepass "$KS_PASS" -keypass "$KS_PASS" \
+            -sigalg SHA256withRSA -digestalg SHA-256 \
+            -signedjar "$GITHUB_WORKSPACE/SwipeUp.aab" app/build/outputs/bundle/release/app-release.aab swipeup
+          "$BT/apksigner" verify --print-certs "$GITHUB_WORKSPACE/SwipeUp.apk"
+          FP=$("$BT/apksigner" verify --print-certs "$GITHUB_WORKSPACE/SwipeUp.apk" | grep -m1 'SHA-256 digest' | awk '{print $NF}' | tr a-f A-F | sed 's/../&:/g;s/:$//')
+          echo "FP=$FP" >> "$GITHUB_ENV"
+          ls -la "$GITHUB_WORKSPACE"/SwipeUp.*
+
+      - name: Yayınla
+        run: |
+          VER="1.0.${{ github.run_number }}"
+          if [ "$KEY_KIND" = kalici ]; then KEYNOTE="Kalıcı anahtarla imzalandı."; else KEYNOTE="Geçici anahtarla imzalandı (her derlemede değişir; güncelleme için eski sürümü silip kurmak gerekir)."; fi
+          printf '%s\n\n%s\n\nSHA-256 parmak izi:\n`%s`\n\nKaynak: %s (%s)\n' \
+            "SwipeUp Android $VER" "$KEYNOTE" "$FP" "${GITHUB_REF_NAME}" "${GITHUB_SHA::7}" > notes.md
+          gh release delete android-latest -y --cleanup-tag || true
+          gh release create android-latest SwipeUp.apk SwipeUp.aab build.log \
+            --prerelease --target "$GITHUB_SHA" --title "SwipeUp Android $VER" --notes-file notes.md
+
+      - name: Hata kaydı
+        if: failure()
+        run: |
+          gh release delete android-log -y --cleanup-tag || true
+          gh release create android-log build.log --prerelease --target "$GITHUB_SHA" \
+            --title "Android derleme hatası #${{ github.run_number }}" --notes "Derleme başarısız; build.log dosyasına bak."
