@@ -1,3 +1,4 @@
+import './errlog.js'; // en önce: açılışta oluşan hatalar da yakalansın
 import { remember, accountSheet, switchFromUrl } from './accounts.js';
 import { icon } from './icons.js';
 import { initNav } from './nav.js';
@@ -347,6 +348,14 @@ function keyboardFit() {
 }
 
 async function boot() {
+  // Yazı tipi açılışı bekletmesin (index.html'de media=print ile iner, burada devreye girer)
+  try { const gf = document.getElementById('gfont'); if (gf) gf.media = 'all'; } catch { /* yok */ }
+  // Açılacak sayfanın modülünü oturum/ayar istekleriyle aynı anda indirmeye başla
+  try {
+    const p = (location.hash || '#/').slice(1).split('?')[0] || '/';
+    const r = localStorage.getItem('su_token') ? routes.find(([re]) => re.test(p)) : routes.find(([, n]) => n === 'auth');
+    if (r) import(`./views/${r[1]}.js`).catch(() => {});
+  } catch { /* yok */ }
   try { keyboardFit(); } catch { /* eski tarayıcı: varsayılan davranış */ }
   await initI18n().catch(() => {});
   try { const t = localStorage.getItem('su_theme'); if (t && t !== 'system') document.documentElement.dataset.theme = t; } catch {}
@@ -379,10 +388,13 @@ async function boot() {
     if (gr.error) setTimeout(() => toast(gr.error), 600);
     else api('/me/logins', { body: { provider: 'google', credential: gr.credential } }).then(async () => { Object.assign(state.me, await api('/me')); toast('Google hesabın bağlandı.'); }).catch((er) => toast(er.message));
   } else if (gr) { state.googleReturn = gr; if (!/^#\/(login|register)/.test(location.hash)) location.hash = '#/login'; }
+  window.__suVer = state.config?.version || '';
   afterBoot(state.config?.version);
   initEvent(state.config);
   // İlk ziyarette telefona yükleme kılavuzu (iPhone: Safari → Ana Ekrana Ekle)
   setTimeout(maybeShowInstall, state.token ? 4000 : 1500);
+  // Yeni üyeye SwipeUp+ denemesi: ilk açılışta bir kez tanıt
+  if (state.me?.plusTrial && state.me.plusTrial.until > Date.now() && !state.me.plusTrial.bought) setTimeout(() => import('./trialsheet.js').then((m) => m.default(state.me.plusTrial)).catch(() => {}), 2500);
   // Beklenmeyen modül hataları (eski sürüm kalıntısı) → güncelleme ekranı
   window.addEventListener('unhandledrejection', (e) => { recover(e.reason); });
   // Geri düğmeleri (data-back="#/yedek"): sayfa içi betik kullanılmaz, tıklama burada yakalanır

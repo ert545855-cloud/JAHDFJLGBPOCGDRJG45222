@@ -1,5 +1,6 @@
 // Google / Apple ile giriş düğmeleri. Sağlayıcının kendi betiği yalnızca gerektiğinde yüklenir (güvenlik kuralında izinli adresler).
 import { state } from './core.js';
+import { report } from './errlog.js';
 
 const loaded = {};
 function loadScript(src) {
@@ -22,7 +23,7 @@ let originBad = false; const originWatch = new Set();
 for (const k of ['error', 'warn', 'log']) {
   const f = console[k].bind(console);
   console[k] = (...a) => {
-    if (!originBad && /GSI_LOGGER/.test(String(a[0])) && /origin is not allowed|origin_mismatch|not a valid origin/i.test(a.map(String).join(' '))) { originBad = true; originWatch.forEach((fn) => fn()); }
+    if (!originBad && /GSI_LOGGER/.test(String(a[0])) && /origin is not allowed|origin_mismatch|not a valid origin/i.test(a.map(String).join(' '))) { originBad = true; originWatch.forEach((fn) => fn()); report({ kind: 'gsi', msg: `Google girişi: bu adres (${location.origin}) Google Cloud'da izinli değil (origin_mismatch)`, src: location.origin + '/' }); }
     f(...a);
   };
 }

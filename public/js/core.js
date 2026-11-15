@@ -1,4 +1,5 @@
 // Ortak durum, API, socket, yardımcılar
+import { report } from './errlog.js';
 import { remember, forget, accounts } from './accounts.js';
 import { icon } from './icons.js';
 
@@ -37,6 +38,7 @@ export async function api(path, opts = {}) {
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
+  if (res.status >= 500 && res.status !== 503) report({ kind: 'api', msg: `${opts.method || (opts.body ? 'POST' : 'GET')} ${path.split('?')[0].replace(/\/[\w-]{8,}/g, '/:id')} → ${res.status}${data.error ? ` · ${data.error}` : ''}`, src: '/api' + path.split('?')[0], status: res.status });
   if (res.status === 401 && state.token) { logout(false, true); throw new Error(data.error); }
   if (res.status === 423) { emit('banned', data); throw new Error(data.error); }
   if (res.status === 503 && data.maintenance) { emit('maintenance', data.maintenance); throw new Error(data.error); }
