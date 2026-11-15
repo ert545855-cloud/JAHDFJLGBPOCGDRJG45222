@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 concurrency:
   group: android-apk
@@ -24,6 +25,7 @@ jobs:
       KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
       KS_SECRET: ${{ secrets.ANDROID_KEYSTORE_PASS }}
       GH_TOKEN: ${{ github.token }}
+      KEY_URL: https://swipeup-hh1f.onrender.com/api/internal/android-key
     steps:
       - uses: actions/checkout@v5
 
@@ -44,21 +46,36 @@ jobs:
           NODE_PATH=/tmp/bw/node_modules node scripts/android/generate.js "$OUT" "${{ github.run_number }}"
 
       - name: İmza anahtarı
+        # Bu adımın çıktısı build.log'a yazılmaz (şifre sızmasın).
         run: |
-          exec > >(tee -a "$GITHUB_WORKSPACE/build.log") 2>&1
+          if [ -z "$KS_B64" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ]; then
+            TOK=$(curl -sS "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=swipeup-android" \
+              -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" | jq -r '.value // empty')
+            echo "::add-mask::$TOK"
+            for i in $(seq 1 12); do
+              # Sunucu uyuyor ya da yeni sürüm yükleniyor olabilir; ~10 dakika boyunca tekrar dener.
+              RES=$(curl -sS -m 90 -X POST -H "Authorization: Bearer $TOK" "$KEY_URL" 2>/dev/null || true)
+              KS_B64=$(echo "$RES" | jq -r '.keystore // empty' 2>/dev/null || true)
+              KS_SECRET=$(echo "$RES" | jq -r '.pass // empty' 2>/dev/null || true)
+              [ -n "$KS_SECRET" ] && break
+              echo "Sunucudan anahtar alınamadı (deneme $i): $(echo "$RES" | jq -r '.error // "yanıt yok"' 2>/dev/null)"
+              sleep 40
+            done
+          fi
           if [ -n "$KS_B64" ] && [ -n "$KS_SECRET" ]; then
+            echo "::add-mask::$KS_SECRET"
             echo "$KS_B64" | base64 -d > "$OUT/android.keystore"
             PASS="$KS_SECRET"; KIND=kalici
           else
             PASS=$(openssl rand -hex 16)
+            echo "::add-mask::$PASS"
             keytool -genkeypair -keystore "$OUT/android.keystore" -alias swipeup -keyalg RSA -keysize 2048 \
-              -validity 10000 -storepass "$PASS" -keypass "$PASS" -dname "CN=SwipeUp, O=SwipeUp, C=TR"
+              -validity 10000 -storepass "$PASS" -keypass "$PASS" -dname "CN=SwipeUp, O=SwipeUp, C=TR" >/dev/null 2>&1
             KIND=gecici
           fi
-          echo "::add-mask::$PASS"
           echo "KS_PASS=$PASS" >> "$GITHUB_ENV"
           echo "KEY_KIND=$KIND" >> "$GITHUB_ENV"
-          echo "Anahtar: $KIND"
+          echo "Anahtar: $KIND" | tee -a "$GITHUB_WORKSPACE/build.log"
 
       - name: Derle
         run: |
