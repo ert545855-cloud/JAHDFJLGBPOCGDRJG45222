@@ -1,4 +1,5 @@
 // SwipeUp — English interface dictionary (Turkish → English)
+import { words, tpl } from './en-extra.js';
 const D = {
   // Giriş / kayıt
   'Kaydırmaya kaldığın yerden devam et.': 'Pick up swiping where you left off.',
@@ -760,4 +761,11 @@ export const patterns = [
   [/^SwipeFarm · Seviye (\d+)(.*)$/, (_, l, r) => `SwipeFarm · Level ${l}${r.replace(/ rozet/, ' badges').replace(/ beğeni/, ' likes')}`],
   [/^Seviye (\d+) çiftliğimi gez$/, (_, l) => `Visit my level ${l} farm`],
 ];
+// Ek sözlük (yeni özellikler): elle yazılmış çeviriyi ezmez
+for (const [k, v] of Object.entries(words)) if (D[k] == null) D[k] = v;
+const reEsc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+for (const [k, v] of tpl) {
+  const re = new RegExp(`^${reEsc(k).replace(/\\\{(\d)\\\}/g, '(.+?)')}$`);
+  patterns.push([re, (...m) => v.replace(/\{(\d)\}/g, (_, i) => m[+i + 1] ?? '')]);
+}
 export default D;

@@ -113,4 +113,4 @@ function safeType(claimed, buf) {
 // Sunarken: betik çalıştıramayan türler (SVG / HTML / XML hariç)
 const isSafeType = (m) => /^(image\/(jpeg|png|gif|webp|avif|heic|heif|bmp)|video\/[\w.+-]+|audio\/[\w.+-]+)$/.test(String(m || '').split(';')[0].trim().toLowerCase());
 
-module.exports = { sniff, normalize, isHeic, heicToJpegSync, safeType, isSafeType };
+module.exports = { downscale, sniff, normalize, isHeic, heicToJpegSync, safeType, isSafeType };

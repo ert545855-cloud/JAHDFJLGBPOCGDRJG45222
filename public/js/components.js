@@ -267,6 +267,8 @@ export function autoplay(root) {
   return () => io.disconnect();
 }
 
+// Kendi yüklediğimiz fotoğrafın küçük hâli (ızgara, liste): /media/abc → /media/abc?w=480
+export const thumb = (src, w = 480) => (typeof src === 'string' && /^\/media\/[\w-]+(\?t=[\w.-]+)?$/.test(src) ? src.replace(/^(\/media\/[\w-]+)(\?)?/, (m0, a, q) => `${a}?w=${w}${q ? '&' : ''}`) : src);
 export function gridTile(p) {
   if (p.type === 'text') return `<a href="#/p/${esc(p.id)}" class="gt-text tbg-${esc(p.bg || 'g1')}"><span>${esc((p.caption || '').slice(0, 90))}</span></a>`;
   const first = (p.items || [])[0];
@@ -275,7 +277,7 @@ export function gridTile(p) {
   const poster = first?.poster || p.poster;
   const href = p.type === 'reel' ? `#/vitrin/${p.id}` : `#/p/${p.id}`;
   return `<a href="${href}">${vid
-    ? `${poster ? `<img src="${esc(poster)}" alt="" loading="lazy">` : `<video src="${esc(first?.media || p.media)}#t=0.5" muted playsinline preload="metadata"></video>`}
+    ? `${poster ? `<img src="${esc(thumb(poster))}" alt="" loading="lazy" decoding="async">` : `<video src="${esc(first?.media || p.media)}#t=0.5" muted playsinline preload="metadata"></video>`}
        <span class="badge">${icon(multi ? 'copy' : 'reels')}</span>${p.type === 'reel' ? `<span class="views">${icon('heart')}${num(p.likeCount)}</span>` : ''}`
-    : `<img src="${esc(first?.media || p.media)}" alt="" loading="lazy">${multi ? `<span class="badge">${icon('copy')}</span>` : ''}`}</a>`;
+    : `<img src="${esc(thumb(first?.media || p.media))}" alt="" loading="lazy" decoding="async">${multi ? `<span class="badge">${icon('copy')}</span>` : ''}`}</a>`;
 }

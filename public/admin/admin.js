@@ -5,7 +5,7 @@ import { icon } from '/js/icons.js';
 export const BASE = location.pathname.split('/').slice(0, 2).join('/');
 const S = { token: localStorage.getItem('su_admin'), me: null, counts: {} };
 const can = (p) => S.me?.role === 'owner' || (S.me?.perms || []).includes(p);
-const SEC_PERM = { growth: 'growth', users: 'users', support: 'support', reports: 'reports', appeals: 'appeals', flags: 'flags', verify: 'verify', orders: 'orders', payouts: 'payouts', market: 'market', ledger: 'erp', erp: 'erp', promos: 'promos', quests: 'quests', songs: 'songs', contests: 'contests', fal: 'fal', content: 'content', media: 'content', announce: 'announce', notes: 'notes', audit: 'audit', database: 'database', maintenance: 'maintenance', settings: 'settings', tags: 'tags', engage: 'engage', karaoke: 'engage', photomod: 'reports' };
+const SEC_PERM = { growth: 'growth', users: 'users', support: 'support', reports: 'reports', appeals: 'appeals', flags: 'flags', verify: 'verify', orders: 'orders', payouts: 'payouts', market: 'market', ledger: 'erp', erp: 'erp', promos: 'promos', quests: 'quests', songs: 'songs', contests: 'contests', fal: 'fal', content: 'content', media: 'content', announce: 'announce', notes: 'notes', audit: 'audit', errors: 'audit', database: 'database', maintenance: 'maintenance', settings: 'settings', tags: 'tags', engage: 'engage', karaoke: 'engage', photomod: 'reports' };
 const canSec = (k) => !SEC_PERM[k] || can(SEC_PERM[k]);
 const root = document.getElementById('root');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -66,6 +66,7 @@ const SECTIONS = [
   ['media', 'Medya', 'image'],
   ['announce', 'Bildirim gönder', 'bell'],
   ['notes', 'Notlar', 'edit'],
+  ['errors', 'Hatalar', 'bolt', 'errorsOpen'],
   ['audit', 'İşlem kaydı', 'eye'],
   ['database', 'Veritabanı', 'grid'],
   ['maintenance', 'Bakım modu', 'timer'],
@@ -223,7 +224,7 @@ function paintMaintBanner() {
 async function refreshCounts() {
   try {
     const o = await api('/overview');
-    const changed = ['songsPending', 'supportOpen', 'reportsOpen', 'photosOpen', 'appealsOpen', 'falPending', 'flagsOpen', 'verifyOpen', 'ordersPaid', 'payoutsOpen', 'marketOpen', 'maintenance'].some((k) => S.counts[k] !== o[k]);
+    const changed = ['songsPending', 'errorsOpen', 'supportOpen', 'reportsOpen', 'photosOpen', 'appealsOpen', 'falPending', 'flagsOpen', 'verifyOpen', 'ordersPaid', 'payoutsOpen', 'marketOpen', 'maintenance'].some((k) => S.counts[k] !== o[k]);
     if (S.counts.users && (o.supportOpen || 0) > (S.counts.supportOpen || 0)) { toast('🎧 Yeni destek mesajı var.'); ding(); }
     S.counts = o;
     paintMaintBanner();
@@ -254,7 +255,7 @@ VIEWS.overview = async (main) => {
       ${st(o.messagesToday, 'Bugün gönderilen mesaj')}${st(o.matches, 'Toplam eşleşme')}${st(o.posts, 'Gönderi ve vitrin videosu')}${st(o.stories, 'Yayında hikaye')}${st(o.banned, 'Askıda / yasaklı', true, '#/users')}
       ${st(o.reportsOpen, 'Açık şikayet', true, '#/reports')}${st(o.appealsOpen, 'Bekleyen itiraz', true, '#/appeals')}${st(o.falPending, 'Bekleyen fal', true, '#/fal')}
       ${st(o.flagsOpen, 'Moderasyon işareti', true, '#/flags')}${st(o.verifyOpen, 'Doğrulama bekleyen', true, '#/verify')}${st(o.ordersPaid, 'Onay bekleyen ödeme', true, '#/orders')}${st(o.payoutsOpen, 'Ödeme talebi', true, '#/payouts')}
-      ${st(o.plusUsers, 'SwipeUp+ üye')}${st(o.verifiedUsers, 'Mavi tikli üye')}
+      ${st(o.plusUsers, 'SwipeUp+ üye')}${o.plusTrialTotal ? st(`${o.plusTrials} / ${o.plusTrialBought}`, `Denemede / denemeden satın alan (toplam ${o.plusTrialTotal})`) : ''}${st(o.verifiedUsers, 'Mavi tikli üye')}
       <div class="stat"><b class="money in">${tl(o.income)}</b><span>Bu ay gelir</span></div>
       <div class="stat"><b class="money out">${tl(o.expense)}</b><span>Bu ay gider</span></div>
       <div class="stat"><b class="money ${o.income - o.expense >= 0 ? 'in' : 'out'}">${tl(o.income - o.expense)}</b><span>Bu ay net</span><a href="#/erp/gelir">Gelir ve gider</a></div>
@@ -547,6 +548,10 @@ VIEWS.songs = async (main) => {
   await songs(main, { api, esc, toast, head, d, dt, icon, userCell, can, token: () => S.token });
 };
 
+VIEWS.errors = async (main) => {
+  const { default: m } = await import('./errors.js');
+  await m(main, { api, esc, toast, head, d, dt, icon, userCell, can });
+};
 VIEWS.contests = async (main) => {
   const { default: m } = await import('./contests.js');
   await m(main, { api, esc, toast, head, d, dt, icon, userCell, can });
@@ -1677,7 +1682,8 @@ VIEWS.settings = async (main) => {
         <label>Ücretsiz günlük süper beğeni<input class="field" type="number" name="freeSupers" value="${e.freeSupers}"></label>
         <label>SwipeUp+ günlük süper beğeni<input class="field" type="number" name="plusSupers" value="${e.plusSupers}"></label>
         <label>Boost fiyatı (jeton)<input class="field" type="number" name="boostCoins" value="${e.boostCoins}"></label>
-        <label>Boost süresi (dakika)<input class="field" type="number" name="boostMinutes" value="${e.boostMinutes}"></label></div></div>
+        <label>Boost süresi (dakika)<input class="field" type="number" name="boostMinutes" value="${e.boostMinutes}"></label>
+        <label>Yeni üyeye SwipeUp+ denemesi (gün, 0 = kapalı)<input class="field" type="number" name="plusTrialDays" min="0" max="30" value="${e.plusTrialDays ?? 3}"></label></div></div>
       <div class="panel"><div class="ph"><h3>Tanışma özellikleri</h3></div><div class="pb fgrid">
         <label>Süper mesaj (jeton)<input class="field" type="number" name="superMsgCoins" value="${e.superMsgCoins ?? 30}"></label>
         <label>Davet ödülü (iki tarafa, jeton)<input class="field" type="number" name="inviteCoins" value="${e.inviteCoins ?? 50}"></label>
@@ -1717,7 +1723,7 @@ VIEWS.settings = async (main) => {
           falPrices: Object.fromEntries(Object.keys(FAL).map((k) => [k, +v(`fal_${k}`)])),
           falciShare: +v('falciShare'), creatorShare: +v('creatorShare'), coinTL: +v('coinTL'),
           freeLikes: +v('freeLikes'), freeSupers: +v('freeSupers'), plusSupers: +v('plusSupers'), boostCoins: +v('boostCoins'), boostMinutes: +v('boostMinutes'),
-          superMsgCoins: +v('superMsgCoins'), inviteCoins: +v('inviteCoins'), falSubCoins: +v('falSubCoins'),
+          superMsgCoins: +v('superMsgCoins'), inviteCoins: +v('inviteCoins'), falSubCoins: +v('falSubCoins'), plusTrialDays: +v('plusTrialDays'),
           plusPlans: read('plans', 'p').map((p) => { const old = e.plusPlans.find((x) => +x.days === +p.days); return { ...p, id: old?.id || `p${p.days}` }; }),
           coinPacks: read('packs', 'c').map((p) => { const old = e.coinPacks.find((x) => +x.coins === +p.coins); return { ...p, id: old?.id || `c${p.coins}` }; }),
           gifts: read('gifts', 'g').map((g, i) => ({ ...g, id: e.gifts[i]?.id || `g${i}${Date.now() % 1000}` })),

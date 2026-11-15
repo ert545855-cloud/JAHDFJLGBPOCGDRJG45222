@@ -1,3 +1,4 @@
+import { storeSection } from '../stickers.js';
 import { icon } from '../icons.js';
 import {
   api, esc, toast, sheet, state, on, refreshBadges,
@@ -55,7 +56,7 @@ export default async function store(view) {
     box.innerHTML = `
       <section class="wallet-card">
         <div><small>Jeton bakiyen</small><b>${icon('coin')} ${s.coins.toLocaleString('tr-TR')}</b></div>
-        <div class="${s.plus ? 'on' : ''}"><small>Üyelik</small><b>${s.plus ? `${icon('crown')} SwipeUp+` : 'Ücretsiz'}</b>${s.plus ? `<span>${date(s.plusUntil)} tarihine kadar</span>` : `<span>Bugün ${s.quota.likesLeft ?? '∞'} beğeni · ${s.quota.supersLeft} süper hakkın kaldı</span>`}</div>
+        <div class="${s.plus ? 'on' : ''}"><small>Üyelik</small><b>${s.plus ? `${icon('crown')} SwipeUp+` : 'Ücretsiz'}</b>${s.plus ? `<span>${state.me.plusTrial && state.me.plusTrial.until >= s.plusUntil - 60000 ? `Ücretsiz deneme · ${Math.max(1, Math.ceil((s.plusUntil - Date.now()) / 86400000))} gün kaldı` : `${date(s.plusUntil)} tarihine kadar`}</span>` : `<span>Bugün ${s.quota.likesLeft ?? '∞'} beğeni · ${s.quota.supersLeft} süper hakkın kaldı</span>`}</div>
       </section>
       ${s.payEnabled ? '' : '<div class="note-box">Ödeme sistemi çok yakında açılıyor. O zamana kadar ücretsiz özellikleri kullanmaya devam edebilirsin.</div>'}
       <h3 class="shop-h">${icon('crown')} SwipeUp+</h3>
@@ -77,9 +78,11 @@ export default async function store(view) {
         <div>${icon('star')}<span><b>Fal</b>Kahve ${s.falPrices.kahve} · Tarot ${s.falPrices.tarot} · Burç ${s.falPrices.burc} · Uyum ${s.falPrices.uyum} jeton</span></div>
         <div>${icon('bolt')}<span><b>Boost</b>${s.boostCoins} jeton · ${s.boostMinutes} dakika en üstte</span></div>
       </div>
+      <section class="stk-sec"></section>
       ${s.orders.length ? `<h3 class="shop-h">Siparişlerim</h3><div class="orders">${s.orders.map((o) => `<button class="order" data-o="${esc(o.id)}">
         <span class="grow"><b>${esc(o.title)}</b><small>${esc(o.code)} · ${date(o.at)}</small></span><span class="amt">${TL(o.amount)}</span><span class="st ${STATUS[o.status][1]}">${STATUS[o.status][0]}</span></button>`).join('')}</div>` : ''}
       <p class="muted" style="font-size:12.5px;margin:18px 2px 30px">Ödemeler havale/EFT ile alınır. Jetonlar nakde çevrilemez. Ayrıntılar için <a class="link" href="#/legal/kosullar">Kullanım koşulları</a>.</p>`;
+    storeSection(box.querySelector('.stk-sec'));
     box.querySelectorAll('[data-p]').forEach((b) => {
       b.onclick = async () => {
         try { const o = await api('/orders', { body: { productId: b.dataset.p } }); paySheet(o, load); load(); } catch (er) { toast(er.message); }

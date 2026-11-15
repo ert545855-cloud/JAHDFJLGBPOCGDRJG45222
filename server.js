@@ -92,7 +92,7 @@ function pub(u, viewerId) {
   const self = viewerId === u.id;
   // Yalnızca hesabın sahibinin görebileceği alanlar (başkasının profiline bakan bunları almaz)
   if (!self) ['paid', 'plusUntil', 'boostUntil', 'lastFreeBoost', 'lastSwipe', 'viewersSeenAt', 'verifyPose', 'banReason', 'bannedUntil', 'bannedAt', 'status', 'warned',
-    'passChangedByUser', 'prefs', 'consentAt', 'burcWeek', 'autoWeek', 'loginStreak', 'skin', 'logo', 'isBot', 'tonightUntil'].forEach((k) => { delete rest[k]; });
+    'passChangedByUser', 'prefs', 'consentAt', 'burcWeek', 'autoWeek', 'loginStreak', 'skin', 'logo', 'isBot', 'tonightUntil', 'plusTrial', 'stickerPacks'].forEach((k) => { delete rest[k]; });
   const hidden = !self && priv(u).hideLastSeen;
   const fdoc = viewerId && !self ? store.get('follows', `${viewerId}_${u.id}`) : null;
   return {
@@ -111,7 +111,7 @@ function pub(u, viewerId) {
   };
 }
 const brief = (u) => u && ({
-  id: u.id, username: u.username, name: u.name, avatar: u.avatar,
+  id: u.id, username: u.username, name: u.name, avatar: small(u.avatar, 320),
   online: priv(u).hideLastSeen ? false : isOnline(u.id), live: lives.has(u.id), lastSeen: priv(u).hideLastSeen ? null : u.lastSeen,
   createdAt: u.createdAt, role: u.role || null, verified: !!u.verified, plus: isPlus(u), frame: u.frame || null, private: !!priv(u).private,
 });
@@ -264,14 +264,18 @@ let gameOut = (g) => g; // social modülü yüklenince gizli oyun bilgisini sakl
 // ---- Özel medya: sohbet fotoğrafı / videosu / sesli mesajı bağlantıyı bilen herkese açık değil ----
 // Sunucu bu dosyaları yalnızca sohbetin üyelerine giden yanıtlarda süreli imzalı adresle verir; imzasız istek 404 alır.
 const MEDIA_RE = /^\/media\/([\w-]{6,40})$/;
+const MEDIA_W_RE = /^\/media\/([\w-]{6,40})(\?w=\d+)?$/; // küçük boyut istekli adres
+const thumbs = require('./server/thumbs');
+// Liste ve küçük görünümler için küçültülmüş fotoğraf adresi (yalnız kendi yüklemelerimiz)
+const small = (url, w) => (typeof url === 'string' && MEDIA_RE.test(url) ? `${url}?w=${w}` : url);
 const mediaKey = () => crypto.createHash('sha256').update('media|' + JWT_SECRET).digest();
 const mediaSig = (id, exp) => crypto.createHmac('sha256', mediaKey()).update(`${id}.${exp}`).digest('base64url').slice(0, 24);
 function signMedia(url) {
-  const mm = typeof url === 'string' && MEDIA_RE.exec(url); if (!mm) return url;
+  const mm = typeof url === 'string' && MEDIA_W_RE.exec(url); if (!mm) return url;
   const meta = store.get('media_meta', mm[1]); if (!meta?.private) return url;
   // Gün içinde aynı adres (tarayıcı önbelleği çalışsın), en az 2 gün geçerli; tek seferlik fotoğraf 2 dakika
   const exp = meta.once ? Math.ceil((now() + 120000) / 60000) * 60 : (Math.floor(now() / DAY) + 3) * (DAY / 1000);
-  return `${url}?t=${exp}.${mediaSig(mm[1], exp)}`;
+  return `${url}${mm[2] ? '&' : '?'}t=${exp}.${mediaSig(mm[1], exp)}`;
 }
 function mediaTokenOk(id, t) {
   const [e, s] = String(t || '').split('.'); const exp = +e;
@@ -289,7 +293,7 @@ function markPrivate(url, fromId, once = false) {
 
 function msgOut(m) {
   if (!m) return m;
-  if (m.deleted) return { ...m, text: '', media: null, game: null, plan: null, quote: null };
+  if (m.deleted) return { ...m, text: '', media: null, game: null, plan: null, quote: null, sticker: null, gift: null };
   let o = m;
   if (m.media && !m.viewOnce) o = { ...o, media: signMedia(m.media) };
   if (m.fal?.images?.length) o = { ...o, fal: { ...m.fal, images: m.fal.images.map(signMedia) } };
@@ -311,7 +315,7 @@ function falLock(chat, fromId) {
   if (me?.role === 'falci' && other?.role !== 'falci' && !store.find('messages', (m) => m.chatId === chat.id && m.fal)) return 'Sadece fal isteyenlere yazabilirsin.';
   return null;
 }
-function sendMessage(chat, fromId, { text, media, mediaType, replyTo, duration, system, story, fal, location, quote, game, plan, superMsg, viewOnce, share, compat, gift }) {
+function sendMessage(chat, fromId, { text, media, mediaType, replyTo, duration, system, story, fal, location, quote, game, plan, superMsg, viewOnce, share, compat, gift, sticker }) {
   text = String(text || '').slice(0, 4000).trim();
   // Medya sadece kendi yüklemelerimizden; GIF ise GIPHY/Tenor bağlantısı olabilir
   if (mediaType !== 'gif' && typeof media === 'string') media = media.split('?')[0]; // imzalı adres geri gelirse yalın hâli
@@ -320,7 +324,7 @@ function sendMessage(chat, fromId, { text, media, mediaType, replyTo, duration, 
   if (location && Number.isFinite(+location.lat) && Number.isFinite(+location.lng)) {
     loc = { lat: Math.round(+location.lat * 1e5) / 1e5, lng: Math.round(+location.lng * 1e5) / 1e5, label: String(location.label || '').slice(0, 80) };
   }
-  if (!text && !media && !fal && !loc && !game && !plan && !share && !compat && !gift) return null;
+  if (!text && !media && !fal && !loc && !game && !plan && !share && !compat && !gift && !sticker) return null;
   if (!system && !fal && falLock(chat, fromId)) return null;
   if (!chat.isGroup) {
     const other = chat.members.find((m) => m !== fromId);
@@ -338,7 +342,7 @@ function sendMessage(chat, fromId, { text, media, mediaType, replyTo, duration, 
     media: media || null, mediaType: media ? (['image', 'video', 'audio', 'gif'].includes(mediaType) ? mediaType : 'image') : null,
     duration: duration ? Math.min(600, Math.round(duration)) : null,
     reply, story: story || null, fal: fal || null, location: loc, system: !!system, reactions: {},
-    quote: quote || null, game: game || null, plan: plan || null, superMsg: !!superMsg, share: share || null, compat: compat || null, gift: gift || null,
+    quote: quote || null, game: game || null, plan: plan || null, superMsg: !!superMsg, share: share || null, compat: compat || null, gift: gift || null, sticker: sticker || null,
     viewOnce: !!(viewOnce && media && (mediaType === 'image' || !mediaType)), openedBy: [],
     at: now(), readBy: [fromId], deliveredTo: [fromId],
     expiresAt: chat.ttl && !system ? now() + chat.ttl : null,
@@ -904,7 +908,7 @@ app.post('/api/upload', auth, upload.single('file'), wrap(async (req, res) => {
 }));
 
 const mediaCache = new Map(); let cacheBytes = 0;
-function dropMediaCache(id) { const m = mediaCache.get(id); if (m) { cacheBytes -= m.data.length; mediaCache.delete(id); } }
+function dropMediaCache(id) { thumbs.drop(id); const m = mediaCache.get(id); if (m) { cacheBytes -= m.data.length; mediaCache.delete(id); } }
 const CACHE_MAX = 120 * 1024 * 1024;
 async function getMedia(id) {
   if (mediaCache.has(id)) { const m = mediaCache.get(id); mediaCache.delete(id); mediaCache.set(id, m); return m; }
@@ -924,7 +928,11 @@ app.get('/media/:id', wrap(async (req, res) => {
   if (pm?.private && !mediaTokenOk(req.params.id, req.query.t)) return res.status(404).end(); // özel dosya: imzasız / süresi geçmiş adres
   const m = await getMedia(req.params.id);
   if (!m) return res.status(404).end();
-  const total = m.data.length;
+  // Küçük boyut istendiyse (liste, ızgara, profil fotoğrafı) küçültülmüş JPEG ver
+  const tw = !req.headers.range && !pm?.once && thumbs.snap(req.query.w);
+  const small0 = tw ? await thumbs.thumb(req.params.id, tw, m) : null;
+  const data = small0 || m.data;
+  const total = data.length;
   // Güvenlik: dosya asla sayfa gibi çalışmasın (eski yüklemelerde güvenli olmayan tür varsa indirme olarak verilir)
   const safe = imagefix.isSafeType(m.mime);
   res.setHeader('Content-Type', safe ? m.mime : 'application/octet-stream');
@@ -944,10 +952,10 @@ app.get('/media/:id', wrap(async (req, res) => {
     res.status(206);
     res.setHeader('Content-Range', `bytes ${start}-${end}/${total}`);
     res.setHeader('Content-Length', end - start + 1);
-    return res.end(m.data.subarray(start, end + 1));
+    return res.end(data.subarray(start, end + 1));
   }
   res.setHeader('Content-Length', total);
-  res.end(m.data);
+  res.end(data);
 }));
 
 // ---------- Kişiler ----------
@@ -1583,7 +1591,7 @@ function cardOut(me, u, likedYou) {
     ...brief(u), age: shownAge(u), city: u.city, bio: u.bio, interests: u.interests || [], tags: tagsOf(u),
     distanceKm: distance(me, u), likedYou: eco.isPlus(me) ? likedYou : false,
     boosted: (u.boostUntil || 0) > now(), tonight: (u.tonightUntil || 0) > now(), music: featureCtx.musicCommon?.(me, u) || [], // ortak sanatçılar
-    photos: photos.length ? photos : [u.avatar],
+    photos: (photos.length ? photos : [u.avatar]).map((x) => small(x, 1080)), // kart ekranı: telefona yetecek boyut
     voice: u.voice || null, badges: (u.badges || []).filter((b) => !b.hidden).map(({ no, ...b }) => b), prompts: (u.prompts || []).map((p) => ({ ...p, q: socialMod.PROMPTS.find((x) => x[0] === p.id)?.[1] || '' })),
   };
 }
@@ -2019,6 +2027,7 @@ const featureCtx = {
   online, appEvent, falci, msgOut, falLock, shownAge, tagsOf, dropMediaCache: (id) => dropMediaCache(id), getMedia: (id) => getMedia(id), pushAdmins,
   storyItem, storyVisible, storyAlive, createPost: (u, b) => createPost(u, b), cleanSticker, systemMsg: (c, t) => systemMsg(c, t), groupAvatar,
 };
+require('./server/errlog')(app, featureCtx); // hata izleme (yönetim → Hatalar)
 require('./server/features')(app, featureCtx);
 require('./server/genel')(app, featureCtx);
 require('./server/market')(app, featureCtx);
@@ -2046,6 +2055,7 @@ require('./server/wheel')(app, featureCtx);
 require('./server/erp')(app, featureCtx);
 require('./server/quests')(app, featureCtx);
 require('./server/growth')(app, featureCtx);
+require('./server/trial')(app, featureCtx); // yeni üyelere SwipeUp+ denemesi (growth'tan sonra: kayıt cihazı bilgisi hazır olsun)
 require('./server/songs')(app, featureCtx);
 require('./server/venues')(app, featureCtx);
 require('./server/contests')(app, featureCtx);
@@ -2058,7 +2068,8 @@ require('./server/playkit')(app, featureCtx); // oyun altyapısı + server/play/
 require('./server/minigames')(app, featureCtx); // sohbet içi mini oyunlar: XOX, Dört Taş, TKM, Amiral Battı
 require('./server/kupa')(app, featureCtx); // Parti Kupası (3D)
 require('./server/farm')(app, featureCtx); // SwipeFarm: çiftlik oyunu
-require('./server/cifte')(app, featureCtx); // çifte buluşma (2'ye 2) ve müzik uyumu
+require('./server/cifte')(app, featureCtx);
+require('./server/stickers')(app, featureCtx); // sohbet çıkartma paketleri // çifte buluşma (2'ye 2) ve müzik uyumu
 photomod(app, featureCtx); // fotoğraf denetimi (Sightengine)
 require('./server/engage')(app, featureCtx); // seriler, kulüpler, günün sorusu, seçki, karaoke… (en son yüklenir)
 gameOut = featureCtx.gameOut;
@@ -2094,12 +2105,15 @@ app.use('/vendor/cannon', express.static(path.join(__dirname, 'node_modules', 'c
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders(res, p) {
     if (p.endsWith('sw.js') || p.endsWith('.html') || p.endsWith('.js') || p.endsWith('.css')) res.setHeader('Cache-Control', 'no-cache');
+    // Görseller ve ikonlar: 1 gün taze, 7 gün boyunca arkada yenilenerek önbellekten (her açılışta yeniden sorulmaz)
+    else if (/[\\/](img|icons|fonts)[\\/]/.test(p)) res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
   },
 }));
 app.get(/^\/(?!api\/|media\/|socket\.io).*/, (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 app.use((err, req, res, next) => {
   console.error(err);
+  if (err.code !== 'LIMIT_FILE_SIZE' && !(err.status >= 400 && err.status < 500)) featureCtx.serverError?.(err, req);
   if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'Dosya en fazla 40 MB olabilir.' });
   res.status(500).json({ error: 'Sunucu hatası, tekrar dene.' });
 });

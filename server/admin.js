@@ -295,6 +295,8 @@ module.exports = function mountAdmin(app, ctx) {
       songsPending: store.filter('songs', (s) => s.status === 'pending').length,
       marketOpen: store.filter('mk_orders', (o) => ['odeme_kontrol', 'sorunlu', 'iade_bekliyor'].includes(o.status)).length,
       plusUsers: users.filter((u) => (u.plusUntil || 0) > t).length,
+      errorsOpen: adminPub.errorsOpen ? adminPub.errorsOpen() : store.filter('client_errors', (x) => x.status === 'open').length,
+      plusTrials: users.filter((u) => u.plusTrial && u.plusTrial.until > t && !u.plusTrial.bought).length, plusTrialBought: users.filter((u) => u.plusTrial?.bought).length, plusTrialTotal: users.filter((u) => u.plusTrial).length,
       verifiedUsers: users.filter((u) => u.verified).length,
       income: sum('gelir'), expense: sum('gider'),
       store: store.kind, mediaMB: +((store.mediaBytes || 0) / 1048576).toFixed(1),
@@ -678,7 +680,7 @@ module.exports = function mountAdmin(app, ctx) {
     if (Array.isArray(b.plusPlans)) patch.plusPlans = b.plusPlans.slice(0, 4).map((p, i) => ({ id: String(p.id || `p${i}`).slice(0, 12), days: n(p.days, 1, 3650, 30) | 0, price: n(p.price, 0.01, 100000, 10), tag: String(p.tag || '').slice(0, 20) || undefined }));
     if (Array.isArray(b.gifts)) patch.gifts = b.gifts.slice(0, 12).map((g, i) => ({ id: String(g.id || `g${i}`).slice(0, 12), em: String(g.em || '🎁').slice(0, 4), name: String(g.name || 'Hediye').slice(0, 20), coins: n(g.coins, 1, 100000, 10) | 0 }));
     if (b.falPrices) patch.falPrices = Object.fromEntries(['kahve', 'tarot', 'burc', 'uyum', 'ruya'].map((k) => [k, n(b.falPrices[k], 0, 10000, cur.falPrices[k]) | 0]));
-    ['boostCoins', 'boostMinutes', 'freeLikes', 'freeSupers', 'plusSupers', 'superMsgCoins', 'inviteCoins', 'falSubCoins'].forEach((k) => { if (b[k] !== undefined) patch[k] = n(b[k], 0, 100000, cur[k]) | 0; });
+    ['boostCoins', 'boostMinutes', 'freeLikes', 'freeSupers', 'plusSupers', 'superMsgCoins', 'inviteCoins', 'falSubCoins', 'plusTrialDays'].forEach((k) => { if (b[k] !== undefined) patch[k] = n(b[k], 0, 100000, cur[k]) | 0; });
     ['creatorShare', 'falciShare'].forEach((k) => { if (b[k] !== undefined) patch[k] = n(b[k], 0, 1, cur[k]); });
     if (b.coinTL !== undefined) patch.coinTL = n(b.coinTL, 0, 100, cur.coinTL);
     eco.save(patch);
@@ -1151,5 +1153,6 @@ module.exports = function mountAdmin(app, ctx) {
     res.type('application/json').send(JSON.stringify(data));
   });
 
-  return { statusOf, ensureAdmin: ctx.ensureAdmin, adminAuth, owner, audit };
+  const adminPub = { statusOf, ensureAdmin: ctx.ensureAdmin, adminAuth, owner, audit };
+  return adminPub;
 };

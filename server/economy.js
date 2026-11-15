@@ -38,6 +38,7 @@ const DEFAULTS = {
   superMsgCoins: 8, // eşleşmeden süper mesaj
   inviteCoins: 12, // davet eden ve edilene
   falSubCoins: 60, // Falcı Teyze aylık aboneliği
+  plusTrialDays: 3, // yeni üyelere SwipeUp+ denemesi (gün, 0 = kapalı)
 };
 
 module.exports = function economy(store) {

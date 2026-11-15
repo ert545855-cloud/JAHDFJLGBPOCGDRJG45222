@@ -3,6 +3,7 @@ import { icon } from '../icons.js';
 import { legalSheet } from './legal.js';
 import { pendingRef } from '../extras.js';
 import { googleButton, appleCredential, oauthCfg } from '../oauth.js';
+import { LANGS, getLang, setLang } from '../i18n.js';
 
 // Kayıtta onay ve bilgilendirme (KVKK): koşullar kabul edilir; aydınlatma metni yalnızca bilgilendirir (onay istenmez);
 // zorunlu olmayan işlemeler ayrı, önceden işaretlenmemiş kutularla sorulur.
@@ -164,6 +165,7 @@ export default function auth(view, mode) {
     ${reg ? '' : '<div class="forgot"><a class="muted" href="#/forgot">Şifreni mi unuttun?</a></div>'}
     ${reg ? '' : `<a class="ins-cta" href="#/install"><img src="/icons/icon-192.png" alt=""><span><b>Uygulamayı telefona yükle</b><small>iPhone ve Android · ücretsiz</small></span>${icon('download')}</a>`}
     ${reg ? '' : `<div class="legal-links"><a href="#/legal/gizlilik">Gizlilik</a> · <a href="#/legal/kosullar">Koşullar</a> · <a href="#/legal/kvkk">KVKK</a></div>`}
+    <div class="lang-pick" data-noi18n>${LANGS.map(([k, n]) => `<button type="button" data-l="${k}" class="${getLang() === k ? 'on' : ''}">${n}</button>`).join('<span>·</span>')}</div>
     <div class="switch">${reg ? 'Hesabın var mı? <a class="link" href="#/login">Giriş yap</a>' : 'Yeni misin? <a class="link" href="#/register">Hesap oluştur</a>'}</div>
     ${adding ? '<div class="switch"><a class="link acc-cancel" href="#/me">Vazgeç, hesabıma dön</a></div>' : ''}
   </section>`;
@@ -187,6 +189,7 @@ export default function auth(view, mode) {
       btn.disabled = false;
     }
   };
+  view.querySelector('.lang-pick')?.addEventListener('click', (e) => { const b = e.target.closest('[data-l]'); if (b && b.dataset.l !== getLang()) setLang(b.dataset.l); });
   view.querySelector('.acc-cancel')?.addEventListener('click', () => { try { sessionStorage.removeItem('su_add'); } catch { /* yok */ } });
   wireDocs(f);
   const gb = view.querySelector('.g-btn');

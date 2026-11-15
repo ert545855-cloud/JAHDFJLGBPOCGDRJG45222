@@ -1,3 +1,4 @@
+import { stickerSheet, stickerHtml } from '../stickers.js';
 import { icon } from '../icons.js';
 import { miniHtml, hydrateMini, miniClick } from '../minigames.js';
 import {
@@ -195,6 +196,7 @@ ${meta}</div>`;
         ${m.text ? `<div class="msg">${reply}${esc(m.text)}${meta}</div>` : `<span class="shm-meta">${meta}</span>`}`;
     }
     if (m.game) return `<div class="msg game-msg ${m.game.kind === 'mini' ? 'mini-msg' : ''}">${gameHtml(m)}${meta}</div>`;
+    if (m.sticker) return `<div class="msg stk-msg">${reply}${stickerHtml(m.sticker, 128)}${meta}</div>`;
     if (m.gift) return `<div class="msg gift-msg">${giftIcon(m.gift, 64, 'gf-em')}<b>${esc(m.gift.name)}</b><small>${m.from === state.me.id ? `${esc(otherName())} kişisine gönderdin` : 'sana hediye gönderdi'} · ${m.gift.coins} jeton</small>${meta}</div>`;
     if (m.compat) return `<div class="msg compat-msg">${compatHtml(m)}${meta}</div>`;
     if (m.plan) return `<div class="msg plan-msg">${planHtml(m)}${meta}</div>`;
@@ -695,7 +697,7 @@ ${meta}</div>`;
         <div class="box">
           <button type="button" class="icon-btn pic" aria-label="Fotoğraf veya video gönder">${icon('image')}</button>
           <textarea rows="1" placeholder="Mesaj yaz..." aria-label="Mesaj yaz" maxlength="4000"></textarea>
-          ${falChat ? '' : `<button type="button" class="icon-btn gifb" aria-label="GIF gönder">${icon('gif')}</button>`}
+          ${falChat ? '' : `<button type="button" class="icon-btn stkb" aria-label="Çıkartma gönder">${icon('sticker')}</button><button type="button" class="icon-btn gifb" aria-label="GIF gönder">${icon('gif')}</button>`}
           <button type="button" class="icon-btn more-b" aria-label="Diğer">${icon('plusSq')}</button>
         </div>
         <button class="go" aria-label="Basılı tutarak sesli mesaj kaydet">${icon('mic')}</button>
@@ -737,6 +739,9 @@ ${meta}</div>`;
       } catch (er) { toast(er.message); }
     };
     comp.querySelector('.pic').onclick = () => sendMedia('image/*,video/*');
+    comp.querySelector('.stkb')?.addEventListener('click', () => stickerSheet(async (st) => {
+      try { const r = await api(`/chats/${chatId}/sticker`, { body: { pack: st.pack, item: st.id, replyTo: replyTo?.id } }); if (r.message) addMsg(r.message); comp.querySelector('.replying .x')?.click(); } catch (er) { toast(er.message); }
+    }));
     comp.querySelector('.gifb')?.addEventListener('click', async () => {
       const src = await pickGif({ title: 'GIF gönder', upload: false }); if (!src) return;
       try { await send({ media: src, mediaType: src.startsWith('/media/') ? 'image' : 'gif' }); } catch (er) { toast(er.message); }
