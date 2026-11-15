@@ -34,6 +34,11 @@ function ui(peer, video, status) {
   return root;
 }
 
+// Görüntülü tanışma güvenlik ipucu
+function introTip() {
+  const t = el(`<div class="intro-tip">${icon('shield')}<span>Rahat hissetmezsen istediğin an kapatabilir, sohbetten bildirebilirsin. Görüşme 10 dakika sonra kendiliğinden biter.</span></div>`);
+  cur?.ui.append(t); setTimeout(() => t.remove(), 9000);
+}
 function setStatus(t) { cur?.ui.querySelector('.st') && (cur.ui.querySelector('.st').textContent = t); }
 
 function controls(kind) {
@@ -99,7 +104,13 @@ function connected() {
   cur.started = Date.now();
   cur.ui.classList.add('connected');
   cur.ui.querySelector('.who img').classList.remove('pulse');
-  cur.timer = setInterval(() => setStatus(fmtDur((Date.now() - cur.started) / 1000)), 1000);
+  cur.timer = setInterval(() => {
+    if (cur.endsAt) {
+      const left = Math.max(0, (cur.endsAt - Date.now()) / 1000);
+      setStatus(`${fmtDur(left)} kaldı`);
+      if (left < 60 && !cur.warned) { cur.warned = true; toast('Son 1 dakika.', { ms: 2500 }); }
+    } else setStatus(fmtDur((Date.now() - cur.started) / 1000));
+  }, 1000);
 }
 
 async function handleSignal({ from, data }) {
@@ -142,17 +153,19 @@ function teardown(msg) {
   if (msg) toast(msg, { ms: 2000 });
 }
 
-export async function startCall(chatId, peer, video) {
+export async function startCall(chatId, peer, video, intro = false) {
   if (cur) return toast('Zaten bir görüşmedesin.');
   if (!window.RTCPeerConnection || !navigator.mediaDevices) return toast('Bu tarayıcı aramayı desteklemiyor.');
-  cur = { id: null, peer, video, role: 'caller', ui: ui(peer, video, 'Aranıyor...') };
+  if (intro) video = true;
+  cur = { id: null, peer, video, intro, role: 'caller', ui: ui(peer, video, intro ? 'Görüntülü tanışma · 10 dk' : 'Aranıyor...') };
+  if (intro) introTip();
   controls('active');
   try {
     cur.stream = await getMedia(video);
     if (!cur) { return; }
     showLocal();
   } catch (e) { toast(e.message); teardown(); return; }
-  state.socket.emit('call:start', { chatId, video }, (r) => {
+  state.socket.emit('call:start', { chatId, video, intro }, (r) => {
     if (!cur) return;
     if (r?.error) { toast(r.error); teardown(); return; }
     cur.id = r.callId;
@@ -161,9 +174,10 @@ export async function startCall(chatId, peer, video) {
 }
 
 export function initCalls() {
-  on('call:incoming', ({ callId, video, from }) => {
+  on('call:incoming', ({ callId, video, from, intro }) => {
     if (cur) { if (cur.id !== callId) state.socket.emit('call:reject', { callId }); return; }
-    cur = { id: callId, peer: from, video, role: 'callee', ui: ui(from, video, video ? 'Görüntülü arama' : 'Sesli arama') };
+    cur = { id: callId, peer: from, video, intro, role: 'callee', ui: ui(from, video, intro ? '10 dakikalık görüntülü tanışma' : video ? 'Görüntülü arama' : 'Sesli arama') };
+    if (intro) introTip();
     controls('incoming');
     cur.stopRing = ringtone();
   });
@@ -175,10 +189,12 @@ export function initCalls() {
     state.socket.emit('call:signal', { to: peerSocket, data: { sdp: pc.localDescription } });
   });
   on('call:signal', handleSignal);
+  // Görüntülü tanışma: geri sayım
+  on('call:limit', ({ callId, endsAt }) => { if (cur && (!cur.id || cur.id === callId)) { cur.endsAt = endsAt; cur.warned = false; } });
   on('call:taken', ({ callId }) => { if (cur?.id === callId) teardown(); });
   on('call:ended', ({ callId, reason }) => {
     if (!cur || (cur.id && cur.id !== callId)) return;
-    const msg = cur.started ? 'Arama bitti' : reason === 'rejected' ? (cur.role === 'caller' ? 'Meşgul' : null) : reason === 'timeout' ? (cur.role === 'caller' ? 'Cevap yok' : 'Cevapsız arama') : 'Arama bitti';
+    const msg = reason === 'limit' ? '10 dakika doldu. Devam etmek istersen yeniden arayabilir ya da buluşma planlayabilirsin.' : cur.started ? 'Arama bitti' : reason === 'rejected' ? (cur.role === 'caller' ? 'Meşgul' : null) : reason === 'timeout' ? (cur.role === 'caller' ? 'Cevap yok' : 'Cevapsız arama') : 'Arama bitti';
     teardown(msg);
   });
 }

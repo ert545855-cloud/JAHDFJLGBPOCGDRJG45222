@@ -73,7 +73,7 @@ module.exports = function social(app, ctx) {
   // ================= Profil ziyaretçileri (SwipeUp+) =================
   app.post('/api/users/:id/view', auth, (req, res) => {
     const t = user(req.params.id);
-    if (!t || t.id === req.user.id || req.user.role === 'falci' || req.user.privacy?.hideVisits) return res.json({ ok: true });
+    if (!t || t.id === req.user.id || req.user.role === 'falci' || (req.user.privacy?.hideVisits && eco.isPlus(req.user))) return res.json({ ok: true }); // SwipeUp+: görünmeden gez
     const day = new Date().toISOString().slice(0, 10);
     const id = `${req.user.id}_${t.id}_${day}`;
     if (!store.get('pviews', id)) {

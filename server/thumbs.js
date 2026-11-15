@@ -11,21 +11,24 @@ function getWorker() {
   if (worker) return worker;
   const { Worker } = require('worker_threads');
   worker = new Worker(path.join(__dirname, 'thumb-worker.js'));
-  worker.on('message', ({ id, ok, data, error }) => { const p = pend.get(id); if (!p) return; pend.delete(id); clearTimeout(p.t); if (ok) p.res(data ? Buffer.from(data) : null); else p.rej(new Error(error)); });
+  worker.on('message', ({ id, ok, data, error, hash }) => { const p = pend.get(id); if (!p) return; pend.delete(id); clearTimeout(p.t); if (ok) p.res(hash || (data ? Buffer.from(data) : null)); else p.rej(new Error(error)); });
   const dead = (e) => { for (const p of pend.values()) { clearTimeout(p.t); p.rej(e || new Error('çalışan durdu')); } pend.clear(); worker = null; };
   worker.on('error', dead); worker.on('exit', () => dead());
   worker.unref();
   return worker;
 }
-function make(buf, w) {
+function make(buf, w, op) {
   return new Promise((res, rej) => {
     const id = ++seq;
     const t = setTimeout(() => { pend.delete(id); rej(new Error('zaman aşımı')); }, 20000);
     pend.set(id, { res, rej, t });
     const copy = new Uint8Array(buf); // aktarım için kopya (önbellekteki asıl dosya bozulmasın)
-    getWorker().postMessage({ id, buf: copy, w }, [copy.buffer]);
+    getWorker().postMessage({ id, buf: copy, w, op }, [copy.buffer]);
   });
 }
+// Fotoğrafın benzerlik özeti (yalnız JPEG); yapılamazsa null
+const hash = (item) => (item?.mime === 'image/jpeg' ? make(item.data, 0, 'hash').catch(() => null) : Promise.resolve(null));
+const hamming = (a, b) => { let x = BigInt('0x' + a) ^ BigInt('0x' + b); let n = 0; while (x) { n += Number(x & 1n); x >>= 1n; } return n; };
 const snap = (w) => { w = parseInt(w, 10); if (!w || w < 1) return 0; return SIZES.find((s) => s >= w) || SIZES[SIZES.length - 1]; };
 
 // Küçüğü döndürür; gerek yoksa / yapılamazsa null (asıl dosya gönderilir)
@@ -45,4 +48,4 @@ async function thumb(id, w, item) {
   return p;
 }
 const drop = (id) => { for (const k of [...cache.keys()]) if (k.startsWith(id + '_')) { const x = cache.get(k); bytes -= x ? x.length : 0; cache.delete(k); } };
-module.exports = { thumb, snap, drop, SIZES, stats: () => ({ items: cache.size, mb: +(bytes / 1048576).toFixed(1) }) };
+module.exports = { thumb, snap, drop, hash, hamming, SIZES, stats: () => ({ items: cache.size, mb: +(bytes / 1048576).toFixed(1) }) };

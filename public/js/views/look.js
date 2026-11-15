@@ -1,10 +1,11 @@
+import { themeSection } from '../supers.js';
 import { icon } from '../icons.js';
 import { api, esc, toast, state, needCoins, emit } from '../core.js';
 
 const back = `<button class="ib" data-back="#/me" aria-label="Geri">${icon('back')}</button>`;
 
 export default async function look(view) {
-  view.innerHTML = `<header class="topbar">${back}<div class="center">Çerçeve ve rozet</div><a class="ib soft" href="#/store" aria-label="Jeton al">${icon('coin')}</a></header><div class="look"><div class="spinner"></div></div>`;
+  view.innerHTML = `<header class="topbar">${back}<div class="center">Görünüm</div><a class="ib soft" href="#/store" aria-label="Jeton al">${icon('coin')}</a></header><div class="look"><div class="spinner"></div></div>`;
   const box = view.querySelector('.look');
   let c;
   const preview = (id) => `<div class="av-wrap fr fr-${esc(id)}"><img class="av av-64" src="${esc(state.me.avatar)}" alt=""></div>`;
@@ -23,7 +24,9 @@ export default async function look(view) {
       ${c.frame ? '<button class="btn block nofr" style="margin-top:14px">Çerçeveyi kaldır</button>' : ''}
       ${(c.badges || []).length ? `<h3 class="shop-h">Rozetlerin</h3><p class="muted" style="font-size:13px;margin:-4px 2px 10px">Rozetlerin etkinlik bittikten sonra da sende kalır. Profilinde görünüp görünmeyeceğini buradan seçebilirsin.</p>
         <div class="bdg-list">${c.badges.map((b) => `<label class="bdg-row"><span class="be">${b.em}</span><span class="grow"><b>${esc(b.name)}</b><small>${b.hidden ? 'Profilinde gizli' : 'Profilinde görünüyor'}</small></span><input type="checkbox" class="sw bt" data-id="${esc(b.id)}" ${b.hidden ? '' : 'checked'}></label>`).join('')}</div>` : ''}
+      <section class="pt-sec"></section>
       <div style="height:30px"></div>`;
+    themeSection(box.querySelector('.pt-sec'));
   };
   const load = async () => { c = await api('/cosmetics'); render(); };
   const sync = (r) => { if (r.coins != null) state.me.coins = r.coins; emit('me', state.me); };

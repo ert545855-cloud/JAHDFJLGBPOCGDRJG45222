@@ -764,8 +764,12 @@ export const patterns = [
 // Ek sözlük (yeni özellikler): elle yazılmış çeviriyi ezmez
 for (const [k, v] of Object.entries(words)) if (D[k] == null) D[k] = v;
 const reEsc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Uzun (özgül) kalıplar eski genel kalıplardan önce denensin: "5 süper beğeni" → "{0} beğeni" yerine "{0} süper beğeni"
+const early = [];
 for (const [k, v] of tpl) {
   const re = new RegExp(`^${reEsc(k).replace(/\\\{(\d)\\\}/g, '(.+?)')}$`);
-  patterns.push([re, (...m) => v.replace(/\{(\d)\}/g, (_, i) => m[+i + 1] ?? '')]);
+  const p = [re, (...m) => v.replace(/\{(\d)\}/g, (_, i) => m[+i + 1] ?? '')];
+  if (k.replace(/\{\d\}/g, '').trim().length >= 10) early.push(p); else patterns.push(p);
 }
+patterns.unshift(...early);
 export default D;

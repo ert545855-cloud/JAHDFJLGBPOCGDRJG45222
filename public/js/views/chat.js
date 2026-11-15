@@ -750,6 +750,7 @@ ${meta}</div>`;
       <button data-a="cam">${icon('camera')}Fotoğraf çek</button>
       <button data-a="once">${icon('eye')}<span class="grow">Tek seferlik fotoğraf<div class="sub muted" style="font-size:12.5px">Bir kez açılır, sonra silinir</div></span></button>
       ${isGroup || falChat ? '' : `<button data-a="game">🎲<span class="grow">Oyun başlat<div class="sub muted" style="font-size:12.5px">XOX, Dört Taş, Amiral Battı, İki doğru bir yalan…</div></span></button>
+      <button data-a="vintro">${icon('video')}<span class="grow">Görüntülü tanışma<div class="sub muted" style="font-size:12.5px">Buluşmadan önce 10 dakikalık görüntülü görüşme</div></span></button>
       <button data-a="plan">${egi('secki', 28)}<span class="grow">Buluşma planla<div class="sub muted" style="font-size:12.5px">Yakındaki kafe ve mekan önerileri, hatırlatma</div></span></button>
       <button data-a="compat">${egi('uyum', 28)}<span class="grow">Uyum testi<div class="sub muted" style="font-size:12.5px">10 soru, sonucu Falcı Teyze yorumlar</div></span></button>
       <button data-a="ideas">${egi('mekan', 28)}<span class="grow">Buluşma fikirleri<div class="sub muted" style="font-size:12.5px">Ortak ilgi alanlarınıza göre öneriler</div></span></button>
@@ -768,6 +769,7 @@ ${meta}</div>`;
           if (a === 'once') sendOnce();
           if (a === 'game') gameSheet();
           if (a === 'plan') planSheet();
+          if (a === 'vintro') startCall(chatId, other, true, true);
           if (a === 'compat') startCompat();
           if (a === 'ideas') ideasSheet();
           if (a === 'st') startersSheet();

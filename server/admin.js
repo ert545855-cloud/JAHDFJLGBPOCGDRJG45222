@@ -683,6 +683,8 @@ module.exports = function mountAdmin(app, ctx) {
     ['boostCoins', 'boostMinutes', 'freeLikes', 'freeSupers', 'plusSupers', 'superMsgCoins', 'inviteCoins', 'falSubCoins', 'plusTrialDays'].forEach((k) => { if (b[k] !== undefined) patch[k] = n(b[k], 0, 100000, cur[k]) | 0; });
     ['creatorShare', 'falciShare'].forEach((k) => { if (b[k] !== undefined) patch[k] = n(b[k], 0, 1, cur[k]); });
     if (b.coinTL !== undefined) patch.coinTL = n(b.coinTL, 0, 100, cur.coinTL);
+    if (Array.isArray(b.invitePrizes)) patch.invitePrizes = b.invitePrizes.slice(0, 3).map((x) => n(x, 0, 100000, 0) | 0);
+    if (Array.isArray(b.superPacks)) patch.superPacks = b.superPacks.slice(0, 4).map((p, i) => ({ id: String(p.id || `s${i}`).slice(0, 12), n: n(p.n, 1, 1000, 5) | 0, coins: n(p.coins, 1, 100000, 40) | 0, tag: String(p.tag || '').slice(0, 20) || undefined }));
     eco.save(patch);
     audit(req.admin, 'ekonomi ayarlarını güncelledi', null, Object.keys(patch).join(', '));
     res.json(eco.get());

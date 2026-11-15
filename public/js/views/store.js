@@ -1,3 +1,4 @@
+import { supersStoreSection } from '../supers.js';
 import { storeSection } from '../stickers.js';
 import { icon } from '../icons.js';
 import {
@@ -66,6 +67,9 @@ export default async function store(view) {
         <li>${icon('undo')}<span>Son kaydırmanı geri al</span></li>
         <li>${icon('star')}<span>Günde ${s.plusSupers} süper beğeni <small>(ücretsiz: ${s.freeSupers})</small></span></li>
         <li>${icon('bolt')}<span>Haftada 1 ücretsiz boost</span></li>
+        <li>${icon('dcheck')}<span>Gizli okuma <small>(mavi tik göndermeden oku)</small></span></li>
+        <li>${icon('eye')}<span>Profillere görünmeden bak</span></li>
+        <li>${icon('crown')}<span>Profil teması ve renkli isim</span></li>
       </ul>
       <div class="plans">${s.plusPlans.map((p) => `<button class="plan" data-p="${esc(p.id)}" ${s.payEnabled ? '' : 'disabled'}>
         ${p.tag ? `<span class="tag">${esc(p.tag)}</span>` : ''}<b>${p.days >= 30 && p.days % 30 === 0 ? `${p.days / 30} ay` : `${p.days} gün`}</b><span class="price">${TL(p.price)}</span><small>${TL(p.price / Math.max(1, p.days / 30))} / ay</small></button>`).join('')}</div>
@@ -78,11 +82,13 @@ export default async function store(view) {
         <div>${icon('star')}<span><b>Fal</b>Kahve ${s.falPrices.kahve} · Tarot ${s.falPrices.tarot} · Burç ${s.falPrices.burc} · Uyum ${s.falPrices.uyum} jeton</span></div>
         <div>${icon('bolt')}<span><b>Boost</b>${s.boostCoins} jeton · ${s.boostMinutes} dakika en üstte</span></div>
       </div>
+      <section class="sp-sec"></section>
       <section class="stk-sec"></section>
       ${s.orders.length ? `<h3 class="shop-h">Siparişlerim</h3><div class="orders">${s.orders.map((o) => `<button class="order" data-o="${esc(o.id)}">
         <span class="grow"><b>${esc(o.title)}</b><small>${esc(o.code)} · ${date(o.at)}</small></span><span class="amt">${TL(o.amount)}</span><span class="st ${STATUS[o.status][1]}">${STATUS[o.status][0]}</span></button>`).join('')}</div>` : ''}
       <p class="muted" style="font-size:12.5px;margin:18px 2px 30px">Ödemeler havale/EFT ile alınır. Jetonlar nakde çevrilemez. Ayrıntılar için <a class="link" href="#/legal/kosullar">Kullanım koşulları</a>.</p>`;
     storeSection(box.querySelector('.stk-sec'));
+    supersStoreSection(box.querySelector('.sp-sec'));
     box.querySelectorAll('[data-p]').forEach((b) => {
       b.onclick = async () => {
         try { const o = await api('/orders', { body: { productId: b.dataset.p } }); paySheet(o, load); load(); } catch (er) { toast(er.message); }
