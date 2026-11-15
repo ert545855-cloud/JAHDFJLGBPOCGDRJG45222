@@ -372,6 +372,7 @@ export const nm = (u, field = 'name') => `${esc(u?.[field] || u?.username || '')
 // Fotoğraf / video filtreleri (yalnız görüntüde uygulanır)
 export const FILTERS = [
   ['', 'Normal', 'none'],
+  ['aydinlik', 'Aydınlık', 'brightness(1.28) contrast(1.06) saturate(1.1)'], // karanlık ortam için
   ['canli', 'Canlı', 'saturate(1.65) contrast(1.1) brightness(1.03)'],
   ['siyahbeyaz', 'Siyah Beyaz', 'grayscale(1) contrast(1.08)'],
   ['noir', 'Noir', 'grayscale(1) contrast(1.45) brightness(.92)'],
