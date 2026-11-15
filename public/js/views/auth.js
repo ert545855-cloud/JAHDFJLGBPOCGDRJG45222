@@ -24,7 +24,39 @@ async function oauthSignIn(view, provider, credential, err) {
     if (r.needSignup) return oauthSignup(view, provider, credential, r);
     setSession(r.token, r.user);
     goHome(false);
-  } catch (er) { err.textContent = er.message; }
+  } catch (er) {
+    if (er.status === 409 && er.data?.linkNeeded) return oauthLink(view, provider, credential, er.message);
+    err.textContent = er.message;
+  }
+}
+// Aynı e-postayla şifreli hesap var: şifre bir kez girilir, Google/Apple hesabı bağlanır ve giriş yapılır
+function oauthLink(view, provider, credential, msg) {
+  const P = provider === 'apple' ? 'Apple' : 'Google';
+  view.innerHTML = `<section class="auth">
+    <div class="wordmark">${logo()}</div>
+    <h2 class="acc-add-h">${P} hesabını bağla</h2>
+    <p class="tagline">${esc(msg)}</p>
+    <form novalidate>
+      <label class="ic-field">${icon('lock')}<input class="field" name="password" type="password" placeholder="SwipeUp şifren" autocomplete="current-password" required></label>
+      <button class="btn primary block" style="margin-top:6px">Bağla ve giriş yap</button>
+      <div class="err" role="alert"></div>
+    </form>
+    <div class="forgot"><a class="muted" href="#/forgot">Şifreni mi unuttun?</a></div>
+    <div class="switch"><a class="link" href="#/login">Vazgeç</a></div>
+  </section>`;
+  const f = view.querySelector('form'); const err = f.querySelector('.err');
+  f.password.focus();
+  f.onsubmit = async (e) => {
+    e.preventDefault(); err.textContent = '';
+    const btn = f.querySelector('button'); btn.disabled = true;
+    try {
+      if (!f.password.value) throw new Error('Şifreni gir.');
+      const r = await api('/auth/oauth', { body: { provider, credential, password: f.password.value, ref: pendingRef() } });
+      setSession(r.token, r.user);
+      toast(`${P} hesabın bağlandı. Bundan sonra tek dokunuşla girersin.`);
+      goHome(false);
+    } catch (er) { err.textContent = er.message; btn.disabled = false; if (/süresi dolmuş|geçersiz/i.test(er.message)) setTimeout(() => { location.hash = '#/login'; }, 1600); }
+  };
 }
 function oauthSignup(view, provider, credential, info) {
   const P = provider === 'apple' ? 'Apple' : 'Google';
@@ -159,6 +191,9 @@ export default function auth(view, mode) {
   wireDocs(f);
   const gb = view.querySelector('.g-btn');
   if (gb) googleButton(gb, (c) => oauthSignIn(view, 'google', c, err), reg ? 'signup_with' : 'continue_with').catch((er) => { gb.textContent = er.message; gb.classList.add('muted'); });
+  // Yönlendirmeli Google girişinden dönüldüyse (ana ekran iPhone uygulaması) kaldığı yerden devam et
+  const gr = state.googleReturn; state.googleReturn = null;
+  if (gr?.error) err.textContent = gr.error; else if (gr?.credential) oauthSignIn(view, 'google', gr.credential, err);
   view.querySelector('.ap-btn')?.addEventListener('click', async () => { try { const c = await appleCredential(); if (c) oauthSignIn(view, 'apple', c, err); } catch (er) { if (er?.error !== 'popup_closed_by_user') err.textContent = er.message || 'Apple ile giriş tamamlanmadı.'; } });
   f.username.addEventListener('input', () => { if (reg) f.username.value = f.username.value.toLowerCase().replace(/\s/g, ''); });
   return null;

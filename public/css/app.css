@@ -4128,6 +4128,10 @@ html.land-game #fx-layer { display: none; }
 .auth .oauth .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; }
 .auth .oauth .or::before, .auth .oauth .or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
 .auth .g-btn { display: flex; justify-content: center; min-height: 44px; }
+.g-btn.g-off { display: none; }
+.g-note { display: grid; gap: 8px; justify-items: center; text-align: center; font-size: 13px; line-height: 1.45; color: var(--muted); background: color-mix(in srgb, var(--muted) 10%, transparent); border-radius: 14px; padding: 10px 12px; }
+.g-note b { color: var(--text); }
+.lg-row .g-note { grid-column: 1 / -1; }
 .ai-cons { font-size: 12.5px; }
 .lg-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; }
 .lg-row > span { color: var(--muted); font-size: 13.5px; }

@@ -10,6 +10,7 @@ import { maybeShowInstall } from './install.js';
 import { initEvent } from './event.js';
 import { checkSafety } from './extras.js';
 import { initI18n } from './i18n.js';
+import { takeGoogleReturn } from './oauth.js';
 
 const routes = [
   [/^\/?$/, 'feed', { tab: 'home' }],
@@ -371,6 +372,13 @@ async function boot() {
   }
   if (!state.config) state.config = await fetch('/api/config').then((r) => r.json()).catch(() => ({}));
   if (state.config?.maintenance) { showMaintenance(state.config.maintenance); return; }
+  // Yönlendirmeli Google girişinden dönüş (?g=kod)
+  const gr = await takeGoogleReturn();
+  if (gr?.purpose === 'link' && state.token && state.me) {
+    location.hash = '#/settings';
+    if (gr.error) setTimeout(() => toast(gr.error), 600);
+    else api('/me/logins', { body: { provider: 'google', credential: gr.credential } }).then(async () => { Object.assign(state.me, await api('/me')); toast('Google hesabın bağlandı.'); }).catch((er) => toast(er.message));
+  } else if (gr) { state.googleReturn = gr; if (!/^#\/(login|register)/.test(location.hash)) location.hash = '#/login'; }
   afterBoot(state.config?.version);
   initEvent(state.config);
   // İlk ziyarette telefona yükleme kılavuzu (iPhone: Safari → Ana Ekrana Ekle)
