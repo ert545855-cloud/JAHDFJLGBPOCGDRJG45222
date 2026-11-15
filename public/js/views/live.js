@@ -3,7 +3,7 @@ import {
   shareSheet, state, api, esc, on, toast, el, sheet, needCoins, tick, FILTERS, filterCss,
 } from '../core.js';
 import { giftIcon } from '../eg-icons.js';
-import { openCamera, switchCamera } from '../cam.js';
+import { openCamera, switchCamera, WANT, tuneTrack, lumaOf } from '../cam.js';
 import { lyricView } from '../lyrics.js';
 
 // Yayıncı efekt seçici (izleyicilerde de aynı efekt görünür)
@@ -63,6 +63,8 @@ export function makePeer(remoteId, onTrack, tag) {
   return pc;
 }
 
+// Yatay gelen görüntü (bilgisayar kamerası) dikey ekranda ortası kırpılmasın: tamamı sığdırılır
+function fitVideo(root, video) { const f = () => { const land = video.videoWidth > video.videoHeight * 1.05; root.classList.toggle('land', land); }; video.addEventListener('loadedmetadata', f); video.addEventListener('resize', f); }
 export function chrome(view, user, { host }) {
   view.innerHTML = `<div class="live">
     <video playsinline autoplay ${host ? 'muted class="mirror"' : ''}></video>
@@ -80,6 +82,7 @@ export function chrome(view, user, { host }) {
     <div class="comments" aria-live="polite"></div>
     <div class="slot"></div>
   </div>`;
+  fitVideo(view.querySelector('.live'), view.querySelector('.live video'));
   return view.querySelector('.live');
 }
 
@@ -122,6 +125,11 @@ export function wireChat(root, hostId) {
 }
 
 // ------------ Yayıncı ------------
+// Görüntü kalitesi: tarayıcının varsayılan düşük bit hızı yerine yayına uygun bir üst sınır (yavaş ağda tarayıcı yine kendisi düşürür)
+async function quality(sender) {
+  if (!sender?.getParameters || !sender.track) return;
+  try { const p = sender.getParameters(); if (!p.encodings?.length) p.encodings = [{}]; p.encodings[0].maxBitrate = 2_500_000; p.encodings[0].maxFramerate = 30; p.degradationPreference = 'balanced'; await sender.setParameters(p); } catch { /* desteklenmiyor */ }
+}
 // Yayıncı çekirdeği: her izleyiciye bağlantı kurar. Görüntü izi sonradan eklenebilir, değiştirilebilir ya da kapatılabilir
 // (sesli yayın, kamerayı çevirme, karaoke sahnesi bunu kullanır).
 export function caster(getStream) {
@@ -129,7 +137,7 @@ export function caster(getStream) {
   const offer = async (id, pc, n = 0) => {
     if (peers.get(id) !== pc) return;
     if (pc.signalingState !== 'stable') { if (n < 10) setTimeout(() => offer(id, pc, n + 1), 400); return; } // önceki el sıkışma bitsin
-    try { await pc.setLocalDescription(await pc.createOffer()); state.socket.emit('live:signal', { to: id, data: { sdp: pc.localDescription } }); } catch { /* bağlantı kapanmış olabilir */ }
+    try { await pc.setLocalDescription(await pc.createOffer()); state.socket.emit('live:signal', { to: id, data: { sdp: pc.localDescription } }); quality(pc.vs); } catch { /* bağlantı kapanmış olabilir */ }
   };
   const offs = [
     on('live:viewer', async ({ viewerId }) => {
@@ -153,7 +161,7 @@ export function caster(getStream) {
     setVideo(track) {
       vtrack = track || null;
       peers.forEach((pc, id) => {
-        if (pc.vs) pc.vs.replaceTrack(vtrack).catch(() => {});
+        if (pc.vs) pc.vs.replaceTrack(vtrack).then(() => quality(pc.vs)).catch(() => {});
         else if (vtrack) { pc.vs = pc.addTrack(vtrack, getStream()); offer(id, pc); }
       });
     },
@@ -175,14 +183,21 @@ async function host(view) {
     root.classList.toggle('audio', !hasCam()); video.srcObject = null;
     if (hasCam()) { video.srcObject = stream; video.play?.().catch(() => {}); }
     video.classList.toggle('mirror', facing === 'user');
+    lightCheck();
   };
+  // Ortam karanlıksa kameranın pozlamasını artır; yine de karanlıksa "Aydınlık" efektini kendiliğinden aç (kişi başka efekt seçmediyse)
+  let lightT = 0;
+  function lightCheck() { clearTimeout(lightT); if (!hasCam()) return;
+    lightT = setTimeout(async () => { const l = lumaOf(video); if (l == null || l >= 72) return; await tuneTrack(stream.getVideoTracks()[0], { dark: true });
+      setTimeout(() => { const l2 = lumaOf(video); if (l2 != null && l2 < 72 && !fx) { setFx('aydinlik'); toast('Ortam karanlık: Aydınlık efekti açıldı. Efektlerden değiştirebilirsin.', { ms: 2600 }); } }, 1200); }, 1500); }
+  function setFx(f) { fx = f; video.style.filter = filterCss(f); if (cast.on) state.socket.emit('live:filter', { filter: f }); }
 
   if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) {
     slot.innerHTML = '<div class="center-msg">Bu tarayıcı canlı yayını desteklemiyor.</div>';
   } else {
     const audio = { echoCancellation: true, noiseSuppression: true };
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 720 }, height: { ideal: 1280 }, aspectRatio: { ideal: 9 / 16 } }, audio });
+      stream = await navigator.mediaDevices.getUserMedia({ video: { ...WANT, facingMode: facing }, audio }); await tuneTrack(stream.getVideoTracks()[0]);
     } catch {
       try { stream = await navigator.mediaDevices.getUserMedia({ audio }); toast('Kamera açılamadı. İstersen yalnızca sesli yayın yapabilirsin.'); } catch {
         slot.innerHTML = `<div class="center-msg"><div>${icon('mic')}<p>Canlı yayın için mikrofon izni gerekiyor. Tarayıcı ayarlarından izin verip sayfayı yenile.</p></div></div>`;
@@ -215,8 +230,7 @@ async function host(view) {
     t.querySelector('.flip')?.addEventListener('click', flip);
     t.querySelector('.mic').onclick = () => { const a = stream.getAudioTracks()[0]; if (!a) return; a.enabled = !a.enabled; tools(); };
     t.querySelector('.fx')?.addEventListener('click', () => effectSheet(fx, (f) => {
-      fx = f; video.style.filter = filterCss(f);
-      if (cast.on) state.socket.emit('live:filter', { filter: f });
+      setFx(f);
       const n = FILTERS.find((x) => x[0] === f)?.[1]; if (n) toast(`Efekt: ${n}`, { ms: 1200 });
     }));
   }
