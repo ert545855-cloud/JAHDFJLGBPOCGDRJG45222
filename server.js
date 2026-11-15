@@ -2079,6 +2079,7 @@ app.get('/.well-known/apple-app-site-association', (req, res) => {
   const team = process.env.APPLE_TEAM_ID; if (!team) return res.status(404).json({});
   res.type('application/json').send(JSON.stringify({ applinks: { apps: [], details: [{ appIDs: [`${team}.${process.env.IOS_BUNDLE || 'app.swipeup.ios'}`], components: [{ '/': '/*' }] }] } }));
 });
+require('./server/androidkey')(app, featureCtx); // Android imza anahtarı yalnızca GitHub derlemesine (OIDC)
 require('./server/promo')(app, featureCtx);
 require('./server/tags')(app, featureCtx);
 require('./server/wheel')(app, featureCtx);
