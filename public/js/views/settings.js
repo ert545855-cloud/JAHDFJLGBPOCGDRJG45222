@@ -179,7 +179,7 @@ export default function settings(view) {
       onMount(sh, close) {
         const done = async (msg) => { Object.assign(state.me, await api('/me')); close(); toast(msg); settings(view); };
         const link = async (provider, credential) => { try { await api('/me/logins', { body: { provider, credential } }); done(`${provider === 'google' ? 'Google' : 'Apple'} hesabın bağlandı.`); } catch (er) { toast(er.message); } };
-        const gl = sh.querySelector('.g-link'); if (gl) googleButton(gl, (c) => link('google', c), 'continue_with').catch((er) => toast(er.message));
+        const gl = sh.querySelector('.g-link'); if (gl) googleButton(gl, (c) => link('google', c), 'continue_with', 'link').catch((er) => toast(er.message));
         sh.querySelector('.la')?.addEventListener('click', async () => { try { const c = await appleCredential(); if (c) link('apple', c); } catch (er) { toast(er.message || 'Apple bağlanamadı.'); } });
         const unlink = async (p) => { if (!confirm('Bağlantı kaldırılsın mı?')) return; try { await api(`/me/logins/${p}`, { method: 'DELETE' }); done('Bağlantı kaldırıldı.'); } catch (er) { toast(er.message); } };
         sh.querySelector('.ug')?.addEventListener('click', () => unlink('google'));

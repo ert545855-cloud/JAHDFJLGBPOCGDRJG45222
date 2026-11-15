@@ -597,17 +597,47 @@ const usernameFrom = (id) => {
   for (let i = 0; store.find('users', (u) => u.username === un) && i < 50; i++) un = `${base.slice(0, 18)}${Math.floor(100 + Math.random() * 9900)}`;
   return un;
 };
+// Google'ın yönlendirmeli girişi (ana ekrana eklenmiş iPhone uygulamasında açılır pencere geri dönemez):
+// Google kimlik belgesini form olarak buraya yollar → kısa ömürlü tek kullanımlık kod → uygulama kodu belgeyle değiştirir
+const gCodes = new Map(); // kod → { credential, exp }
+app.post('/api/auth/google/cb', express.urlencoded({ extended: false, limit: '20kb' }), (req, res) => {
+  const cred = String(req.body?.credential || '');
+  const ck = /(?:^|;\s*)g_csrf_token=([^;]+)/.exec(req.headers.cookie || '')?.[1];
+  const bodyTok = req.body?.g_csrf_token;
+  if (!cred || (ck && bodyTok && ck !== bodyTok)) { console.warn('[oauth] google yönlendirme: belge yok ya da csrf uyuşmadı'); return res.redirect(303, '/?gerr=1#/login'); }
+  for (const [k, v] of gCodes) if (v.exp < Date.now()) gCodes.delete(k);
+  if (gCodes.size > 500) return res.redirect(303, '/?gerr=1#/login');
+  const code = crypto.randomBytes(18).toString('base64url');
+  gCodes.set(code, { credential: cred, exp: Date.now() + 120000 });
+  res.redirect(303, `/?g=${code}#/login`);
+});
+app.post('/api/auth/google/code', (req, res) => {
+  const c = gCodes.get(String(req.body?.code || '')); gCodes.delete(String(req.body?.code || ''));
+  if (!c || c.exp < Date.now()) return res.status(400).json({ error: 'Google girişinin süresi doldu. Tekrar dene.' });
+  res.json({ credential: c.credential });
+});
 app.post('/api/auth/oauth', wrap(async (req, res) => {
   if (limited('oauth:' + ipOf(req), 30, 900000)) return res.status(429).json({ error: 'Çok fazla deneme. 15 dakika sonra tekrar dene.' });
   const provider = req.body?.provider === 'apple' ? 'apple' : 'google';
   const P = provider === 'google' ? 'Google' : 'Apple';
   let id;
-  try { id = await oidc.verify(provider, req.body?.credential); } catch (e) { return res.status(401).json({ error: e.message }); }
+  try { id = await oidc.verify(provider, req.body?.credential); } catch (e) { console.warn(`[oauth] ${provider} doğrulanamadı:`, e.message); return res.status(401).json({ error: e.message }); }
   const key = `${provider}Sub`;
   const u = store.find('users', (x) => x[key] === id.sub);
   if (u) return res.json({ token: sign(u), user: pub(u, u.id) });
-  if (id.email && store.find('users', (x) => x.email === id.email)) {
-    return res.status(409).json({ error: `Bu e-posta adresiyle kayıtlı bir SwipeUp hesabı var. Önce kullanıcı adın ve şifrenle giriş yap, sonra Ayarlar → Giriş yöntemleri'nden ${P} hesabını bağla.`, linkNeeded: true });
+  const same = id.email && store.find('users', (x) => x.email === id.email);
+  if (same) {
+    // Aynı e-postayla şifreli hesap var: şifresi bir kez girilirse Google/Apple hesabı ona bağlanır ve giriş yapılır
+    const pw = req.body?.password;
+    if (pw != null && !same.noPass) {
+      if (limited('login-u:' + same.username, 8, 900000)) return res.status(429).json({ error: 'Çok fazla hatalı deneme. 15 dakika sonra tekrar dene ya da şifreni sıfırla.' });
+      if (!(await bcrypt.compare(String(pw), same.passHash))) return res.status(401).json({ error: 'Şifre hatalı.', linkNeeded: true });
+      hits.delete('login-u:' + same.username);
+      const nu = store.update('users', same.id, { [key]: id.sub, emailVerified: true });
+      console.log(`[oauth] ${P} hesabı mevcut hesaba bağlandı (${same.id})`);
+      return res.json({ token: sign(nu), user: pub(nu, nu.id), linked: true });
+    }
+    return res.status(409).json({ error: same.noPass ? `Bu e-posta adresi başka bir giriş yöntemiyle açılmış bir SwipeUp hesabında kayıtlı. O yöntemle gir, sonra Ayarlar → Giriş yöntemleri'nden ${P} hesabını bağla.` : `Bu e-posta adresiyle kayıtlı bir SwipeUp hesabın var. Şifreni bir kez gir, ${P} hesabın ona bağlansın.`, linkNeeded: !same.noPass });
   }
   // Yeni hesap: doğum tarihi (18+) ve kullanım koşulları gerekir; ilk istekte form istenir
   const { birthdate, accept } = req.body || {};
