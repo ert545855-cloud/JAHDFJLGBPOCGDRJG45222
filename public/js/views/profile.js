@@ -72,13 +72,27 @@ export function themeMenu() {
   });
 }
 
+const NGROUPS = [
+  ['messages', 'comment', 'Mesajlar', 'Birebir ve grup mesajları'], ['matches', 'heart', 'Eşleşmeler', 'Yeni eşleşme olunca'],
+  ['likes', 'star', 'Beğeniler', 'Beğeni, süper beğeni ve süper mesaj'], ['calls', 'phone', 'Aramalar', 'Gelen ve cevapsız aramalar'],
+  ['social', 'users', 'Takip ve yorumlar', 'Takip, yorum, etiket, hikaye yanıtı'], ['games', 'trophy', 'Oyunlar', 'Oyun davetleri, çiftlik, seviye ve seriler'],
+  ['events', 'calendar', 'Etkinlik ve öneriler', 'Etkinlikler, günlük seçki, burç'], ['market', 'bag', 'Store', 'Alış ve satış güncellemeleri'],
+  ['promo', 'bell', 'Duyuru ve kampanyalar', 'SwipeUp’tan haberler'],
+];
 export async function notifSettings() {
   const enabled = await pushEnabled().catch(() => false);
+  const np = await api('/me/notify-prefs').catch(() => ({ off: [], quiet: false, quietFrom: 23, quietTo: 8 }));
+  const hours = Array.from({ length: 24 }, (_, h) => h);
   const hint = pushHint();
   sheet('Bildirimler', `<div style="padding:0 16px 16px;display:grid;gap:12px">
     <p class="muted" style="margin:0">Mesaj, arama, eşleşme, beğeni, yorum, takip ve canlı yayın bildirimleri bu cihaza gönderilir. Uygulama açıkken bildirimler ekranın üstünde görünür.</p>
     ${hint ? `<p style="margin:0">${esc(hint)}</p>` : `<button class="btn ${enabled ? '' : 'primary'} block tg">${enabled ? 'Bu cihazda bildirimleri kapat' : 'Bu cihazda bildirimleri aç'}</button>
     ${enabled ? '<button class="btn outline block test">Test bildirimi gönder</button>' : ''}`}
+    <div class="np-h">Hangi bildirimler gelsin?</div>
+    <div class="np-list">${NGROUPS.map(([k, ic, t, sub]) => `<label class="np-row">${icon(ic)}<span class="grow">${t}<small>${sub}</small></span><input type="checkbox" class="sw ng" data-g="${k}" ${(np.off || []).includes(k) ? '' : 'checked'}></label>`).join('')}</div>
+    <label class="np-row">${icon('moon')}<span class="grow">Sessiz saatler<small>Bu saatlerde telefonuna bildirim gelmez (aramalar hariç)</small></span><input type="checkbox" class="sw nq" ${np.quiet ? 'checked' : ''}></label>
+    <div class="np-q" ${np.quiet ? '' : 'hidden'}><select class="field qf">${hours.map((h) => `<option value="${h}" ${h === (np.quietFrom ?? 23) ? 'selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select><span>–</span><select class="field qt">${hours.map((h) => `<option value="${h}" ${h === (np.quietTo ?? 8) ? 'selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select></div>
+    <p class="muted" style="margin:0;font-size:12.5px">Güvenlik, destek ve satın alma bildirimleri her zaman gelir.</p>
     <label class="switch-row" style="display:flex;align-items:center;font-size:14.5px"><span class="grow">Falcı Teyze’den sabah burç mesajı<small class="muted" style="display:block;font-size:12.5px">Her sabah burcuna özel kısa bir yorum</small></span><input type="checkbox" class="bp" ${state.me.privacy?.noBurcPush ? '' : 'checked'}></label>
   </div>`, {
     onMount(sh, close) {
@@ -88,6 +102,12 @@ export async function notifSettings() {
       sh.querySelector('.bp').onchange = async (e) => {
         try { const u = await api('/me', { method: 'PATCH', body: { privacy: { noBurcPush: !e.target.checked } } }); Object.assign(state.me, u); toast(e.target.checked ? 'Sabah burç mesajı açık ☀️' : 'Sabah burç mesajı kapatıldı.'); } catch (er) { toast(er.message); }
       };
+      const save = async () => {
+        const body = { off: [...sh.querySelectorAll('.ng')].filter((x) => !x.checked).map((x) => x.dataset.g), quiet: sh.querySelector('.nq').checked, quietFrom: +sh.querySelector('.qf').value, quietTo: +sh.querySelector('.qt').value };
+        sh.querySelector('.np-q').hidden = !body.quiet;
+        try { await api('/me/notify-prefs', { body }); toast('Bildirim tercihlerin kaydedildi.', { ms: 1500 }); } catch (er) { toast(er.message); }
+      };
+      sh.querySelectorAll('.ng, .nq, .qf, .qt').forEach((x) => { x.onchange = save; });
       sh.querySelector('.test')?.addEventListener('click', async () => {
         try { await api('/push/test', { body: {} }); toast('Test bildirimi gönderildi.'); } catch (e) { toast(e.message); }
       });
@@ -176,7 +196,7 @@ export default async function profile(view, username) {
       ${self ? `<button class="center ig-un acc-sw" aria-label="Hesap değiştir">${u.privacy?.private ? `${icon('lock', '', 'style="width:15px;height:15px;vertical-align:-2px"')} ` : ''}${esc(u.username)}${icon('chevDown', 'acc-cv')}</button>` : `<div class="center ig-un">${u.privacy?.private ? `${icon('lock', '', 'style="width:15px;height:15px;vertical-align:-2px"')} ` : ''}${esc(u.username)}</div>`}
       ${self ? `<a class="ib soft" href="#/settings" aria-label="Ayarlar">${icon('menu')}</a>` : `<button class="ib soft menu-btn" aria-label="Seçenekler">${icon('more')}</button>`}
     </header>
-    <section class="ig-hero">
+    <section class="ig-hero ${u.pTheme?.bg ? `pt pt-${esc(u.pTheme.bg)}` : ''}">
       <div class="ig-top">
         <${avHref ? `a href="${esc(avHref)}"` : 'div'} class="av-wrap ${u.frame ? `fr fr-${esc(u.frame)}` : ''}">
           ${u.live || u.hasStory ? `<div class="ring ${u.live ? 'live' : u.storySeen ? 'seen' : ''}"><img class="av" src="${esc(u.avatar)}" alt=""></div>` : `<img class="av" src="${esc(u.avatar)}" alt="">`}

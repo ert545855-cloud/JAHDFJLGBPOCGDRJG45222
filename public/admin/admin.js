@@ -1246,8 +1246,30 @@ VIEWS.database = async (main) => {
     : `<div class="case" style="background:color-mix(in srgb,var(--warn) 10%,transparent);border-radius:12px;margin-bottom:14px"><b>Fotoğraf ve videolar veritabanında tutuluyor</b><div class="muted">${d.storageError ? `Supabase Storage bağlanamadı: ${esc(d.storageError)}` : 'Ayrı depoya (Supabase Storage, 1 GB ücretsiz) geçmek için Render’a SUPABASE_URL ve SUPABASE_SECRET_KEY eklenmeli.'}</div></div>`}
     ${d.lastError ? `<div class="case" style="background:color-mix(in srgb,var(--bad) 8%,transparent);border-radius:12px;margin-bottom:14px"><b>Son yazma hatası</b><div class="muted">${dt(d.lastError.at)} · ${esc(d.lastError.message)}</div></div>` : ''}
     ${d.migration ? `<div class="panel" style="margin-bottom:14px"><div class="pb row" style="gap:12px">${icon('check')}<div><b>Taşıma tamamlandı</b><div class="muted">${dt(d.migration.at)} · Render Key Value’dan ${d.migration.docs} kayıt ve ${d.migration.media} medya (${d.migration.mediaMB} MB) taşındı.</div></div></div></div>` : ''}
+    ${can('database') ? '<div class="panel bks" style="margin-bottom:14px"><div class="ph"><h3>Otomatik yedekler</h3><button class="btn sm bk-now">Şimdi yedek al</button></div><div class="pb"><div class="spin"></div></div></div>' : ''}
     <div class="panel"><div class="ph"><h3>Tablolar</h3></div><div class="tw"><table class="tbl"><thead><tr><th>Veri</th><th>Koleksiyon</th><th class="num">Kayıt</th></tr></thead><tbody>
       ${d.collections.map((c) => `<tr><td>${esc(COL_TR[c.name] || c.name)}</td><td class="muted mono">${esc(c.name)}</td><td class="num">${c.count.toLocaleString('tr-TR')}</td></tr>`).join('')}</tbody></table></div></div>`;
+  // Gece yedekleri
+  const bks = main.querySelector('.bks .pb');
+  const loadBk = async () => {
+    if (!bks) return;
+    try {
+      const r = await api('/backups');
+      bks.innerHTML = `<p class="muted" style="margin:0 0 10px;font-size:13px">Her gece 03:30'da bütün kayıtlar sıkıştırılıp saklanır; son ${r.keep} yedek tutulur. Fotoğraf ve videolar ayrı depoda olduğu için yedeğe girmez.</p>
+        ${r.lastError ? `<div class="case" style="background:color-mix(in srgb,var(--bad) 8%,transparent);border-radius:10px;margin-bottom:10px"><b>Son yedek alınamadı</b><div class="muted">${dt(r.lastError.at)} · ${esc(r.lastError.message)}</div></div>` : ''}
+        ${r.list.length ? `<div class="tw"><table class="tbl"><thead><tr><th>Tarih</th><th>Alan</th><th class="num">Kayıt</th><th class="num">Boyut</th><th></th></tr></thead><tbody>${r.list.map((b) => `<tr><td>${dt(b.at)}</td><td class="muted">${esc(b.by)}</td><td class="num">${b.docs.toLocaleString('tr-TR')}</td><td class="num">${(b.size / 1024).toFixed(0)} KB</td><td class="num"><button class="btn sm" data-dl="${esc(b.id)}">${icon('download')} İndir</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="muted">Henüz yedek yok. İlk gece yedeği 03:30\'da alınacak.</div>'}`;
+    } catch (er) { bks.textContent = er.message; }
+  };
+  loadBk();
+  main.querySelector('.bk-now')?.addEventListener('click', async (e) => { e.target.disabled = true; try { await api('/backups', { body: {} }); toast('Yedek alındı.'); loadBk(); } catch (er) { toast(er.message); } e.target.disabled = false; });
+  bks?.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-dl]'); if (!b) return;
+    try {
+      const r = await fetch(`${BASE}/api/backups/${b.dataset.dl}`, { headers: { Authorization: 'Bearer ' + S.token } });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'İndirilemedi.');
+      const a = document.createElement('a'); a.href = URL.createObjectURL(await r.blob()); a.download = `swipeup-${b.dataset.dl}.json.gz`; a.click();
+    } catch (er) { toast(er.message); }
+  });
   main.querySelector('[data-bk]')?.addEventListener('click', async (e) => {
     e.preventDefault();
     try {
@@ -1395,6 +1417,7 @@ VIEWS.growth = async (main) => {
       <div class="stat"><b>${pct(T.d30)}</b><span>30. gün geri gelen</span></div>
       ${g.flags.spamOpen || g.flags.multiOpen ? `<div class="stat alert"><b>${g.flags.spamOpen + g.flags.multiOpen}</b><span>Açık spam / sahte hesap kaydı</span><a href="#/flags">Görüntüle</a></div>` : ''}
     </div>
+    <div class="panel fnl" style="margin-bottom:14px"><div class="ph"><h3>Kayıt hunisi</h3><span class="muted" style="font-size:12px">Son ${days} günde kaydolanlar</span></div><div class="pb"><div class="spin"></div></div></div>
     <div class="grid g2">
       <div class="panel"><div class="ph"><h3>Günlük aktif kullanıcı</h3></div><div class="pb">${bars(g.dau, short)}</div></div>
       <div class="panel"><div class="ph"><h3>Yeni kayıt</h3></div><div class="pb">${bars(g.newUsers, short)}</div></div>
@@ -1403,6 +1426,15 @@ VIEWS.growth = async (main) => {
       ${g.features.sort((a, b) => b.d7 - a.d7).map((f, i) => `<tr data-i="${i}" style="cursor:pointer"><td><b>${esc(f.name)}</b></td><td class="num">${f.today}</td><td class="num">${f.d7}</td><td class="num">${trend(f.d7, f.prev7)}</td><td class="num">${f.d30}</td></tr><tr class="fx" data-x="${i}" hidden><td colspan="5">${bars(f.series, short)}</td></tr>`).join('')}
     </tbody></table></div></div>`;
   main.querySelector('.gd').onclick = (e) => { const b = e.target.closest('[data-d]'); if (!b) return; sessionStorage.setItem('su_gdays', b.dataset.d); VIEWS.growth(main); };
+  // Kayıt hunisi: kayıt → profil fotoğrafı → ilk eşleşme → ilk mesaj
+  api(`/funnel?days=${days}`).then((f) => {
+    const box = main.querySelector('.fnl .pb'); if (!box) return;
+    const max = Math.max(1, f.steps[0].n);
+    box.innerHTML = `<div class="fn-steps">${f.steps.map((s, i) => `<div class="fn-st"><div class="fn-bar" style="--w:${Math.max(2, Math.round((s.n / max) * 100))}%"><span>${esc(s.label)}</span><b>${s.n}</b></div><div class="fn-m">%${s.pct}${i ? `<small> · ${s.drop} kişi düştü${f.steps[i - 1].n ? ` (%${Math.round((s.drop / f.steps[i - 1].n) * 100)})` : ''}</small>` : ''}</div></div>`).join('')}</div>
+      ${f.medianHoursToMatch != null ? `<p class="muted" style="font-size:12.5px;margin:10px 0 0">Kayıttan ilk eşleşmeye ortanca süre: ${f.medianHoursToMatch < 48 ? `${f.medianHoursToMatch} saat` : `${Math.round(f.medianHoursToMatch / 24)} gün`}</p>` : ''}
+      <div class="tw" style="margin-top:10px"><table><thead><tr><th>Kayıt haftası</th><th class="num">Kayıt</th><th class="num">Fotoğraf</th><th class="num">Eşleşme</th><th class="num">Mesaj</th></tr></thead><tbody>
+      ${f.weeks.filter((w) => w.n).reverse().map((w) => { const p = (v) => `${v} <small class="muted">%${Math.round((v / w.n) * 100)}</small>`; return `<tr><td>${d(w.from)}</td><td class="num">${w.n}</td><td class="num">${p(w.photo)}</td><td class="num">${p(w.match)}</td><td class="num">${p(w.msg)}</td></tr>`; }).join('') || '<tr><td colspan="5" class="muted">Bu dönemde kayıt yok.</td></tr>'}</tbody></table></div>`;
+  }).catch((er) => { const box = main.querySelector('.fnl .pb'); if (box) box.textContent = er.message; });
   main.querySelector('.feat').onclick = (e) => { const r = e.target.closest('[data-i]'); if (!r) return; const x = main.querySelector(`[data-x="${r.dataset.i}"]`); x.hidden = !x.hidden; };
 };
 
@@ -1683,6 +1715,9 @@ VIEWS.settings = async (main) => {
         <label>SwipeUp+ günlük süper beğeni<input class="field" type="number" name="plusSupers" value="${e.plusSupers}"></label>
         <label>Boost fiyatı (jeton)<input class="field" type="number" name="boostCoins" value="${e.boostCoins}"></label>
         <label>Boost süresi (dakika)<input class="field" type="number" name="boostMinutes" value="${e.boostMinutes}"></label>
+        <label>5'li süper beğeni (jeton)<input class="field" type="number" name="sp0" value="${(e.superPacks || [])[0]?.coins ?? 40}"></label>
+        <label>15'li süper beğeni (jeton)<input class="field" type="number" name="sp1" value="${(e.superPacks || [])[1]?.coins ?? 100}"></label>
+        <label>Aylık davet yarışı ödülleri (1. / 2. / 3., jeton)<input class="field" name="invP" value="${(e.invitePrizes || [300, 150, 75]).join(' / ')}"></label>
         <label>Yeni üyeye SwipeUp+ denemesi (gün, 0 = kapalı)<input class="field" type="number" name="plusTrialDays" min="0" max="30" value="${e.plusTrialDays ?? 3}"></label></div></div>
       <div class="panel"><div class="ph"><h3>Tanışma özellikleri</h3></div><div class="pb fgrid">
         <label>Süper mesaj (jeton)<input class="field" type="number" name="superMsgCoins" value="${e.superMsgCoins ?? 30}"></label>
@@ -1723,7 +1758,7 @@ VIEWS.settings = async (main) => {
           falPrices: Object.fromEntries(Object.keys(FAL).map((k) => [k, +v(`fal_${k}`)])),
           falciShare: +v('falciShare'), creatorShare: +v('creatorShare'), coinTL: +v('coinTL'),
           freeLikes: +v('freeLikes'), freeSupers: +v('freeSupers'), plusSupers: +v('plusSupers'), boostCoins: +v('boostCoins'), boostMinutes: +v('boostMinutes'),
-          superMsgCoins: +v('superMsgCoins'), inviteCoins: +v('inviteCoins'), falSubCoins: +v('falSubCoins'), plusTrialDays: +v('plusTrialDays'),
+          superMsgCoins: +v('superMsgCoins'), inviteCoins: +v('inviteCoins'), falSubCoins: +v('falSubCoins'), plusTrialDays: +v('plusTrialDays'), invitePrizes: v('invP').split(/[^\d]+/).filter(Boolean).map(Number).slice(0, 3), superPacks: [{ ...((e.superPacks || [])[0] || { id: 's5', n: 5 }), coins: +v('sp0') }, { ...((e.superPacks || [])[1] || { id: 's15', n: 15, tag: 'Avantajlı' }), coins: +v('sp1') }],
           plusPlans: read('plans', 'p').map((p) => { const old = e.plusPlans.find((x) => +x.days === +p.days); return { ...p, id: old?.id || `p${p.days}` }; }),
           coinPacks: read('packs', 'c').map((p) => { const old = e.coinPacks.find((x) => +x.coins === +p.coins); return { ...p, id: old?.id || `c${p.coins}` }; }),
           gifts: read('gifts', 'g').map((g, i) => ({ ...g, id: e.gifts[i]?.id || `g${i}${Date.now() % 1000}` })),

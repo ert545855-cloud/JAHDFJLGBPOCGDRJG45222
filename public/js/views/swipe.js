@@ -1,3 +1,4 @@
+import { superSheet } from '../supers.js';
 import { icon } from '../icons.js';
 import { api, esc, toast, isOn, state, sheet, on, tick, plusSheet, needCoins } from '../core.js';
 import { showMatch } from '../app.js';
@@ -153,7 +154,7 @@ export default async function swipe(view) {
           // Sınır doldu: kartı geri koy
           history.pop(); deck.unshift(u);
           setTimeout(render, 300);
-          if (state.badges.plus) toast(er.message); else plusSheet(er.message);
+          if (er.data?.buySupers) superSheet(er.message); else if (state.badges.plus) toast(er.message); else plusSheet(er.message);
         } else toast(er.message);
       }
       if (deck.length < 3) {

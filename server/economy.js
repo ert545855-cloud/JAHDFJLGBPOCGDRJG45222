@@ -15,6 +15,11 @@ const DEFAULTS = {
   plusPlans: [
     { id: 'p30', days: 30, price: 99.99 },
     { id: 'p90', days: 90, price: 249.99, tag: '%17 indirim' },
+    { id: 'p365', days: 365, price: 599.99, tag: '%50 indirim' },
+  ],
+  superPacks: [ // jetonla süper beğeni (günlük hakka ek, süresi dolmaz)
+    { id: 's5', n: 5, coins: 40 },
+    { id: 's15', n: 15, coins: 100, tag: 'Avantajlı' },
   ],
   gifts: [
     { id: 'gul', em: '🌹', name: 'Gül', coins: 1 },
@@ -42,6 +47,11 @@ const DEFAULTS = {
 };
 
 module.exports = function economy(store) {
+  // Kayıtlı plan listesinde yıllık plan yoksa bir kez ekle (yönetim sonradan silerse yeniden eklenmez)
+  setTimeout(() => {
+    const s = store.get('settings', 'economy');
+    if (s && Array.isArray(s.plusPlans) && !s.yearPlanAdded && !s.plusPlans.some((p) => p.days >= 365)) store.put('settings', { ...s, plusPlans: [...s.plusPlans, { id: 'p365', days: 365, price: 599.99, tag: '%50 indirim' }], yearPlanAdded: true });
+  }, 3000);
   const get = () => {
     const s = store.get('settings', 'economy') || {};
     return { ...DEFAULTS, ...s, bank: { ...DEFAULTS.bank, ...(s.bank || {}) }, falPrices: { ...DEFAULTS.falPrices, ...(s.falPrices || {}) } };
@@ -96,7 +106,9 @@ module.exports = function economy(store) {
     return {
       d, plus,
       likesLeft: plus ? null : Math.max(0, s.freeLikes - d.likes),
-      supersLeft: Math.max(0, (plus ? s.plusSupers : s.freeSupers) - d.supers),
+      supersDaily: Math.max(0, (plus ? s.plusSupers : s.freeSupers) - d.supers),
+      superBank: u.superBank || 0, // satın alınan süper beğeniler
+      supersLeft: Math.max(0, (plus ? s.plusSupers : s.freeSupers) - d.supers) + (u.superBank || 0),
     };
   }
   function product(id) {

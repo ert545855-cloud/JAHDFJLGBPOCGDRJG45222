@@ -1,5 +1,5 @@
 import { icon } from '../icons.js';
-import { api, esc, toast, avatar, nm, sheet } from '../core.js';
+import { api, esc, toast, avatar, nm, sheet, state } from '../core.js';
 
 // Bağlantıyı panoya kopyala; tarayıcı izin vermezse seçilebilir kutuda göster
 async function copyText(text) {
@@ -34,9 +34,11 @@ export default async function invite(view) {
       ${by ? `<div class="inv-by">${avatar(by, 40, { dot: false })}<div class="grow"><b>${nm(by)} seni davet etti</b><small>${by.rewarded ? `İkinize de ${r.coins} jeton yüklendi.` : by.needsPhoto ? `Profil fotoğrafını ekle, ikinize de ${r.coins} jeton yüklensin.` : 'Ödülün işleniyor.'}</small></div>${!by.rewarded && by.needsPhoto ? '<a class="btn sm primary" href="#/edit">Fotoğraf ekle</a>' : ''}</div>` : ''}
       ${r.canRedeem ? `<form class="inv-redeem"><div class="grow"><b>Davet kodun var mı?</b><small>Seni davet eden arkadaşının kodunu gir, ikiniz de ${r.coins} jeton kazanın.</small></div>
         <div class="row"><input class="field" name="c" placeholder="ör. ${esc(r.code.replace(/./g, 'X'))}" maxlength="6" autocapitalize="characters" autocomplete="off" spellcheck="false"><button class="btn primary">Kullan</button></div></form>` : ''}
+      <section class="inv-race"></section>
       <h3 class="shop-h">Davet ettiklerin <span class="muted">${r.items.length ? `· ${r.rewarded} ödül` : ''}</span></h3>
       ${r.items.length ? r.items.map((u) => `<a class="list-item" href="#/u/${esc(u.username)}">${avatar(u, 40, { dot: false })}<div class="grow"><div class="b">${nm(u)}</div><div class="sub">${u.rewarded ? `+${r.coins} jeton kazandın` : 'Profil fotoğrafı eklemesi bekleniyor'}</div></div>${u.rewarded ? '<span class="pill ok">Kazanıldı</span>' : '<span class="pill">Bekliyor</span>'}</a>`).join('') : '<div class="empty" style="padding:16px">Henüz kimseyi davet etmedin.</div>'}
       <p class="muted" style="font-size:12px;margin:18px 4px">Aynı ağdan açılan birden fazla hesap ve ayda 30’dan fazla davet ödül kazandırmaz. Davet kodu kayıttan sonraki 7 gün içinde girilebilir.</p>`;
+    raceSection(box.querySelector('.inv-race'));
     const copyLink = async () => { if (await copyText(link)) toast('Bağlantı kopyalandı.'); else linkSheet(link); };
     box.querySelector('.cp').onclick = copyLink;
     box.querySelector('.inv-code').onclick = async () => { if (await copyText(r.code)) toast('Davet kodu kopyalandı.'); else linkSheet(link); };
@@ -59,4 +61,16 @@ export default async function invite(view) {
     }
   };
   await load();
+}
+
+// Aylık davet yarışı: ay sonunda ilk üçe jeton
+async function raceSection(box) {
+  const r = await api('/invite/leaders').catch(() => null); if (!r || !box) return;
+  const left = Math.max(0, r.endsAt - Date.now()); const d = Math.floor(left / 86400000); const h = Math.floor((left % 86400000) / 3600000);
+  const MED = (i) => `<i class="medal m${i + 1}">${i + 1}</i>`;
+  box.innerHTML = `<div class="race-h"><div class="grow"><b>Bu ayın davet yarışı</b><small>Bitişe ${d ? `${d} gün ` : ''}${h} saat · profil fotoğrafını ekleyen davetler sayılır</small></div>${icon('trophy')}</div>
+    <div class="race-prizes">${r.prizes.map((p, i) => `<div>${MED(i)}<b>${p}</b><small>jeton</small></div>`).join('')}</div>
+    <div class="race-me">${r.me.rank ? `Sıran: <b>${r.me.rank}.</b> · ${r.me.count} davet` : 'Henüz bu ay davetin yok. İlk davetinle listeye gir!'}</div>
+    ${r.top.length ? `<div class="race-list">${r.top.map((x) => `<a class="race-row ${x.user.id === state.me.id ? 'me' : ''}" href="#/u/${esc(x.user.username)}"><span class="rk">${x.rank <= 3 ? MED(x.rank - 1) : x.rank}</span>${avatar(x.user, 34, { dot: false })}<span class="grow">${nm(x.user)}</span><b>${x.count}</b></a>`).join('')}</div>` : '<p class="muted" style="font-size:13.5px;margin:8px 2px">Bu ay henüz kimse davetle arkadaş getirmedi. İlk sen ol!</p>'}
+    ${r.lastWinners.length ? `<div class="race-last"><small>Geçen ayın kazananları</small>${r.lastWinners.map((w, i) => `<span>${MED(i)} ${nm(w.user)} · ${w.coins} jeton</span>`).join('')}</div>` : ''}`;
 }

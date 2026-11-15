@@ -370,7 +370,9 @@ export function richText(text) {
 }
 // Ad + mavi tik + SwipeUp+ rozeti
 export const tick = (u) => (u?.verified ? `<span class="vtick" title="Doğrulanmış profil">${icon('verified')}</span>` : '');
-export const nm = (u, field = 'name') => `${esc(u?.[field] || u?.username || '')}${tick(u)}`;
+// SwipeUp+ renkli isim: listelerde u.nc, profilde u.pTheme.name
+const ncOf = (u) => (u?.plus !== false && (u?.nc || u?.pTheme?.name)) || null;
+export const nm = (u, field = 'name') => { const c = ncOf(u); const t = esc(u?.[field] || u?.username || ''); return `${c ? `<span class="nc nc-${esc(c)}">${t}</span>` : t}${tick(u)}`; };
 // Fotoğraf / video filtreleri (yalnız görüntüde uygulanır)
 export const FILTERS = [
   ['', 'Normal', 'none'],
@@ -411,6 +413,9 @@ export function plusSheet(reason) {
       <li>${icon('undo')}<span><b>Geri al</b>Yanlışlıkla geçtiğin kişiye dön</span></li>
       <li>${icon('star')}<span><b>Her gün 5 süper beğeni</b>Öne çık</span></li>
       <li>${icon('bolt')}<span><b>Haftada 1 ücretsiz boost</b>30 dakika en üstte</span></li>
+      <li>${icon('dcheck')}<span><b>Gizli okuma</b>Mavi tik göndermeden oku</span></li>
+      <li>${icon('eye')}<span><b>Görünmeden gez</b>Baktığın profiller seni görmez</span></li>
+      <li>${icon('crown')}<span><b>Profil teması</b>Arka plan ve renkli isim</span></li>
     </ul>
     <a class="btn primary block" href="#/store">Planları gör</a></div>`);
 }

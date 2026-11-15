@@ -1288,7 +1288,84 @@ export const words = {
 "çıkartma · hareketli": "stickers · animated",
 "seni ikilisi olmaya çağırıyor": "is inviting you to be their pair",
 "Spotify’ı bağla": "Connect Spotify",
-"Sanatçı ekle": "Add artist"
+"Sanatçı ekle": "Add artist",
+"süper beğeni": "super likes",
+"Paketler yüklenemedi.": "Couldn't load the packs.",
+"Satın aldıkların günlük hakkın bitince kullanılır, süresi dolmaz. Elinde:": "The ones you buy are used after your daily ones run out, and they never expire. You have:",
+"Süper beğeni paketleri": "Super like packs",
+"Günlük hakkın bitince kullanılır, süresi dolmaz. Elinde:": "Used after your daily ones run out, never expire. You have:",
+"Süper beğeni, karşındakine onu özellikle beğendiğini gösterir ve kartında öne çıkarır.": "A super like shows someone you especially like them and makes you stand out on their deck.",
+"SwipeUp+ ile her gün 5 süper beğeni": "5 super likes every day with SwipeUp+",
+"Bakiye:": "Balance:",
+"Profil teması": "Profile theme",
+"SwipeUp+ üyelerine özel: profilinin arka planı ve her yerde görünen renkli ismin.": "SwipeUp+ exclusive: your profile background and a colored name shown everywhere.",
+"SwipeUp+ üyelerine özel: profilinin arka planı ve her yerde görünen renkli ismin. Önizleyebilirsin, kaydetmek için SwipeUp+ gerekir.": "SwipeUp+ exclusive: your profile background and a colored name shown everywhere. You can preview; saving needs SwipeUp+.",
+"Arka plan": "Background",
+"İsim rengi": "Name color",
+"SwipeUp+ ile kullan": "Use with SwipeUp+",
+"Profil teması SwipeUp+ ayrıcalığıdır.": "Profile themes are a SwipeUp+ perk.",
+"Profil teman kaydedildi.": "Your profile theme was saved.",
+"Kutup ışığı": "Aurora",
+"Gün batımı": "Sunset",
+"Okyanus": "Ocean",
+"Lavanta": "Lavender",
+"Gece": "Night",
+"Altın": "Gold",
+"Gül": "Rose",
+"Mor": "Purple",
+"Turkuaz": "Turquoise",
+"Ateş": "Fire",
+"Gökkuşağı": "Rainbow",
+"Görünüm": "Appearance",
+"Görünmeden gez (SwipeUp+)": "Browse invisibly (SwipeUp+)",
+"Gizli okuma (SwipeUp+)": "Read secretly (SwipeUp+)",
+"Mesajları okursun ama karşı tarafa mavi tik gitmez; sen onlarınkini görmeye devam edersin": "You read messages without sending blue checks, and you still see theirs",
+"Baktığın profillerin ziyaretçi listesinde görünmezsin": "You won't appear in the visitor lists of profiles you view",
+"Bu ayar SwipeUp+ ayrıcalığıdır.": "This setting is a SwipeUp+ perk.",
+"(mavi tik göndermeden oku)": "(read without sending blue checks)",
+"Gizli okuma": "Read secretly",
+"Profillere görünmeden bak": "View profiles invisibly",
+"Profil teması ve renkli isim": "Profile theme and colored name",
+"Mavi tik göndermeden oku": "Read without sending blue checks",
+"Görünmeden gez": "Browse invisibly",
+"Baktığın profiller seni görmez": "Profiles you view won't see you",
+"Arka plan ve renkli isim": "Background and colored name",
+"Hangi bildirimler gelsin?": "Which notifications do you want?",
+"Birebir ve grup mesajları": "One-to-one and group messages",
+"Eşleşmeler": "Matches",
+"Yeni eşleşme olunca": "When you get a new match",
+"Beğeniler": "Likes",
+"Beğeni, süper beğeni ve süper mesaj": "Likes, super likes and super messages",
+"Aramalar": "Calls",
+"Gelen ve cevapsız aramalar": "Incoming and missed calls",
+"Takip ve yorumlar": "Follows and comments",
+"Takip, yorum, etiket, hikaye yanıtı": "Follows, comments, tags, story replies",
+"Oyunlar": "Games",
+"Oyun davetleri, çiftlik, seviye ve seriler": "Game invites, farm, levels and streaks",
+"Etkinlik ve öneriler": "Events and suggestions",
+"Etkinlikler, günlük seçki, burç": "Events, daily picks, horoscope",
+"Alış ve satış güncellemeleri": "Buying and selling updates",
+"Duyuru ve kampanyalar": "News and promotions",
+"SwipeUp’tan haberler": "News from SwipeUp",
+"Sessiz saatler": "Quiet hours",
+"Bu saatlerde telefonuna bildirim gelmez (aramalar hariç)": "No notifications on your phone during these hours (except calls)",
+"Güvenlik, destek ve satın alma bildirimleri her zaman gelir.": "Safety, support and purchase notifications always come through.",
+"Bildirim tercihlerin kaydedildi.": "Your notification preferences were saved.",
+"Bu ayın davet yarışı": "This month's invite race",
+"Sıran:": "Your rank:",
+"Henüz bu ay davetin yok. İlk davetinle listeye gir!": "No invites this month yet. Get on the list with your first one!",
+"Bu ay henüz kimse davetle arkadaş getirmedi. İlk sen ol!": "No one has brought a friend this month yet. Be the first!",
+"Geçen ayın kazananları": "Last month's winners",
+"Görüntülü tanışma": "Video intro",
+"Buluşmadan önce 10 dakikalık görüntülü görüşme": "A 10-minute video call before you meet",
+"Rahat hissetmezsen istediğin an kapatabilir, sohbetten bildirebilirsin. Görüşme 10 dakika sonra kendiliğinden biter.": "If you don't feel comfortable you can hang up any time and report from the chat. The call ends automatically after 10 minutes.",
+"kaldı": "left",
+"Son 1 dakika.": "1 minute left.",
+"Görüntülü tanışma · 10 dk": "Video intro · 10 min",
+"10 dakikalık görüntülü tanışma": "10-minute video intro",
+"10 dakika doldu. Devam etmek istersen yeniden arayabilir ya da buluşma planlayabilirsin.": "The 10 minutes are up. If you want to continue, call again or plan a date.",
+"SwipeUp nedir?": "What is SwipeUp?",
+"⚠️ Güvenlik uyarısı: SwipeUp’ta tanıştığın biri senden para, IBAN, kripto ya da hediye kartı istiyorsa dikkatli ol. Tanımadığın kimseye para gönderme; şüphelenirsen mesaja uzun basıp bildir.": "⚠️ Safety warning: be careful if someone you met on SwipeUp asks you for money, bank details, crypto or gift cards. Never send money to people you don't know; if in doubt, long-press the message and report it."
 };
 export const tpl = [
 [
@@ -1408,8 +1485,20 @@ export const tpl = [
 "When on, new messages are deleted for everyone after the time you choose.{0}"
 ],
 [
+"Bitişe {0} gün {1} saat · profil fotoğrafını ekleyen davetler sayılır",
+"Ends in {0} d {1} h · invites who add a profile photo count"
+],
+[
 "{0} ile aynı mekandasınız, eşleştiniz! Sohbete gitmek için dokun.",
 "You and {0} are at the same place — you matched! Tap to go to the chat."
+],
+[
+"Bitişe {0} saat · profil fotoğrafını ekleyen davetler sayılır",
+"Ends in {0} h · invites who add a profile photo count"
+],
+[
+"Günlük hakkın bitince kullanılır, süresi dolmaz. Elinde: {0}",
+"Used after your daily ones run out, never expire. You have: {0}"
 ],
 [
 "Cevapların gönderildi. {0} cevaplayınca uyumunuz görünecek.",
@@ -1478,6 +1567,10 @@ export const tpl = [
 [
 "Arkadaşını getir, ikiniz de {0} jeton kazanın",
 "Bring a friend, you both earn {0} coins"
+],
+[
+"{0} süper beğeni eklendi. Elinde {1} tane var.",
+"{0} super likes added. You have {1}."
 ],
 [
 "{0} şu an çiftliğinde. El sallayabilirsin.",
@@ -1550,6 +1643,10 @@ export const tpl = [
 [
 "Başvurular {0} tarihinde kapanıyor",
 "Submissions close on {0}"
+],
+[
+"{0} süper beğeni {1} jeton, bakiyen {2}.",
+"{0} super likes cost {1} coins; your balance is {2}."
 ],
 [
 "{0} çerçevesi {1} jeton. Alınsın mı?",
@@ -2148,6 +2245,10 @@ export const tpl = [
 "{0} days · {1} coins"
 ],
 [
+"{0} süper beğeni",
+"{0} super likes"
+],
+[
 "{0} yüklenemedi",
 "{0} couldn't be loaded"
 ],
@@ -2272,6 +2373,10 @@ export const tpl = [
 "{0} stickers"
 ],
 [
+"{0} · {1} jeton",
+"{0} · {1} coins"
+],
+[
 "{0} haftası",
 "{0} week"
 ],
@@ -2314,6 +2419,10 @@ export const tpl = [
 [
 "{0} gönderi",
 "{0} posts"
+],
+[
+"· {0} davet",
+"· {0} invites"
 ],
 [
 "{0} Gönder",
@@ -2374,6 +2483,10 @@ export const tpl = [
 [
 "{0} Başla",
 "{0} Start"
+],
+[
+"{0} kaldı",
+"{0} left"
 ],
 [
 "{0} {1} üye",

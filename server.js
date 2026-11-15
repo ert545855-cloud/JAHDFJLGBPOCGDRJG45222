@@ -92,7 +92,7 @@ function pub(u, viewerId) {
   const self = viewerId === u.id;
   // Yalnızca hesabın sahibinin görebileceği alanlar (başkasının profiline bakan bunları almaz)
   if (!self) ['paid', 'plusUntil', 'boostUntil', 'lastFreeBoost', 'lastSwipe', 'viewersSeenAt', 'verifyPose', 'banReason', 'bannedUntil', 'bannedAt', 'status', 'warned',
-    'passChangedByUser', 'prefs', 'consentAt', 'burcWeek', 'autoWeek', 'loginStreak', 'skin', 'logo', 'isBot', 'tonightUntil', 'plusTrial', 'stickerPacks'].forEach((k) => { delete rest[k]; });
+    'passChangedByUser', 'prefs', 'consentAt', 'burcWeek', 'autoWeek', 'loginStreak', 'skin', 'logo', 'isBot', 'tonightUntil', 'plusTrial', 'stickerPacks', 'superBank'].forEach((k) => { delete rest[k]; });
   const hidden = !self && priv(u).hideLastSeen;
   const fdoc = viewerId && !self ? store.get('follows', `${viewerId}_${u.id}`) : null;
   return {
@@ -101,7 +101,7 @@ function pub(u, viewerId) {
     online: hidden ? false : isOnline(u.id),
     lastSeen: hidden ? null : u.lastSeen,
     live: lives.has(u.id),
-    plus: isPlus(u), verified: !!u.verified, level: featureCtx.levelOf?.(u) || null, tonight: (u.tonightUntil || 0) > now(), // "Bu akşam müsaitim": 24 saatlik etiket
+    plus: isPlus(u), pTheme: isPlus(u) ? u.pTheme || null : null, verified: !!u.verified, level: featureCtx.levelOf?.(u) || null, tonight: (u.tonightUntil || 0) > now(), // "Bu akşam müsaitim": 24 saatlik etiket
     ...(self ? { closeFriendsCount: (closeFriends || []).length } : {}),
     age: self ? u.age ?? null : shownAge(u), ageHidden: !!priv(u).hideAge, tags: tagsOf(u),
     prompts: (u.prompts || []).map((p) => ({ ...p, q: socialMod.PROMPTS.find((x) => x[0] === p.id)?.[1] || '' })),
@@ -113,7 +113,7 @@ function pub(u, viewerId) {
 const brief = (u) => u && ({
   id: u.id, username: u.username, name: u.name, avatar: small(u.avatar, 320),
   online: priv(u).hideLastSeen ? false : isOnline(u.id), live: lives.has(u.id), lastSeen: priv(u).hideLastSeen ? null : u.lastSeen,
-  createdAt: u.createdAt, role: u.role || null, verified: !!u.verified, plus: isPlus(u), frame: u.frame || null, private: !!priv(u).private,
+  createdAt: u.createdAt, role: u.role || null, verified: !!u.verified, plus: isPlus(u), nc: isPlus(u) ? u.pTheme?.name || null : null, frame: u.frame || null, private: !!priv(u).private,
 });
 
 function distance(a, b) {
@@ -204,6 +204,22 @@ const ipOf = (req) => {
 };
 
 // ================= Bildirimler =================
+// Bildirim türleri → ayar grubu (Ayarlar → Bildirimler)
+const NOTIFY_GROUP = {
+  like: 'likes', liked: 'likes', super_msg: 'likes', match: 'matches', message: 'messages', group: 'messages', call: 'calls', missed: 'calls',
+  comment: 'social', follow: 'social', follow_request: 'social', follow_ok: 'social', repost: 'social', post: 'social', story_answer: 'social', mention: 'social',
+  game: 'games', farm: 'games', level: 'games', streak: 'games', event: 'events', picks: 'events', burc: 'events', market: 'market', announce: 'promo', live: 'social',
+};
+function pushAllowed(u, type) {
+  if (!u) return true;
+  const g = NOTIFY_GROUP[type]; const np = u.notifyPrefs || {};
+  if (g && (np.off || []).includes(g)) return false;
+  if (np.quiet && g && g !== 'calls') { // sessiz saatler (Türkiye saati)
+    const h = new Date(Date.now() + 3 * 3600000).getUTCHours(); const a = np.quietFrom ?? 23; const b = np.quietTo ?? 8;
+    if (a > b ? h >= a || h < b : h >= a && h < b) return false;
+  }
+  return true;
+}
 async function notify(userId, n) {
   if (!userId || userId === n.fromId || isBlocked(userId, n.fromId)) return;
   const from = n.fromId ? store.get('users', n.fromId) : null;
@@ -217,6 +233,8 @@ async function notify(userId, n) {
   const visible = [...(online.get(userId) || [])].some((s) => s.data.visible);
   if (visible || !VAPID) return;
   const me = store.get('users', userId);
+  // Kişinin bildirim tercihleri: kapattığı türler ve sessiz saatler (güvenlik, destek ve satın alma bildirimleri her zaman gider)
+  if (!pushAllowed(me, n.type)) return;
   const body = {
     title: n.title || (from && n.type !== 'liked' ? from.name : 'SwipeUp'),
     body: n.text,
@@ -670,6 +688,15 @@ app.post('/api/auth/oauth', wrap(async (req, res) => {
   res.json({ token: sign(nu), user: pub(store.get('users', nu.id), nu.id), recoveryCode: code.match(/.{4}/g).join('-'), created: true });
 }));
 // Ayarlar → Giriş yöntemleri: Google / Apple bağla, kaldır
+// Bildirim tercihleri (tür bazında kapatma, sessiz saatler)
+app.get('/api/me/notify-prefs', auth, (req, res) => res.json(req.user.notifyPrefs || { off: [], quiet: false, quietFrom: 23, quietTo: 8 }));
+app.post('/api/me/notify-prefs', auth, (req, res) => {
+  const b = req.body || {}; const groups = new Set(Object.values(NOTIFY_GROUP));
+  const hr = (x, d) => (Number.isInteger(+x) && +x >= 0 && +x <= 23 ? +x : d);
+  const p = { off: (Array.isArray(b.off) ? b.off : []).filter((g) => groups.has(g)), quiet: !!b.quiet, quietFrom: hr(b.quietFrom, 23), quietTo: hr(b.quietTo, 8) };
+  store.update('users', req.user.id, { notifyPrefs: p });
+  res.json(p);
+});
 app.get('/api/me/logins', auth, (req, res) => res.json({ password: !req.user.noPass, google: !!req.user.googleSub, apple: !!req.user.appleSub, oauth: oidc.publicConfig() }));
 app.post('/api/me/logins', auth, wrap(async (req, res) => {
   const provider = req.body?.provider === 'apple' ? 'apple' : 'google';
@@ -803,7 +830,9 @@ app.patch('/api/me', auth, (req, res) => {
   if (b.privacy && typeof b.privacy === 'object') {
     const cur = priv(req.user);
     const np = { ...cur };
-    ['private', 'hideLastSeen', 'hideRead', 'hideFromDeck', 'hideVisits', 'hideAge', 'hideCheckin', 'noBurcPush'].forEach((k) => { if (b.privacy[k] !== undefined) np[k] = !!b.privacy[k]; });
+    ['private', 'hideLastSeen', 'hideRead', 'hideFromDeck', 'hideVisits', 'ghostRead', 'hideAge', 'hideCheckin', 'noBurcPush'].forEach((k) => { if (b.privacy[k] !== undefined) np[k] = !!b.privacy[k]; });
+    // SwipeUp+ ayrıcalıkları: gizli okuma ve görünmeden profil gezme
+    if ((b.privacy.ghostRead || b.privacy.hideVisits) && !isPlus(req.user)) return res.status(402).json({ error: 'Bu ayar SwipeUp+ ayrıcalığıdır.', needPlus: true });
     patch.privacy = np;
     // Gizli hesap kapatılınca bekleyen istekleri kabul et
     if (cur.private && !np.private) store.filter('follows', (f) => f.to === req.user.id && f.status === 'pending').forEach((f) => store.update('follows', f.id, { status: null }));
@@ -850,7 +879,7 @@ app.patch('/api/me', auth, (req, res) => {
     patch.username = un;
   }
   const saved = store.update('users', req.user.id, patch);
-  if (patch.photos || patch.avatar) featureCtx.checkInviteReward?.(saved);
+  if (patch.photos || patch.avatar) { featureCtx.checkInviteReward?.(saved); featureCtx.onPhotos?.(saved); }
   const out = pub(store.get('users', req.user.id), req.user.id);
   if (patch.privacy) broadcastPresence(req.user.id);
   res.json(out);
@@ -1618,10 +1647,11 @@ app.post('/api/swipe', auth, (req, res) => {
   const me = req.user;
   if (dir !== 'left') {
     const q = eco.quota(me);
-    if (dir === 'super' && q.supersLeft <= 0) return res.status(402).json({ error: q.plus ? 'Bugünkü süper beğeni hakkın bitti.' : 'Bugünkü süper beğeni hakkın bitti. SwipeUp+ ile her gün 5 süper beğeni.', limit: 'super' });
+    if (dir === 'super' && q.supersLeft <= 0) return res.status(402).json({ buySupers: true, error: q.plus ? 'Bugünkü süper beğeni hakkın bitti.' : 'Bugünkü süper beğeni hakkın bitti. SwipeUp+ ile her gün 5 süper beğeni.', limit: 'super' });
     if (dir === 'right' && q.likesLeft === 0) return res.status(402).json({ error: 'Bugünkü beğeni hakkın bitti. SwipeUp+ ile sınırsız beğen.', limit: 'likes' });
-    const d = { ...q.d, likes: q.d.likes + (dir === 'right' ? 1 : 0), supers: q.d.supers + (dir === 'super' ? 1 : 0) };
-    store.update('users', me.id, { daily: d });
+    const fromBank = dir === 'super' && q.supersDaily <= 0; // günlük hak bittiyse satın alınan süper beğeniden düş
+    const d = { ...q.d, likes: q.d.likes + (dir === 'right' ? 1 : 0), supers: q.d.supers + (dir === 'super' && !fromBank ? 1 : 0) };
+    store.update('users', me.id, { daily: d, ...(fromBank ? { superBank: Math.max(0, (me.superBank || 0) - 1) } : {}) });
   }
   store.put('swipes', { id: `${me.id}_${t.id}`, from: me.id, to: t.id, dir, at: now() });
   if (dir !== 'left') featureCtx.quest?.(me.id, 'begeni', 1, t.id);
@@ -2069,7 +2099,11 @@ require('./server/minigames')(app, featureCtx); // sohbet içi mini oyunlar: XOX
 require('./server/kupa')(app, featureCtx); // Parti Kupası (3D)
 require('./server/farm')(app, featureCtx); // SwipeFarm: çiftlik oyunu
 require('./server/cifte')(app, featureCtx);
-require('./server/stickers')(app, featureCtx); // sohbet çıkartma paketleri // çifte buluşma (2'ye 2) ve müzik uyumu
+require('./server/stickers')(app, featureCtx); // sohbet çıkartma paketleri
+require('./server/plusx')(app, featureCtx); // süper beğeni paketleri, profil teması
+require('./server/backup')(app, featureCtx); // gece otomatik yedek
+require('./server/growth2')(app, featureCtx); // davet sıralaması, kayıt hunisi, tanıtım sayfası
+require('./server/guard')(app, featureCtx); // dolandırıcılık uyarısı, sahte profil (growth'tan sonra: onMessage zinciri) // çifte buluşma (2'ye 2) ve müzik uyumu
 photomod(app, featureCtx); // fotoğraf denetimi (Sightengine)
 require('./server/engage')(app, featureCtx); // seriler, kulüpler, günün sorusu, seçki, karaoke… (en son yüklenir)
 gameOut = featureCtx.gameOut;
@@ -2155,7 +2189,7 @@ function finishCall(call, reason) {
   [call.from, call.to].forEach((u) => emitTo(u, 'call:ended', { callId: call.id, reason }));
   const chat = store.get('chats', call.chatId);
   if (!chat) return;
-  const kind = call.video ? 'Görüntülü arama' : 'Sesli arama';
+  const kind = call.intro ? 'Görüntülü tanışma' : call.video ? 'Görüntülü arama' : 'Sesli arama';
   if (was === 'active') {
     const secs = Math.round((now() - call.answeredAt) / 1000);
     sendMessage(chat, call.from, { text: `📞 ${kind} · ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`, system: true });
@@ -2242,8 +2276,8 @@ io.on('connection', (socket) => {
     const c = store.get('chats', chatId);
     if (!c || !c.members.includes(uid)) return;
     const me = store.get('users', uid);
-    if (priv(me).hideRead) {
-      // Okundu bilgisi kapalı: okundu sayılır ama karşı tarafa mavi tik gitmez
+    if (priv(me).hideRead || (priv(me).ghostRead && isPlus(me))) {
+      // Okundu bilgisi kapalı (ya da SwipeUp+ gizli okuma): okundu sayılır ama karşı tarafa mavi tik gitmez
       store.filter('messages', (m) => m.chatId === chatId && !hasRead(m, uid)).forEach((m) => {
         m.seenBy = [...(m.seenBy || []), uid]; store.update('messages', m.id, {});
       });
@@ -2256,18 +2290,19 @@ io.on('connection', (socket) => {
   });
 
   // ---- Sesli / görüntülü arama ----
-  socket.on('call:start', ({ chatId, video }, ack) => {
+  socket.on('call:start', ({ chatId, video, intro }, ack) => {
     const c = store.get('chats', chatId);
     if (!c || c.isGroup || !c.members.includes(uid)) return ack?.({ error: 'Arama başlatılamadı.' });
     const to = c.members.find((m) => m !== uid);
     if (isBlocked(uid, to)) return ack?.({ error: 'Bu kişiyi arayamazsın.' });
     if (SPECIAL.has(store.get('users', to)?.role) || SPECIAL.has(store.get('users', uid)?.role)) return ack?.({ error: 'Bu hesapla arama yapılamaz.' });
     if ([...calls.values()].some((x) => [x.from, x.to].includes(to))) return ack?.({ error: 'Kişi şu an başka bir görüşmede.' });
-    const call = { id: nanoid(10), chatId, from: uid, to, video: !!video, state: 'ringing', at: now(), callerSocket: socket.id };
+    // intro: 10 dakikalık görüntülü tanışma (süre dolunca kendiliğinden biter)
+    const call = { id: nanoid(10), chatId, from: uid, to, video: !!video || !!intro, intro: !!intro, limit: intro ? 600 : 0, state: 'ringing', at: now(), callerSocket: socket.id };
     calls.set(call.id, call);
     const peer = store.get('users', to);
-    emitTo(to, 'call:incoming', { callId: call.id, chatId, video: call.video, from: brief(store.get('users', uid)) });
-    notify(to, { type: 'call', fromId: uid, tag: 'call-' + call.id, title: store.get('users', uid).name, text: video ? '📹 Görüntülü arama geliyor' : '📞 Sesli arama geliyor', url: `/#/chat/${chatId}` });
+    emitTo(to, 'call:incoming', { callId: call.id, chatId, video: call.video, intro: call.intro, limit: call.limit, from: brief(store.get('users', uid)) });
+    notify(to, { type: 'call', fromId: uid, tag: 'call-' + call.id, title: store.get('users', uid).name, text: intro ? '📹 10 dakikalık görüntülü tanışma daveti' : video ? '📹 Görüntülü arama geliyor' : '📞 Sesli arama geliyor', url: `/#/chat/${chatId}` });
     call.timer = setTimeout(() => finishCall(call, 'timeout'), 35000);
     ack?.({ ok: true, callId: call.id, peer: brief(peer) });
   });
@@ -2277,6 +2312,7 @@ io.on('connection', (socket) => {
     if (!call || call.to !== uid || call.state !== 'ringing') return;
     clearTimeout(call.timer);
     call.state = 'active'; call.answeredAt = now(); call.calleeSocket = socket.id;
+    if (call.limit) { call.timer = setTimeout(() => finishCall(call, 'limit'), call.limit * 1000); [call.from, call.to].forEach((u) => emitTo(u, 'call:limit', { callId, endsAt: now() + call.limit * 1000 })); }
     io.to(call.callerSocket).emit('call:accepted', { callId, peerSocket: socket.id });
     online.get(uid)?.forEach((s) => { if (s.id !== socket.id) s.emit('call:taken', { callId }); });
   });

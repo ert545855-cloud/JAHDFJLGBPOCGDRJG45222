@@ -544,3 +544,11 @@ tr.sgw td { background: color-mix(in srgb, #ffc926 10%, transparent); }
 .er-stack { margin: 0; max-height: 260px; overflow: auto; padding: 10px; border-radius: 10px; background: var(--soft); font-size: 11.5px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
 .er-users { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
 .er-act { display: flex; gap: 8px; }
+/* kayıt hunisi */
+.fn-steps { display: grid; gap: 8px; }
+.fn-st { display: grid; grid-template-columns: 1fr 190px; gap: 10px; align-items: center; }
+.fn-bar { position: relative; height: 34px; border-radius: 10px; background: var(--soft); overflow: hidden; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-size: 13.5px; }
+.fn-bar::before { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--w); background: linear-gradient(90deg, #ff8a3d, #ff3d6e); opacity: .22; }
+.fn-bar span, .fn-bar b { position: relative; }
+.fn-m { font-weight: 700; font-size: 14px; } .fn-m small { font-weight: 500; color: var(--muted); }
+@media (max-width: 640px) { .fn-st { grid-template-columns: 1fr; } }

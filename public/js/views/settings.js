@@ -2,7 +2,7 @@ import { accounts, accountSheet } from '../accounts.js';
 import { googleButton, appleCredential, oauthCfg } from '../oauth.js';
 import { icon } from '../icons.js';
 import {
-  state, api, esc, toast, sheet, logout, avatar, refreshBadges, logoMenu, adoptToken,
+  state, api, esc, toast, sheet, logout, avatar, refreshBadges, logoMenu, adoptToken, plusSheet,
 } from '../core.js';
 
 const PRIV = [
@@ -11,7 +11,8 @@ const PRIV = [
   ['hideRead', 'dcheck', 'Okundu bilgisini kapat', 'Mavi tik gönderilmez; sen de başkalarınınkini göremezsin'],
   ['hideFromDeck', 'flame', 'Kaydırmada beni gösterme', 'Keşfet destesinde yeni kişilere çıkmazsın'],
   ['hideAge', 'person', 'Yaşımı gizle', 'Yaşın profilinde ve kaydırma kartında görünmez; yaş filtreleri yine çalışır'],
-  ['hideVisits', 'eye', 'Profil ziyaretlerimi gösterme', 'Baktığın profillerin ziyaretçi listesinde görünmezsin'],
+  ['hideVisits', 'eye', 'Görünmeden gez (SwipeUp+)', 'Baktığın profillerin ziyaretçi listesinde görünmezsin', true],
+  ['ghostRead', 'dcheck', 'Gizli okuma (SwipeUp+)', 'Mesajları okursun ama karşı tarafa mavi tik gitmez; sen onlarınkini görmeye devam edersin', true],
   ['hideCheckin', 'mapPin', 'Mekanımı arkadaşlarıma gösterme', 'Etiketlediğin mekan, karşılıklı takipleştiğin kişilere ve eşleşmelerine de görünmez'],
 ];
 import { notifSettings, themeMenu } from './profile.js';
@@ -54,7 +55,7 @@ export default function settings(view) {
     </div>
     <div class="group-t">Gizlilik</div>
     <div class="group">
-      ${PRIV.map(([k, ic, t, sub]) => `<label class="it">${icon(ic)}<span class="grow">${t}<div class="sub">${sub}</div></span><input type="checkbox" class="sw" data-k="${k}" ${me.privacy?.[k] ? 'checked' : ''}></label>`).join('')}
+      ${PRIV.map(([k, ic, t, sub, plus]) => `<label class="it">${icon(ic)}<span class="grow">${t}${plus && !me.plus ? ` <span class="plus-chip">${icon('crown')}+</span>` : ''}<div class="sub">${sub}</div></span><input type="checkbox" class="sw" data-k="${k}" ${me.privacy?.[k] && (!plus || me.plus) ? 'checked' : ''}></label>`).join('')}
       <button class="it bl">${icon('block')}<span class="grow">Engellenenler</span></button>
     </div>
     <div class="group-t">Hesap</div>
@@ -98,7 +99,7 @@ export default function settings(view) {
         const u = await api('/me', { method: 'PATCH', body: { privacy: { [c.dataset.k]: c.checked } } });
         state.me.privacy = u.privacy;
         toast(c.checked ? 'Açıldı.' : 'Kapatıldı.');
-      } catch (e) { c.checked = !c.checked; toast(e.message); }
+      } catch (e) { c.checked = !c.checked; if (e.status === 402) plusSheet(e.message); else toast(e.message); }
     };
   });
   view.querySelector('.dl').onclick = async () => {
