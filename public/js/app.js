@@ -2,7 +2,7 @@ import { remember, accountSheet, switchFromUrl } from './accounts.js';
 import { icon } from './icons.js';
 import { initNav } from './nav.js';
 import {
-  state, api, on, emit, connectSocket, refreshBadges, toast, esc, el, applySkin, currentSkin, notifHref, applyLogo, refreshStoryMap, syncPush,
+  state, api, on, emit, connectSocket, refreshBadges, toast, esc, el, applySkin, currentSkin, setGameLook, notifHref, applyLogo, refreshStoryMap, syncPush,
 } from './core.js';
 import { initCalls } from './calls.js';
 import { checkVersion, recover, afterBoot } from './update.js';
@@ -63,11 +63,11 @@ const routes = [
   [/^\/seviye$/, 'level', { tabs: false }],
   [/^\/haftanin-enleri$/, 'best', { tab: 'home' }],
   [/^\/oyunlar$/, 'games', { tab: 'home' }],
-  [/^\/farm(?:\/([\w.-]+))?$/, 'farm', { tabs: false }],
-  [/^\/oyun\/okey\/([\w-]+)$/, 'okey', { tabs: false, dark: true }],
-  [/^\/oyun\/cizbil\/([\w-]+)$/, 'cizbil', { tabs: false }],
-  [/^\/oyun\/kupa\/([\w-]+)$/, 'kupa', { tabs: false, dark: true }],
-  [/^\/oyun\/([a-z0-9]+)\/([\w-]+)$/, 'play', { tabs: false }],
+  [/^\/farm(?:\/([\w.-]+))?$/, 'farm', { tabs: false, game: true }],
+  [/^\/oyun\/okey\/([\w-]+)$/, 'okey', { tabs: false, dark: true, game: true }],
+  [/^\/oyun\/cizbil\/([\w-]+)$/, 'cizbil', { tabs: false, game: true }],
+  [/^\/oyun\/kupa\/([\w-]+)$/, 'kupa', { tabs: false, dark: true, game: true }],
+  [/^\/oyun\/([a-z0-9]+)\/([\w-]+)$/, 'play', { tabs: false, game: true }],
   [/^\/soru$/, 'dq', { tab: 'home' }],
   [/^\/kulupler$/, 'clubs', { tab: 'home' }],
   [/^\/kulup\/([a-z0-9]+)$/, 'clubs', { tab: 'home' }],
@@ -189,6 +189,7 @@ async function router() {
   if (cleanup) { try { cleanup(); } catch {} cleanup = null; }
   document.body.classList.toggle('no-tabs', match.opts.tabs === false);
   document.body.classList.toggle('dark-ui', !!match.opts.dark);
+  setGameLook(!!match.opts.game); // oyunlarda uygulama teması kapalı
   tabbar.dataset.active = match.opts.tab || '';
   if (state.me) renderTabbar(match.opts.tab);
   // Her sayfada temiz bir kap: önceki sayfanın view üzerine eklediği dinleyiciler taşınmasın

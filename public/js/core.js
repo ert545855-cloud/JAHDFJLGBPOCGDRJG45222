@@ -572,9 +572,27 @@ export const SKINS = [
   { id: 'gece', name: 'Gece moru', note: 'Koyu, neon parıltı', pv: 'radial-gradient(80% 60% at 0 0,#3b1d73,#0d0a1a)', a: 'linear-gradient(120deg,#7c3aed,#ec4899)', meta: ['#0d0a1a'] },
   { id: 'altin', name: 'Altın', note: 'Siyah ve altın', pv: 'radial-gradient(80% 60% at 100% 0,#3b2c10,#0b0906)', a: 'linear-gradient(120deg,#ffe7a3,#f0c25a,#c58b22)', meta: ['#0b0906'] },
 ];
+// Oyunlarda uygulama teması kapanır: oyun ekranları her zaman kendi koyu düzeniyle görünür.
+// Oyundan çıkınca kişinin teması ve açık/koyu tercihi aynen geri gelir. Oyun açıkken tema değişirse çıkışta uygulanır.
+let gameLook = null;
+const GAME_META = '#000000';
+export function setGameLook(on) {
+  const root = document.documentElement;
+  if (on && !gameLook) {
+    gameLook = { skin: root.dataset.skin || null, theme: root.dataset.theme || null };
+    delete root.dataset.skin; root.dataset.theme = 'dark'; root.dataset.game = '';
+    document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', GAME_META));
+  } else if (!on && gameLook) {
+    const g = gameLook; gameLook = null; delete root.dataset.game;
+    if (g.theme) root.dataset.theme = g.theme; else delete root.dataset.theme;
+    applySkin(g.skin || 'gunbatimi', { save: false });
+  }
+}
+export const inGameLook = () => !!gameLook;
 export function applySkin(id, { save = true } = {}) {
   const sk = SKINS.find((x) => x.id === id) || SKINS[0];
   const root = document.documentElement;
+  if (gameLook) { gameLook.skin = sk.id === 'gunbatimi' ? null : sk.id; if (save) { try { localStorage.setItem('su_skin', sk.id); } catch {} } return sk.id; } // oyundan çıkınca uygulanır
   if (sk.id === 'gunbatimi') delete root.dataset.skin; else root.dataset.skin = sk.id;
   document.querySelectorAll('meta[name="theme-color"]').forEach((m, i) => {
     m.setAttribute('content', sk.id === 'gunbatimi' ? sk.meta[i] || sk.meta[0] : sk.meta[0]);
@@ -582,7 +600,7 @@ export function applySkin(id, { save = true } = {}) {
   if (save) { try { localStorage.setItem('su_skin', sk.id); } catch {} }
   return sk.id;
 }
-export const currentSkin = () => document.documentElement.dataset.skin || 'gunbatimi';
+export const currentSkin = () => (gameLook ? gameLook.skin : document.documentElement.dataset.skin) || 'gunbatimi';
 
 // ---- Logo ----
 export const logo = () => '<img class="mark" src="/icons/mark.png" alt=""><span class="wmt">swipeup</span>';

@@ -36,6 +36,8 @@
     --line: #26262e; --uv: #ff5a6e; --uv-press: #ff4a60; --uv-soft: #2a1519; --shadow: 0 10px 30px -14px rgba(0,0,0,.6);
 }
 
+/* Oyun ekranları: tema kapalı, her zaman koyu (core.js setGameLook). Form öğeleri de koyu çizilsin. */
+:root[data-game] { color-scheme: dark; }
 /* ===== Temalar (data-skin) ===== */
 :root[data-skin="pembe"] {
   color-scheme: light;
