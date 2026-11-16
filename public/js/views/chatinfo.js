@@ -16,6 +16,7 @@ export default async function chatinfo(view, chatId) {
       <div class="group">
         <button class="it clr">${icon('trash')}<span class="grow">Sohbeti temizle<div class="sub">Mesajlar sadece senden silinir</div></span></button>
         ${u.matched ? `<button class="it um">${icon('x')}<span class="grow">Eşleşmeyi kaldır<div class="sub">Sohbetiniz ikiniz için de silinir</div></span></button>` : ''}
+        <a class="it" href="#/guvenlik">${icon('shield')}<span class="grow">Güvenlik merkezi<div class="sub">Buluşmayı paylaş, güvenli tanışma ipuçları, acil numaralar</div></span></a>
       </div>
       <div class="group">
         <button class="it danger bl">${icon('block')}Engelle</button>

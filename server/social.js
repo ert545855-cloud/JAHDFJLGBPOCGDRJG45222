@@ -297,11 +297,14 @@ module.exports = function social(app, ctx) {
     const esc = (x) => String(x ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
     const fmt = (t) => new Date(t).toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
     let body;
-    if (!s) body = '<h1>Bağlantı geçersiz</h1><p>Bu güvenlik bağlantısı bulunamadı ya da süresi doldu.</p>';
+    res.set('X-Robots-Tag', 'noindex, nofollow').set('Referrer-Policy', 'no-referrer').set('Cache-Control', 'no-store');
+    if (!s || now() > s.when + 2 * DAY) body = '<h1>Bağlantı geçersiz</h1><p>Bu güvenlik bağlantısı bulunamadı ya da süresi doldu.</p>';
+    else if (s.status === 'cancelled') body = '<h1>Paylaşım iptal edildi</h1><p>Buluşma iptal edildi ya da paylaşım kapatıldı.</p>';
     else {
       const late = s.status === 'planned' && now() > s.when + 3 * 3600000;
-      const st = s.status === 'ok' ? `<div class="st ok">✓ ${esc(s.me.name)} iyi olduğunu bildirdi<small>${fmt(s.okAt)}</small></div>`
-        : late ? `<div class="st bad">⚠️ ${esc(s.me.name)} buluşmadan sonra henüz haber vermedi<small>Ona ulaşmayı dene.</small></div>`
+      const st = s.status === 'help' ? `<div class="st bad">🆘 ${esc(s.me.name)} yardım istedi<small>${fmt(s.helpAt)} · Hemen ona ulaşmayı dene; ulaşamazsan 112’yi ara ve bu sayfadaki bilgileri ver.</small></div><a class="call" href="tel:112">112’yi ara</a>`
+        : s.status === 'ok' ? `<div class="st ok">✓ ${esc(s.me.name)} iyi olduğunu bildirdi<small>${fmt(s.okAt)}</small></div>`
+        : late ? `<div class="st bad">⚠️ ${esc(s.me.name)} buluşmadan sonra henüz haber vermedi<small>Ona ulaşmayı dene. Ulaşamaz ve acil bir durumdan şüphelenirsen 112’yi ara.</small></div>`
           : now() > s.when ? `<div class="st wait">⏳ Buluşma devam ediyor olabilir<small>${esc(s.me.name)} işi bitince “İyiyim” diyecek.</small></div>`
             : '<div class="st wait">📅 Buluşma planlandı</div>';
       body = `<p class="k">${esc(s.me.name)} seninle buluşma bilgilerini paylaştı</p>
@@ -318,7 +321,7 @@ module.exports = function social(app, ctx) {
       .who img{width:52px;height:52px;border-radius:16px;object-fit:cover}.who b{display:block}.who span{color:#7a6c85;font-size:14px}
       .row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #eee}.row span{color:#7a6c85}.row b{text-align:right}
       .st{margin-top:16px;padding:14px;border-radius:16px;font-weight:700}.st small{display:block;font-weight:500;color:inherit;opacity:.8;margin-top:2px}
-      .ok{background:#e3f7ec;color:#0c7a43}.bad{background:#fde8ea;color:#b4232f}.wait{background:#fff4dc;color:#8a5a00}.f{color:#7a6c85;font-size:13px;margin:16px 0 0}
+      .call{display:block;margin-top:10px;text-align:center;padding:14px;border-radius:14px;background:#b4232f;color:#fff;font-weight:800;text-decoration:none}.ok{background:#e3f7ec;color:#0c7a43}.bad{background:#fde8ea;color:#b4232f}.wait{background:#fff4dc;color:#8a5a00}.f{color:#7a6c85;font-size:13px;margin:16px 0 0}
       </style></head><body><main><div class="lg"><img src="/icons/icon-192.png" alt="">SwipeUp</div>${body}</main></body></html>`);
   });
   // Buluşmadan 2 saat sonra "iyi misin?" hatırlatması
@@ -326,7 +329,7 @@ module.exports = function social(app, ctx) {
     const t = now();
     store.filter('safety', (s) => s.status === 'planned' && !s.reminded && t > s.when + 2 * 3600000 && t < s.when + DAY).forEach((s) => {
       store.update('safety', s.id, { reminded: true });
-      notify(s.userId, { type: 'safety', text: '💛 Buluşman nasıl geçti? Arkadaşına iyi olduğunu bildirmek için dokun.', url: '/#/chats', tag: 'safety-' + s.id });
+      notify(s.userId, { type: 'safety', text: '💛 Buluşman nasıl geçti? Paylaştığın kişiye iyi olduğunu bildirmek için dokun.', url: `/#/guvenlik/paylas/${s.id}`, tag: 'safety-' + s.id });
     });
   }, 5 * 60000).unref();
 

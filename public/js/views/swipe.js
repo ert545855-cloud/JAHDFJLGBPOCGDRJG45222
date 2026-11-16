@@ -1,6 +1,7 @@
 import { superSheet } from '../supers.js';
 import { icon } from '../icons.js';
 import { api, esc, toast, isOn, state, sheet, on, tick, plusSheet, needCoins } from '../core.js';
+import { withOrientation } from '../consent.js';
 import { showMatch } from '../app.js';
 import { egi } from '../eg-icons.js';
 import { voiceChip } from '../extras.js';
@@ -238,7 +239,8 @@ export function openFilters(onSave) {
         e.preventDefault();
         let a = +f.a1.value; let b = +f.a2.value; if (a > b) [a, b] = [b, a];
         try {
-          const u = await api('/me', { method: 'PATCH', body: { lookingFor: f.lf.value, prefs: { ageMin: a, ageMax: b, maxKm: +f.km.value > 500 ? null : +f.km.value, verifiedOnly: f.vo.checked, tonightOnly: f.tn.checked, passCity: f.pc.value }, ...(location ? { location, ...(consentLocation ? { consentLocation: true } : {}) } : {}) } });
+          const ob = await withOrientation({ lookingFor: f.lf.value }); if (!ob) return; f.lf.value = ob.lookingFor;
+          const u = await api('/me', { method: 'PATCH', body: { ...ob, prefs: { ageMin: a, ageMax: b, maxKm: +f.km.value > 500 ? null : +f.km.value, verifiedOnly: f.vo.checked, tonightOnly: f.tn.checked, passCity: f.pc.value }, ...(location ? { location, ...(consentLocation ? { consentLocation: true } : {}) } : {}) } });
           Object.assign(state.me, u); close(); onSave?.();
         } catch (er) { toast(er.message); }
       };

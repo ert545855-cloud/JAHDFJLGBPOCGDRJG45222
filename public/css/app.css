@@ -4342,3 +4342,31 @@ html.land-game #fx-layer { display: none; }
 .form label.consent { display: flex; font-weight: 500; font-size: 14px; }
 .kv-types .consent { padding: 8px 6px; }
 .form label .opt { font-weight: 500; color: var(--muted); }
+.price .was { color: var(--muted); font-weight: 600; font-size: .82em; margin-right: 2px; }
+.sale-note { color: var(--text); }
+.pay-sum .was { font-size: 15px; opacity: .8; font-weight: 600; }
+
+/* Güvenlik merkezi */
+.gv { padding: 8px 16px 32px; }
+.gv-h { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-size: 18px; margin: 22px 0 6px; }
+.gv-h svg { width: 20px; height: 20px; color: var(--uv); }
+.gv-p { margin: 0 0 10px; font-size: 14.5px; line-height: 1.55; color: var(--muted); }
+.gv-list { display: grid; gap: 8px; margin-bottom: 10px; }
+.gv-card { padding: 12px 14px; border-radius: var(--r-md); background: var(--surface); display: grid; gap: 4px; }
+.gv-card.on { box-shadow: inset 0 0 0 2px var(--uv); }
+.gv-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.gv-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.gv-row .btn { display: inline-flex; align-items: center; gap: 6px; }
+.gv-row .btn svg { width: 16px; height: 16px; }
+.gv-alert { padding: 14px; border-radius: var(--r-md); background: rgba(255,45,85,.1); margin: 8px 0 4px; }
+.gv-alert p { margin: 4px 0 8px; font-size: 14px; }
+.gv-ul { margin: 0; padding-left: 20px; font-size: 14.5px; line-height: 1.55; display: grid; gap: 4px; }
+.gv-sos { display: grid; gap: 8px; }
+.gv-tel { display: grid; gap: 2px; padding: 12px 14px; border-radius: var(--r-md); background: var(--surface); color: var(--text); text-decoration: none; }
+.gv-tel b { font-family: var(--display); font-size: 18px; }
+.gv-tel span { font-size: 13px; color: var(--muted); }
+.gv-tel.big { background: rgba(255,45,85,.12); }
+.gv-tel.big b { font-size: 26px; color: var(--hot, #e0244a); }
+.gv-foot { font-size: 13px; margin-top: 20px; }
+.gv-sh { padding: 0 18px 20px; display: grid; gap: 10px; }
+.gv-url { font-size: 13px; letter-spacing: 0; font-weight: 600; word-break: break-all; text-align: left; }

@@ -6,7 +6,7 @@ const { nanoid } = require('nanoid');
 const mail = require('./mail');
 
 // Belge sürümleri: metin değişince tarih güncellenir; Kullanım Koşulları değişince üyelerden yeniden onay istenir
-const VER = { kosullar: '2026-11-17', gizlilik: '2026-11-17', kvkk: '2026-11-17', riza: '2026-11-17', cerez: '2026-11-17', mesafeli: '2026-11-17', onbilgi: '2026-11-17', iade: '2026-11-17', kunye: '2026-11-17', lisanslar: '2026-11-17' };
+const VER = { kosullar: '2026-11-17', gizlilik: '2026-11-17', kvkk: '2026-11-17', riza: '2026-11-17', cerez: '2026-11-17', mesafeli: '2026-11-17', onbilgi: '2026-11-17', iade: '2026-11-17', kunye: '2026-11-17', lisanslar: '2026-11-17', saklama: '2026-11-17', guvenlik: '2026-11-17' };
 const THH = { year: 2026, limit: 186000 }; // tüketici hakem heyeti parasal sınırı (her yıl Aralık'ta güncellenir)
 const DEF = { deliveryHours: 24, payHours: 72, refund14: true };
 const DAY = 86400000;
@@ -82,7 +82,7 @@ ${L.refund14 ? '<p><b>14 gün iade güvencesi:</b> Yasal bir zorunluluk olmamakl
   function docs(u, p, o) { // o: sipariş (kod, tarih); yoksa önizleme
     const L = info(); const at = o?.at || now();
     const buyer = [['Alıcı', u ? (u.name || u.username) : '[alıcı]'], ['Kullanıcı adı', u ? `@${u.username}` : ''], ['E-posta', u?.email || ''], ['Sipariş kodu', o?.code || 'Onayladığında oluşturulur'], ['Tarih', trDate(at)]].filter(([, v]) => v);
-    const price = p ? `<p>Tüm vergiler dahil toplam fiyat: <b>${TL(p.price)}</b>${p.kind === 'coins' ? ` (jeton başına ${TL(p.price / p.coins)})` : p.days >= 30 ? ` (aylık ${TL(p.price / (p.days / 30))})` : ''}. Bu tutar dışında SwipeUp tarafından alınan ek bir ücret yoktur. Bankanın havale/EFT için ayrıca masraf kesmesi hâlinde bu masraf bankanla aranızdadır.</p>` : '<p>Fiyat, sipariş ekranında tüm vergiler dahil Türk lirası olarak gösterilir.</p>';
+    const price = p ? `<p>Tüm vergiler dahil toplam fiyat: <b>${TL(p.price)}</b>${p.kind === 'coins' ? ` (jeton başına ${TL(p.price / p.coins)})` : p.days >= 30 ? ` (aylık ${TL(p.price / (p.days / 30))})` : ''}. ${p.was ? ` Bu fiyat kampanya fiyatıdır: indirimden önceki son 30 günde uygulanan en düşük fiyat ${TL(p.was)} (%${p.off} indirim); kampanya ${esc(p.saleUntil.split('-').reverse().join('.'))} günü sonuna kadar geçerlidir.` : ''} Bu tutar dışında SwipeUp tarafından alınan ek bir ücret yoktur. Bankanın havale/EFT için ayrıca masraf kesmesi hâlinde bu masraf bankanla aranızdadır.</p>` : '<p>Fiyat, sipariş ekranında tüm vergiler dahil Türk lirası olarak gösterilir.</p>';
     const pay = `<p>Ödeme yalnızca <b>havale/EFT</b> ile yapılır; kart bilgisi istenmez. Sipariş onaylandığında ödeme yapacağın IBAN, alıcı adı ve sipariş kodu gösterilir; açıklama kısmına sipariş kodunu yazman gerekir. Sipariş ${L.payHours} saat içinde ödenmezse kendiliğinden iptal edilir.</p>
 <p>Ödemenin hesabımıza ulaşıp doğrulanmasından sonra ürün en geç <b>${L.deliveryHours} saat</b> içinde hesabına tanımlanır ve bildirim alırsın.</p>`;
     const tech = '<p>Jeton ve SwipeUp+ ayrıcalıkları güncel bir web tarayıcısında (Chrome, Safari, Firefox, Edge) ve SwipeUp’ın Android / iPhone uygulamasında çalışır; internet bağlantısı gerektirir. Ürün yalnızca satın alındığı SwipeUp hesabında kullanılabilir.</p>';
@@ -208,7 +208,7 @@ ${L.refund14 ? '<p><b>14 gün iade güvencesi:</b> Yasal bir zorunluluk olmamakl
       eco.addCoins(r.userId, -(o.coins || 0), 'refund', { note: `${o.code} iadesi`, by: req.admin.username });
     }
     store.update('refunds', r.id, { status: okIt ? 'approved' : 'rejected', note2: note, closedAt: now(), by: req.admin.username });
-    if (o) store.update('orders', o.id, { refund: { ...(o.refund || {}), status: okIt ? 'approved' : 'rejected' }, ...(okIt && r.reason !== 'hata' ? { status: 'refunded', closedAt: now() } : {}) });
+    if (o) store.update('orders', o.id, { refund: { ...(o.refund || {}), status: okIt ? 'approved' : 'rejected' }, ...(okIt && r.reason !== 'hata' ? { status: 'refunded', refundedAt: now(), approvedAt: o.approvedAt || o.closedAt } : {}) });
     notify(r.userId, { type: 'order', text: okIt ? `${o?.code || ''} iade talebin onaylandı. ${TL(r.amount)} en geç 14 gün içinde bildirdiğin IBAN’a gönderilecek.` : `${o?.code || ''} iade talebin onaylanmadı.${note ? ` Gerekçe: ${note}` : ''}`, url: '/#/store', tag: `refund-${r.id}` });
     A.audit?.(req.admin, okIt ? 'iade talebini onayladı' : 'iade talebini reddetti', r.userId, `${o?.code || ''} · ${REFUND[r.reason]}`); res.json({ ok: true });
   });

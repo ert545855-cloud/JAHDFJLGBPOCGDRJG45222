@@ -2,6 +2,7 @@ import { icon } from '../icons.js';
 import {
   state, api, esc, toast, pickFile, compressImage, uploadFile,
 } from '../core.js';
+import { withOrientation } from '../consent.js';
 import { voiceEditor, promptsEditor } from '../extras.js';
 
 export default function edit(view) {
@@ -83,15 +84,15 @@ export default function edit(view) {
   const save = async (e) => {
     e?.preventDefault();
     try {
-      const u = await api('/me', {
-        method: 'PATCH',
-        body: {
-          name: f.name.value, username: f.username.value, bio: f.bio.value, ...(me.birthdate ? {} : { age: f.age.value || null }),
-          city: f.city.value, gender: f.gender.value || null, lookingFor: f.lookingFor.value,
-          interests: f.interests.value.split(',').map((s) => s.trim()).filter(Boolean),
-          photos, avatar: avatarUrl, voice, prompts,
-        },
+      const body = await withOrientation({
+        name: f.name.value, username: f.username.value, bio: f.bio.value, ...(me.birthdate ? {} : { age: f.age.value || null }),
+        city: f.city.value, gender: f.gender.value || null, lookingFor: f.lookingFor.value,
+        interests: f.interests.value.split(',').map((s) => s.trim()).filter(Boolean),
+        photos, avatar: avatarUrl, voice, prompts,
       });
+      if (!body) return;
+      f.lookingFor.value = body.lookingFor;
+      const u = await api('/me', { method: 'PATCH', body });
       Object.assign(state.me, u);
       toast('Profil kaydedildi.');
       location.hash = first ? '#/swipe' : '#/me';

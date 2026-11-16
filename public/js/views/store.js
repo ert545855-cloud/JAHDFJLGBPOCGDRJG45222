@@ -12,6 +12,9 @@ const STATUS = {
 };
 const REFUND = { tanimlanmadi: 'Ödedim ama hesabıma tanımlanmadı', hata: 'Hatalı tutar ya da çift ödeme', cayma14: 'Harcanmamış jetonlarımı iade etmek istiyorum (14 gün)' };
 const RSTAT = { open: 'İade talebi inceleniyor', approved: 'İade onaylandı', rejected: 'İade talebi onaylanmadı' };
+// Kampanya: eski fiyat = indirimden önceki 30 günün en düşük fiyatı (sunucu hesaplar)
+const priceHtml = (p) => (p.was ? `<span class="price"><s class="was" aria-label="Önceki fiyat">${TL(p.was)}</s> ${TL(p.now)}</span>` : `<span class="price">${TL(p.now ?? p.price)}</span>`);
+const saleNote = (list) => { const x = list.filter((p) => p.was); if (!x.length) return ''; const end = x.map((p) => p.saleUntil).sort()[0]; return `<p class="muted shop-note sale-note">Üstü çizili fiyat, indirimden önceki son 30 günde uygulanan en düşük fiyattır. Kampanya ${new Date(end + 'T12:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} günü sonuna kadar geçerlidir.</p>`; };
 
 // Satın alma: ön bilgilendirme formu + mesafeli satış sözleşmesi (sunucuda bu ürün ve senin bilgilerinle üretilir),
 // iki ayrı ve önceden işaretlenmemiş onay, "ödeme yükümlülüğü doğuracaktır" düğmesi (Mesafeli Sözleşmeler Yönetmeliği md. 5–8, 15)
@@ -19,8 +22,8 @@ export async function buySheet(productId, onDone) {
   let d; try { d = await api(`/orders/preview/${encodeURIComponent(productId)}`); } catch (e) { toast(e.message); return; }
   const p = d.product;
   const close = sheet('Siparişi onayla', `<form class="buy">
-    <div class="pay-sum"><span>${esc(p.title)}</span><b>${TL(p.price)}</b></div>
-    <p class="muted buy-tax">Tüm vergiler dahil${p.kind === 'coins' ? ` · jeton başına ${TL(p.price / p.coins)}` : p.days >= 30 ? ` · aylık ${TL(p.price / (p.days / 30))}` : ''} · ödeme havale/EFT ile · ${p.kind === 'plus' ? 'otomatik yenilenmez' : 'nakde çevrilemez'}</p>
+    <div class="pay-sum"><span>${esc(p.title)}</span><b>${p.was ? `<s class="was">${TL(p.was)}</s> ` : ''}${TL(p.price)}</b></div>
+    <p class="muted buy-tax">${p.was ? `%${p.off} indirim · ` : ''}Tüm vergiler dahil${p.kind === 'coins' ? ` · jeton başına ${TL(p.price / p.coins)}` : p.days >= 30 ? ` · aylık ${TL(p.price / (p.days / 30))}` : ''} · ödeme havale/EFT ile · ${p.kind === 'plus' ? 'otomatik yenilenmez' : 'nakde çevrilemez'}</p>
     <div class="buy-tabs"><button type="button" class="on" data-t="pre">Ön bilgilendirme formu</button><button type="button" data-t="contract">Mesafeli satış sözleşmesi</button></div>
     <div class="buy-doc legal" tabindex="0">${d.pre}</div>
     <label class="consent"><input type="checkbox" name="pre"><span>${esc(d.preText)}</span></label>
@@ -136,12 +139,12 @@ export default async function store(view) {
         <li>${icon('crown')}<span>Profil teması ve renkli isim</span></li>
       </ul>
       <div class="plans">${s.plusPlans.map((p) => `<button class="plan" data-p="${esc(p.id)}" ${s.payEnabled ? '' : 'disabled'}>
-        ${p.tag ? `<span class="tag">${esc(p.tag)}</span>` : ''}<b>${p.days >= 30 && p.days % 30 === 0 ? `${p.days / 30} ay` : `${p.days} gün`}</b><span class="price">${TL(p.price)}</span><small>${TL(p.price / Math.max(1, p.days / 30))} / ay</small></button>`).join('')}</div>
+        ${p.off ? `<span class="tag">%${p.off} indirim</span>` : p.tag ? `<span class="tag">${esc(p.tag)}</span>` : ''}<b>${p.days >= 30 && p.days % 30 === 0 ? `${p.days / 30} ay` : `${p.days} gün`}</b>${priceHtml(p)}<small>${TL((p.now ?? p.price) / Math.max(1, p.days / 30))} / ay</small></button>`).join('')}</div>${saleNote(s.plusPlans)}
       <p class="muted shop-note">Fiyatlar Türk lirası ve tüm vergiler dahildir. SwipeUp+ otomatik yenilenmez; süre bitince kendiliğinden sona erer.</p>
       <h3 class="shop-h">${icon('coin')} Jeton</h3>
       <p class="muted" style="margin:-4px 2px 10px;font-size:14px">Canlı yayınlarda hediye gönder, Falcı Teyze’ye fal baktır, boost ile öne çık.</p>
-      <div class="packs" style="--cols:${s.coinPacks.length === 4 || s.coinPacks.length < 3 ? 2 : 3}">${s.coinPacks.map((p) => `<button class="pack" data-p="${esc(p.id)}" ${s.payEnabled ? '' : 'disabled'}>${p.tag ? `<span class="tag">${esc(p.tag)}</span>` : ''}
-        <span class="coins">${icon('coin')}${p.coins.toLocaleString('tr-TR')}</span><span class="price">${TL(p.price)}</span><small class="unit">jeton başı ${TL(p.price / p.coins)}</small></button>`).join('')}</div>
+      <div class="packs" style="--cols:${s.coinPacks.length === 4 || s.coinPacks.length < 3 ? 2 : 3}">${s.coinPacks.map((p) => `<button class="pack" data-p="${esc(p.id)}" ${s.payEnabled ? '' : 'disabled'}>${p.off ? `<span class="tag">%${p.off} indirim</span>` : p.tag ? `<span class="tag">${esc(p.tag)}</span>` : ''}
+        <span class="coins">${icon('coin')}${p.coins.toLocaleString('tr-TR')}</span>${priceHtml(p)}<small class="unit">jeton başı ${TL((p.now ?? p.price) / p.coins)}</small></button>`).join('')}</div>${saleNote(s.coinPacks)}
       <p class="muted shop-note">Tüm vergiler dahil. Jeton nakde çevrilemez ve devredilemez; her özelliğin jeton bedeli harcamadan önce gösterilir.</p>
       <div class="uses">
         <div>${icon('gift')}<span><b>Hediyeler</b>${s.gifts.slice(0, 4).map((g) => `${g.em} ${g.coins}`).join(' · ')}…</span></div>

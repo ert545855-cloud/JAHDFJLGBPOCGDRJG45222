@@ -18,10 +18,11 @@ function get() {
 
 module.exports = {
   enabled: () => !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) || !!process.env.SMTP_HOST,
-  async send(to, subject, text) {
+  // opts.headers: ör. kampanya e-postalarında List-Unsubscribe (tek tıkla ret)
+  async send(to, subject, text, opts = {}) {
     const t = get();
     if (!t) throw new Error('E-posta ayarlı değil');
     const from = process.env.MAIL_FROM || `SwipeUp <${process.env.GMAIL_USER || process.env.SMTP_USER}>`;
-    await t.sendMail({ from, to, subject, text });
+    await t.sendMail({ from, to, subject, text, ...(opts.headers ? { headers: opts.headers } : {}) });
   },
 };

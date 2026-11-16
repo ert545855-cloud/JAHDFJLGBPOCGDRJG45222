@@ -88,11 +88,11 @@ const tagsOf = (u) => { const ids = u?.tags || []; if (!ids.length) return []; c
 const shownAge = (u) => (priv(u).hideAge ? null : u.age ?? null);
 function pub(u, viewerId) {
   if (!u) return null;
-  const { passHash, recoveryHash, tokenVer, googleSub, appleSub, noPass, emailVerified, consents, email, lat, lng, birthdate, coins, earnings, daily, inviteIp, invitedBy, inviteRewarded, refCode, falSub, frames, mkBalance, earnedTotal, regIp, regDevice, falPacks, closeFriends, xp, level, ...rest } = u;
+  const { passHash, recoveryHash, tokenVer, googleSub, appleSub, noPass, emailVerified, consents, email, lat, lng, birthdate, coins, earnings, daily, inviteIp, invitedBy, inviteRewarded, refCode, falSub, frames, mkBalance, earnedTotal, regIp, regDevice, falPacks, closeFriends, xp, level, devices, notMe, inactiveWarnAt, ...rest } = u; // devices: giriş yapılan cihazlar (yalnız sunucuda)
   const self = viewerId === u.id;
   // Yalnızca hesabın sahibinin görebileceği alanlar (başkasının profiline bakan bunları almaz)
   if (!self) ['paid', 'plusUntil', 'boostUntil', 'lastFreeBoost', 'lastSwipe', 'viewersSeenAt', 'verifyPose', 'banReason', 'bannedUntil', 'bannedAt', 'status', 'warned',
-    'passChangedByUser', 'prefs', 'consentAt', 'burcWeek', 'autoWeek', 'loginStreak', 'skin', 'logo', 'isBot', 'tonightUntil', 'plusTrial', 'stickerPacks', 'superBank', 'termsV', 'termsAt', 'lookingFor'].forEach((k) => { delete rest[k]; });
+    'passChangedByUser', 'prefs', 'consentAt', 'burcWeek', 'autoWeek', 'loginStreak', 'skin', 'logo', 'isBot', 'tonightUntil', 'plusTrial', 'stickerPacks', 'superBank', 'termsV', 'termsAt', 'lookingFor', 'lookingForPending', 'lookingForPendingAt'].forEach((k) => { delete rest[k]; });
   const hidden = !self && priv(u).hideLastSeen;
   const fdoc = viewerId && !self ? store.get('follows', `${viewerId}_${u.id}`) : null;
   return {
@@ -106,7 +106,7 @@ function pub(u, viewerId) {
     age: self ? u.age ?? null : shownAge(u), ageHidden: !!priv(u).hideAge, tags: tagsOf(u),
     prompts: (u.prompts || []).map((p) => ({ ...p, q: socialMod.PROMPTS.find((x) => x[0] === p.id)?.[1] || '' })),
     badges: (u.badges || []).filter((b) => self || !b.hidden).map(({ no, ...b }) => b),
-    ...(self ? { consents: consents || {}, termsV: u.termsV || null, lookingFor: u.lookingFor || 'all', noPass: !!noPass, logins: { google: !!googleSub, apple: !!appleSub }, email: email || '', hasLocation: lat != null, birthdate: birthdate || null, coins: coins || 0, earnings: earnings || 0, needsBirthdate: !birthdate, refCode: refCode || null, falSub: falSub || null, frames: frames || [] } : {}),
+    ...(self ? { consents: consents || {}, termsV: u.termsV || null, lookingFor: u.lookingFor || 'all', lookingForPending: u.lookingForPending || null, noPass: !!noPass, logins: { google: !!googleSub, apple: !!appleSub }, email: email || '', hasLocation: lat != null, birthdate: birthdate || null, coins: coins || 0, earnings: earnings || 0, needsBirthdate: !birthdate, refCode: refCode || null, falSub: falSub || null, frames: frames || [] } : {}),
     ...(viewerId && !self ? { isFollowing: !!fdoc && fdoc.status !== 'pending', requested: fdoc?.status === 'pending', distanceKm: distance(store.get('users', viewerId), u) } : {}),
   };
 }
@@ -148,6 +148,12 @@ function postOut(p, viewerId) {
 // Oturum anahtarı hesabın oturum sürümünü taşır: şifre değişince / "diğer cihazlardan çık" denince eski anahtarlar geçersiz olur
 function sign(u) { return jwt.sign({ id: u.id, v: u.tokenVer || 0 }, JWT_SECRET, { expiresIn: '90d' }); }
 const tokenOk = (payload, u) => !!u && (payload.v || 0) === (u.tokenVer || 0);
+// Her başarılı giriş: trafik kaydı + yeni cihaz kontrolü (server/guvenlik.js)
+function signIn(req, u, via, fresh = false) {
+  trafik.log('giris', { req, uid: u.id, path: via });
+  try { featureCtx.onSignIn?.(req, store.get('users', u.id) || u, via, fresh); } catch (e) { console.error('[giriş]', e.message); }
+  return sign(store.get('users', u.id) || u);
+}
 const bumpTokens = (id) => store.update('users', id, { tokenVer: ((store.get('users', id)?.tokenVer) || 0) + 1 });
 
 // Yasak / askı durumu (yönetim panelinden verilir)
@@ -202,6 +208,8 @@ const ipOf = (req) => {
   }
   return String(req.socket?.remoteAddress || req.ip || '').replace(/^::ffff:/, '');
 };
+// 5651: trafik bilgisi kaydı (girişler, içerik işlemleri, canlı bağlantılar; 2 yıl, bütünlük zinciriyle)
+const trafik = require('./server/trafik')(store, { ipOf, secret: () => process.env.TRAFIK_KEY || store.get('meta', 'secrets')?.trafikKey }); // ayrı anahtar: oturum anahtarı değişse de zincir doğrulanır
 
 // ================= Bildirimler =================
 // Bildirim türleri → ayar grubu (Ayarlar → Bildirimler)
@@ -450,6 +458,7 @@ app.use(helmet({
 app.disable('x-powered-by');
 app.use(compression());
 app.use(express.json({ limit: '1mb' }));
+app.use(trafik.middleware);
 // "__proto__", "constructor", "toString" gibi nesne prototipi adları ne anahtar ne değer olarak kabul edilir:
 // sabit tablolarda (ürün, fal türü, kategori…) arama yapan uçlar bu adlarla kandırılamasın, nesnelere prototip sızmasın.
 const PROTO_NAMES = new Set(Object.getOwnPropertyNames(Object.prototype));
@@ -576,7 +585,7 @@ app.post('/api/auth/register', wrap(async (req, res) => {
   io.emit('people:new', brief(u));
   featureCtx.attachInvite?.(u, req.body?.ref, ipOf(req));
   featureCtx.onRegister?.(u, req);
-  res.json({ token: sign(u), user: pub(store.get('users', u.id), u.id), recoveryCode: code.match(/.{4}/g).join('-') });
+  res.json({ token: signIn(req, u, 'kayıt', true), user: pub(store.get('users', u.id), u.id), recoveryCode: code.match(/.{4}/g).join('-') });
 }));
 
 // ---------- İsteğe bağlı açık rızalar (KVKK m.5/1) ----------
@@ -586,12 +595,17 @@ const CONSENTS = {
   marketingEmail: 'Kampanya, etkinlik ve yeniliklerle ilgili e-posta almak (ticari elektronik ileti; İleti Yönetim Sistemi’ne kaydedilir)',
   location: 'Yakınımdaki kişileri gösterebilmek için yaklaşık konumumun işlenmesi',
   ai: 'Fal isteklerimdeki fotoğraf ve notların yorum taslağı için yurt dışındaki yapay zeka hizmetine (Google Gemini) aktarılması',
+  orientation: 'Kaydırmada hangi cinsiyetten kişileri görmek istediğime dair tercihimin (cinsel hayata ilişkin özel nitelikli kişisel veri sayılabilir) yalnızca eşleşme önerileri için işlenmesi',
 };
 const CONSENT_VER = '2026-11-17';
 setTimeout(() => { // eski birleşik "bildirim ve e-posta" izni: e-posta kanalı ayrı kayda geçer (verilen izin aynen korunur)
   for (const u of store.filter('users', (x) => x.consents?.marketing && !x.consents.marketingEmail)) {
     const m = u.consents.marketing; store.update('users', u.id, { consents: { ...u.consents, marketingEmail: { on: !!m.on, at: m.at, v: m.v || '2026-11-11' } } });
     store.put('consent_log', { id: nanoid(12), userId: u.id, kind: 'marketingEmail', on: !!m.on, text: 'Önceki birleşik izin (bildirim ve e-posta) e-posta kanalı için ayrıca kaydedildi', v: m.v || '2026-11-11', via: 'geçiş', ip: null, at: now() });
+  }
+  // "Kimi arıyorum" tercihi özel nitelikli veri sayılabilir (KVKK m.6): açık rıza yoksa kullanılmaz, kullanıcıya bir kez sorulur
+  for (const u of store.filter('users', (x) => x.lookingFor && x.lookingFor !== 'all' && !x.consents?.orientation?.on)) {
+    store.update('users', u.id, { lookingForPending: u.lookingFor, lookingForPendingAt: now(), lookingFor: 'all' });
   }
 }, 5000).unref?.();
 function setConsents(uid, input, req, via) {
@@ -606,6 +620,8 @@ function setConsents(uid, input, req, via) {
   }
   const patch = { consents: cur };
   if (cur.location && !cur.location.on) { patch.lat = null; patch.lng = null; } // rıza geri alınınca konum silinir
+  if (cur.orientation && !cur.orientation.on) { patch.lookingFor = 'all'; patch.lookingForPending = null; } // özel nitelikli veri: rıza geri alınınca tercih silinir
+  if (cur.orientation?.on && u.lookingForPending) { patch.lookingFor = u.lookingForPending; patch.lookingForPending = null; } // bekleyen tercih rızayla geri gelir
   return store.update('users', uid, patch);
 }
 const hasConsent = (u, k) => !!u?.consents?.[k]?.on;
@@ -653,7 +669,7 @@ app.post('/api/auth/oauth', wrap(async (req, res) => {
   try { id = await oidc.verify(provider, req.body?.credential); } catch (e) { console.warn(`[oauth] ${provider} doğrulanamadı:`, e.message); return res.status(401).json({ error: e.message }); }
   const key = `${provider}Sub`;
   const u = store.find('users', (x) => x[key] === id.sub);
-  if (u) return res.json({ token: sign(u), user: pub(u, u.id) });
+  if (u) return res.json({ token: signIn(req, u, P), user: pub(store.get('users', u.id), u.id) });
   const same = id.email && store.find('users', (x) => x.email === id.email);
   if (same) {
     // Aynı e-postayla şifreli hesap var: şifresi bir kez girilirse Google/Apple hesabı ona bağlanır ve giriş yapılır
@@ -664,7 +680,7 @@ app.post('/api/auth/oauth', wrap(async (req, res) => {
       hits.delete('login-u:' + same.username);
       const nu = store.update('users', same.id, { [key]: id.sub, emailVerified: true });
       console.log(`[oauth] ${P} hesabı mevcut hesaba bağlandı (${same.id})`);
-      return res.json({ token: sign(nu), user: pub(nu, nu.id), linked: true });
+      return res.json({ token: signIn(req, nu, `${P} (hesap bağlandı)`), user: pub(store.get('users', nu.id), nu.id), linked: true });
     }
     return res.status(409).json({ error: same.noPass ? `Bu e-posta adresi başka bir giriş yöntemiyle açılmış bir SwipeUp hesabında kayıtlı. O yöntemle gir, sonra Ayarlar → Giriş yöntemleri'nden ${P} hesabını bağla.` : `Bu e-posta adresiyle kayıtlı bir SwipeUp hesabın var. Şifreni bir kez gir, ${P} hesabın ona bağlansın.`, linkNeeded: !same.noPass });
   }
@@ -692,7 +708,7 @@ app.post('/api/auth/oauth', wrap(async (req, res) => {
   io.emit('people:new', brief(nu));
   featureCtx.attachInvite?.(nu, req.body?.ref, ipOf(req));
   featureCtx.onRegister?.(nu, req);
-  res.json({ token: sign(nu), user: pub(store.get('users', nu.id), nu.id), recoveryCode: code.match(/.{4}/g).join('-'), created: true });
+  res.json({ token: signIn(req, nu, `kayıt (${P})`, true), user: pub(store.get('users', nu.id), nu.id), recoveryCode: code.match(/.{4}/g).join('-'), created: true });
 }));
 // Ayarlar → Giriş yöntemleri: Google / Apple bağla, kaldır
 // Bildirim tercihleri (tür bazında kapatma, sessiz saatler)
@@ -732,7 +748,9 @@ app.post('/api/auth/login', wrap(async (req, res) => {
     return res.status(401).json({ error: 'Kullanıcı adı veya şifre hatalı.' });
   }
   hits.delete('login-u:' + login);
-  res.json({ token: sign(u), user: pub(u, u.id) });
+  // "Bu ben değilim" sonrası: şifre bilinen biri tarafından kullanılmış olabilir; önce şifre sıfırlanmalı
+  if (u.passResetRequired) return res.status(403).json({ error: 'Hesabının güvenliği için önce şifreni sıfırlaman gerekiyor. “Şifreni mi unuttun?” adımından e-postana gelen kodla ya da kurtarma kodunla yeni şifre belirle.', resetRequired: true });
+  res.json({ token: signIn(req, u, 'şifre'), user: pub(store.get('users', u.id), u.id) });
 }));
 
 app.post('/api/auth/forgot', wrap(async (req, res) => {
@@ -770,11 +788,12 @@ app.post('/api/auth/reset', wrap(async (req, res) => {
   let newCode = null;
   if (viaRecovery) { newCode = recoveryCode(); patch.recoveryHash = await bcrypt.hash(newCode, 8); }
   patch.tokenVer = (u.tokenVer || 0) + 1; // şifre sıfırlandı: başka cihazlardaki oturumlar kapanır
+  patch.passResetRequired = false;
   store.update('users', u.id, patch);
   store.del('resets', u.id);
   disconnectUser(u.id);
   const fresh = store.get('users', u.id);
-  res.json({ token: sign(fresh), user: pub(fresh, u.id), recoveryCode: newCode && newCode.match(/.{4}/g).join('-') });
+  res.json({ token: signIn(req, fresh, 'şifre sıfırlama'), user: pub(store.get('users', u.id), u.id), recoveryCode: newCode && newCode.match(/.{4}/g).join('-') });
 }));
 
 app.post('/api/me/recovery', auth, wrap(async (req, res) => {
@@ -787,7 +806,7 @@ app.post('/api/me/password', auth, wrap(async (req, res) => {
   const { current, password } = req.body || {};
   if (!req.user.noPass && !(await bcrypt.compare(String(current || ''), req.user.passHash))) return res.status(400).json({ error: 'Mevcut şifre hatalı.' });
   if (String(password || '').length < 6) return res.status(400).json({ error: 'Yeni şifre en az 6 karakter olmalı.' });
-  store.update('users', req.user.id, { noPass: false, passHash: await bcrypt.hash(password, 10), tokenVer: (req.user.tokenVer || 0) + 1, ...(['falci', 'official'].includes(req.user.role) ? { passChangedByUser: true } : {}) });
+  store.update('users', req.user.id, { noPass: false, passResetRequired: false, passHash: await bcrypt.hash(password, 10), tokenVer: (req.user.tokenVer || 0) + 1, ...(['falci', 'official'].includes(req.user.role) ? { passChangedByUser: true } : {}) });
   disconnectUser(req.user.id); // eski oturumlar kapanır; bu cihaz yeni anahtarla devam eder
   res.json({ ok: true, token: sign(store.get('users', req.user.id)) });
 }));
@@ -845,7 +864,14 @@ app.patch('/api/me', auth, (req, res) => {
     if (cur.private && !np.private) store.filter('follows', (f) => f.to === req.user.id && f.status === 'pending').forEach((f) => store.update('follows', f.id, { status: null }));
   }
   if (b.gender !== undefined) patch.gender = ['k', 'e', 'd'].includes(b.gender) ? b.gender : null;
-  if (b.lookingFor !== undefined) patch.lookingFor = ['k', 'e', 'all'].includes(b.lookingFor) ? b.lookingFor : 'all';
+  if (b.lookingFor !== undefined) {
+    const lf = ['k', 'e', 'all'].includes(b.lookingFor) ? b.lookingFor : 'all';
+    if (lf !== 'all' && !hasConsent(req.user, 'orientation')) {
+      if (b.consentOrientation !== true) return res.status(400).json({ error: 'Bu tercihi kullanabilmemiz için ayrı açık rızan gerekiyor.', needConsent: 'orientation', text: CONSENTS.orientation });
+      setConsents(req.user.id, { orientation: true }, req, 'kaydırma tercihi');
+    }
+    patch.lookingFor = lf; patch.lookingForPending = null;
+  }
   if (Array.isArray(b.interests)) patch.interests = b.interests.map((s) => String(s).slice(0, 24)).slice(0, 8);
   if (Array.isArray(b.photos)) patch.photos = b.photos.map(String).filter((x) => isMedia(x) || (req.user.photos || []).includes(x)).slice(0, 6); // yeni eklenen yalnız kendi yüklemelerimiz
   if (b.skin !== undefined) patch.skin = ['gunbatimi', 'pembe', 'gece', 'altin'].includes(b.skin) ? b.skin : 'gunbatimi';
@@ -2035,8 +2061,9 @@ app.post('/api/share', auth, (req, res) => {
 // ---------- Yönetici telefon/masaüstü bildirimleri ----------
 async function pushAdmins(p) {
   if (!VAPID) return;
-  const subs = store.all('adm_push');
-  await Promise.all(subs.map((s) => webpush.sendNotification(s.sub, JSON.stringify({ icon: '/icons/icon-192.png', ...p, url: adminUrl(p.url || '/admin/') }), { TTL: 86400, urgency: 'high' })
+  const { only, ...pl } = p; // only: yalnız bu yöneticilerin cihazlarına (ör. güvenlik uyarıları sahibe)
+  const subs = store.all('adm_push').filter((x) => !only || only.includes(x.adminId));
+  await Promise.all(subs.map((s) => webpush.sendNotification(s.sub, JSON.stringify({ icon: '/icons/icon-192.png', ...pl, url: adminUrl(pl.url || '/admin/') }), { TTL: 86400, urgency: 'high' })
     .catch((e) => { if (e.statusCode === 404 || e.statusCode === 410) store.del('adm_push', s.id); })));
 }
 app.post('/api/admin/push', adminApi.adminAuth, (req, res) => {
@@ -2062,10 +2089,12 @@ const featureCtx = {
   store, io, auth, wrap, eco, notify, emitTo, brief, pub, postOut, chatOut, sendMessage, canSee, priv,
   isBlocked, limited, ipOf, markPrivate, signMedia, isMedia, isGif: (u) => GIF_HOSTS.test(String(u || '')), extractTags, cardOut, purgeUser, moderation, chatBetween, admin: adminApi,
   online, appEvent, falci, msgOut, falLock, shownAge, tagsOf, dropMediaCache: (id) => dropMediaCache(id), getMedia: (id) => getMedia(id), pushAdmins,
-  storyItem, storyVisible, storyAlive, createPost: (u, b) => createPost(u, b), cleanSticker, systemMsg: (c, t) => systemMsg(c, t), groupAvatar,
+  trafik, sign, bumpTokens, disconnectUser, setConsents, storyItem, storyVisible, storyAlive, createPost: (u, b) => createPost(u, b), cleanSticker, systemMsg: (c, t) => systemMsg(c, t), groupAvatar,
   userFromReq: (req) => { try { const p = jwt.verify((req.headers.authorization || '').slice(7), JWT_SECRET, { algorithms: ['HS256'] }); const u = store.get('users', p.id); return tokenOk(p, u) ? u : null; } catch { return null; } },
 };
 require('./server/legal')(app, featureCtx); // hukuki uyum: künye, sözleşmeler, iade, KVKK başvuruları, hak ihlali bildirimleri
+require('./server/uyum')(app, featureCtx); // saklama ve imha, 5651 trafik dökümü, veri ihlali kaydı, yönetici uyarıları, muhasebe dökümü
+require('./server/guvenlik')(app, featureCtx); // güvenlik merkezi: buluşma paylaşımı, yeni cihaz uyarısı, giriş geçmişi
 require('./server/errlog')(app, featureCtx); // hata izleme (yönetim → Hatalar)
 require('./server/features')(app, featureCtx);
 require('./server/genel')(app, featureCtx);
@@ -2076,7 +2105,7 @@ require('./server/support')(app, featureCtx);
 // Mağaza uygulamaları için alan adı doğrulaması: Android (Trusted Web Activity) ve iOS evrensel bağlantıları.
 // ANDROID_SHA256: Play Console > Uygulama imzalama sayfasındaki SHA-256 parmak izi (birden fazlaysa virgülle).
 // Mağaza sayfaları ve dış bağlantılar için kısa yasal metin adresleri
-const LEGAL_SHORT = { '/gizlilik': 'gizlilik', '/privacy': 'gizlilik', '/kvkk': 'kvkk', '/kosullar': 'kosullar', '/terms': 'kosullar', '/acik-riza': 'riza', '/topluluk-kurallari': 'kurallar' };
+const LEGAL_SHORT = { '/saklama-ve-imha': 'saklama', '/gizlilik': 'gizlilik', '/privacy': 'gizlilik', '/kvkk': 'kvkk', '/kosullar': 'kosullar', '/terms': 'kosullar', '/acik-riza': 'riza', '/topluluk-kurallari': 'kurallar' };
 app.get(Object.keys(LEGAL_SHORT), (req, res) => res.redirect(302, `/#/legal/${LEGAL_SHORT[req.path]}`));
 app.get(['/hesap-silme', '/delete-account'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'hesap-silme.html')));
 app.get('/.well-known/assetlinks.json', (req, res) => {
@@ -2211,6 +2240,9 @@ function finishCall(call, reason) {
 
 io.on('connection', (socket) => {
   const uid = socket.data.userId;
+  const sockIp = ipOf(socket.request); const sockAt = Date.now();
+  trafik.log('baglanti', { uid, ip: sockIp, method: 'WS', path: 'bağlandı', dev: socket.handshake.headers['x-device'] || socket.handshake.auth?.device, ua: socket.handshake.headers['user-agent'] });
+  socket.on('disconnect', () => trafik.log('baglanti', { uid, ip: sockIp, method: 'WS', path: `ayrıldı (${Math.round((Date.now() - sockAt) / 1000)} sn)`, ua: socket.handshake.headers['user-agent'] }));
   socket.use((pkt, next) => { if (pkt.slice(1).some((a) => typeof a !== 'function' && protoBad(a))) return; next(); }); // prototip adı taşıyan olayları sessizce düşür
   if (!online.has(uid)) online.set(uid, new Set());
   const wasOnline = isOnline(uid);
@@ -2536,6 +2568,7 @@ async function ensureOfficial() {
 (async () => {
   await store.init();
   await store.initStorage();
+  trafik.start();
   const coinMoved = require('./server/coinrate')(store); // 1 jeton = 1 TL geçişi (bir kez)
   // Eski sohbet dosyalarını da özel yap (bir kez; sonraki açılışlarda yalnız eksikler)
   { let n = 0; store.filter('messages', (m) => m.media && m.mediaType !== 'gif' && MEDIA_RE.test(m.media)).forEach((m) => { const id = MEDIA_RE.exec(m.media)[1]; const meta = store.get('media_meta', id); if (!meta?.private || (m.viewOnce && !meta.once)) { markPrivate(m.media, m.from, !!m.viewOnce); n++; } });
@@ -2548,6 +2581,7 @@ async function ensureOfficial() {
     vapid: webpush.generateVAPIDKeys(),
   });
   JWT_SECRET = JWT_SECRET || meta.jwt;
+  if (!meta.trafikKey) store.update('meta', 'secrets', { trafikKey: crypto.randomBytes(32).toString('hex') });
   // Yönetim paneli adresi: ADMIN_PATH (Render ortam değişkeni) ya da ilk açılışta üretilip saklanan rastgele adres
   {
     let ap = String(process.env.ADMIN_PATH || meta.adminPath || '').replace(/[^\w-]/g, '');

@@ -83,7 +83,7 @@ ${sellerTable()}
 <tr><td>Kimlik ve iletişim: ad, kullanıcı adı, doğum tarihi, e-posta, Google / Apple giriş kimliği</td><td>Üyeliğin kurulması ve yürütülmesi, giriş, şifre sıfırlama</td><td>Sözleşmenin kurulması ve ifası (m.5/2-c)</td></tr>
 <tr><td>Doğum tarihi</td><td>18 yaş sınırının uygulanması (profilde yalnızca yaşın görünür, istersen gizleyebilirsin)</td><td>Hukuki yükümlülük (m.5/2-ç), meşru menfaat (m.5/2-f)</td></tr>
 <tr><td>Profil: fotoğraflar, biyografi, şehir, cinsiyet, ilgi alanları, profil soruları, sevdiğin sanatçılar</td><td>Eşleşme, keşfet ve sosyal özelliklerin sunulması</td><td>Sözleşmenin ifası (m.5/2-c)</td></tr>
-<tr><td>Kimi aradığın (eşleşme tercihi)</td><td>Keşfet destesinin süzülmesi; diğer üyelere gösterilmez</td><td>Sözleşmenin ifası (m.5/2-c)</td></tr>
+<tr><td>Kimi aradığın (eşleşme tercihi; cinsel hayata ilişkin özel nitelikli veri sayılabilir)</td><td>Keşfet destesinin süzülmesi; diğer üyelere gösterilmez</td><td>Açık rıza (m.6/2); rıza verilmezse tercih işlenmez ve herkes gösterilir</td></tr>
 <tr><td>Konum (yaklaşık 1 km’ye yuvarlanmış)</td><td>Yakındaki kişileri ve uzaklığı göstermek; diğer üyeler yalnızca kilometre görür</td><td>Açık rıza (m.5/1)</td></tr>
 <tr><td>Mesajlar, sesli mesajlar, gönderiler, hikayeler, yorumlar, canlı yayın ve arama</td><td>İletişim ve paylaşım hizmetinin sunulması</td><td>Sözleşmenin ifası (m.5/2-c)</td></tr>
 <tr><td>Şikayet edilen ya da otomatik işaretlenen içerikler, moderasyon kayıtları</td><td>Hukuka aykırı içerikle mücadele, topluluk güvenliği, itiraz süreçleri</td><td>Hukuki yükümlülük (m.5/2-ç, 5651 s. Kanun), hakkın tesisi ve korunması (m.5/2-e), meşru menfaat (m.5/2-f)</td></tr>
@@ -92,10 +92,11 @@ ${sellerTable()}
 <tr><td>İşlem güvenliği: IP adresi, oturum ve giriş kayıtları, rastgele cihaz kimliği</td><td>Hesap güvenliği, sahte hesap ve dolandırıcılığın önlenmesi, 5651 s. Kanun kayıt yükümlülükleri</td><td>Hukuki yükümlülük (m.5/2-ç), meşru menfaat (m.5/2-f)</td></tr>
 <tr><td>Fal isteğindeki fotoğraf ve notlar</td><td>Yapay zekayla yorum taslağı hazırlanması</td><td>Açık rıza (m.5/1)</td></tr>
 <tr><td>E-posta ve bildirim aboneliği</td><td>Kampanya ve yenilik iletileri</td><td>Açık rıza (m.5/1) ve ticari ileti onayı (6563 s. Kanun)</td></tr>
+<tr><td>Buluşma paylaşımı: yer, saat, kiminle buluştuğun, durumun</td><td>Senin isteğinle güvendiğin kişiye gösterilmesi (Güvenlik merkezi)</td><td>Sözleşmenin ifası (m.5/2-c); buluşmadan 7 gün sonra silinir</td></tr>
 <tr><td>Açık rıza ve onay kayıtları</td><td>Verdiğin izinleri ve kabul ettiğin belge sürümlerini ispat etmek</td><td>Hukuki yükümlülük (m.5/2-ç), hakkın tesisi (m.5/2-e)</td></tr>
 </tbody></table></div>
 <h3>Özel nitelikli kişisel veriler</h3>
-<p>Senden sağlık, din, cinsel hayat, biyometrik veri gibi özel nitelikli kişisel veri istemiyoruz; profilde bunlar için bir alan yoktur. Biyografine, mesajlarına ya da paylaşımlarına bu tür bilgileri yazmamanı öneririz. Kendi isteğinle paylaşırsan, bu bilgiler yalnızca senin seçtiğin kişilere gösterilmek üzere hizmetin bir parçası olarak saklanır; başka bir amaçla işlenmez ve analiz edilmez.</p>
+<p>Senden sağlık, din, biyometrik veri gibi özel nitelikli kişisel veri istemiyoruz; profilde bunlar için bir alan yoktur. Tek istisna, kaydırmada hangi cinsiyetten kişileri görmek istediğine dair isteğe bağlı tercihindir: bu bilgi cinsel hayata ilişkin veri sayılabildiğinden yalnızca <b>ayrı açık rızanla</b> (KVKK m.6) ve yalnızca eşleşme önerileri için işlenir, kimseye gösterilmez; rızanı geri alınca silinir. Biyografine, mesajlarına ya da paylaşımlarına bu tür bilgileri yazmamanı öneririz. Kendi isteğinle paylaşırsan, bu bilgiler yalnızca senin seçtiğin kişilere gösterilmek üzere hizmetin bir parçası olarak saklanır; başka bir amaçla işlenmez ve analiz edilmez.</p>
 <h3>Toplama yöntemi</h3>
 <p>Veriler, uygulamayı kullanırken senin girdiğin bilgiler, cihazından izin verdiğin ölçüde alınan bilgiler (konum, kamera, mikrofon) ve kullanım sırasında otomatik oluşan kayıtlar yoluyla elektronik ortamda toplanır.</p>
 <h3>Aktarım</h3>
@@ -122,12 +123,14 @@ ${sellerTable()}
 <h3>Topladığımız veriler</h3>
 <ul>
 <li><b>Hesap bilgileri:</b> kullanıcı adı, ad, doğum tarihi, (isteğe bağlı) e-posta, şifrenin geri döndürülemez özeti; Google / Apple ile girersen bu hesabın kimlik numarası ve e-posta adresi.</li>
-<li><b>Profil bilgileri:</b> fotoğraflar, biyografi, yaş, şehir, cinsiyet, ilgi alanları, burç, sevdiğin sanatçılar. Kimi aradığın bilgisi yalnızca desteni süzmek için kullanılır, kimseye gösterilmez.</li>
+<li><b>Profil bilgileri:</b> fotoğraflar, biyografi, yaş, şehir, cinsiyet, ilgi alanları, burç, sevdiğin sanatçılar. Kimi aradığın bilgisi özel nitelikli veri sayılabildiği için yalnızca ayrı açık rızanla, desteni süzmek için kullanılır ve kimseye gösterilmez.</li>
 <li><b>Paylaştıkların:</b> gönderiler, vitrin videoları, hikayeler, yorumlar, beğeniler, mesajlar, sesli mesajlar, fal istekleri.</li>
 <li><b>Konum:</b> yalnızca açık rıza verirsen, yaklaşık 1 km hassasiyetle yuvarlanmış olarak; konum geçmişi tutulmaz, rızanı geri alınca silinir. Sohbette kendi isteğinle paylaştığın konum o mesajda saklanır.</li>
 <li><b>Doğrulama selfiesi:</b> mavi tik için gönderdiğin fotoğraf; yalnızca yönetim ekibi gözle inceler, yüz tanıma yapılmaz.</li>
 <li><b>Ödeme kayıtları:</b> sipariş kodu, tutar, havale/EFT gönderen adı, onayladığın sözleşme metni, iade için verdiğin IBAN. Kart bilgisi toplamayız.</li>
 <li><b>Teknik veriler:</b> IP adresi ve tarayıcıda oluşturulan rastgele bir cihaz kimliği (spam ve sahte hesapları önlemek için), bildirim aboneliği, son görülme zamanı, uygulamayı hangi gün kullandığın (istatistik için).</li>
+<li><b>Giriş ve trafik kayıtları:</b> girişlerin, içerik oluşturan işlemlerin ve canlı bağlantıların IP adresi, zamanı, cihaz ve tarayıcı bilgisi. 5651 sayılı Kanun gereği 2 yıl saklanır; içeriğin kendisi bu kayıtlara girmez. Tanımadığımız bir cihazdan giriş yapılırsa seni uyarmak için de kullanılır.</li>
+<li><b>Buluşma paylaşımı:</b> Güvenlik merkezinden bir buluşmayı paylaşırsan yer, saat, (seçersen) kiminle buluştuğun ve durumun, bağlantıyı verdiğin kişiye gösterilir; buluşmadan 7 gün sonra silinir.</li>
 </ul>
 <h3>Neden işliyoruz</h3>
 <ul>
@@ -148,11 +151,13 @@ ${PROVIDERS}
 <li><b>Hesap ve profil bilgileri, paylaşımlar, mesajlar:</b> hesabın açık olduğu sürece. Hesabını sildiğinde profilin, paylaşımların, eşleşmelerin, mesajların ve yüklediğin dosyalar silinir; yedeklerden en geç 30 gün içinde düşer.</li>
 <li><b>Hikayeler:</b> 24 saat (arşive aldıkların 30 gün). <b>Kaybolan mesajlar:</b> seçtiğin süre.</li>
 <li><b>Ödeme, sözleşme ve jeton kayıtları:</b> vergi ve ticaret mevzuatı gereği 10 yıl (hesabın silinse de bu kayıtlar erişimi kısıtlı arşivde tutulur).</li>
-<li><b>Şikayet, moderasyon, destek, iade ve KVKK başvuru kayıtları:</b> kapanıştan sonra 2 yıl.</li>
-<li><b>İşlem güvenliği kayıtları (IP, giriş zamanları):</b> en fazla 2 yıl.</li>
-<li><b>Açık rıza ve belge onay kayıtları:</b> rızanı ispat edebilmek için, rıza geri alınsa da zamanaşımı süresince.</li>
+<li><b>Şikayet, moderasyon ve destek kayıtları:</b> kapanıştan sonra 2 yıl. <b>KVKK başvuruları ve hak ihlali bildirimleri:</b> 3 yıl. <b>İade kayıtları:</b> mali kayıt olarak 10 yıl.</li>
+<li><b>Doğrulama selfiesi:</b> karardan 30 gün sonra silinir; yalnızca sonucu (doğrulandı / doğrulanmadı) kalır.</li>
+<li><b>5651 trafik kayıtları (IP, giriş ve işlem zamanları):</b> 2 yıl. <b>Giriş ve cihaz geçmişi:</b> 1 yıl.</li>
+<li><b>Uzun süre kullanılmayan hesaplar:</b> 24 ay hiç giriş yapılmazsa, 30 gün önceden haber verilerek silinir.</li>
+<li><b>Açık rıza ve belge onay kayıtları:</b> hesabın açıkken; hesap silinince 3 yıl (İYS onay ispatı).</li>
 </ul>
-<p>Süresi dolan veriler en geç 6 ayda bir yapılan periyodik imhayla silinir ya da anonim hâle getirilir.</p>
+<p>Süresi dolan veriler kendiliğinden, günde iki kez çalışan periyodik imhayla silinir ya da anonim hâle getirilir; ayrıntılar <a class="link" href="#/legal/saklama">Saklama ve İmha Politikası</a>’nda.</p>
 <h3>Verilerini nasıl koruyoruz</h3>
 <ul>
 <li>Tüm bağlantılar HTTPS (TLS) ile şifrelenir; tarayıcıya yalnızca güvenli bağlantı kullanması söylenir (HSTS).</li>
@@ -160,6 +165,7 @@ ${PROVIDERS}
 <li>Sayfaya dışarıdan betik yüklenmesini engelleyen sıkı içerik güvenlik politikası, hız sınırlama ve kötüye kullanım koruması uygulanır.</li>
 <li>Yönetim paneline erişim yetkiyle sınırlıdır, iki adımlı doğrulama kullanılabilir ve yapılan işlemler kayıt altına alınır.</li>
 <li>Bir veri ihlali olursa Kişisel Verileri Koruma Kurulu’na ve etkilenen kişilere mevzuatın öngördüğü sürede (Kurul’a 72 saat içinde) bildirim yapılır.</li>
+<li>Toplu veri dışa aktarma gibi hassas yönetim işlemleri kayda geçer ve sahip yöneticiye ayrıca bildirilir. Hesabına tanımadığımız bir cihazdan girilirse sana haber verilir; “Bu ben değilim” ile tüm oturumları kapatabilirsin.</li>
 </ul>
 <h3>Çerezler ve yerel depolama</h3>
 <p>Reklam ya da analiz çerezi kullanmıyoruz. Cihazında yalnızca uygulamanın çalışması ve senin tercihlerin için gereken kayıtları tutuyoruz; listesi <a class="link" href="#/legal/cerez">Çerez ve Yerel Depolama Politikası</a>’nda.</p>
@@ -234,6 +240,8 @@ ${PROVIDERS}
 <p>Yakınındaki kişileri ve uzaklığı gösterebilmek için cihazından alınan konumun yaklaşık 1 km hassasiyetle yuvarlanarak saklanır. Tam konumun ve konum geçmişin saklanmaz; diğer kullanıcılara yalnızca kilometre cinsinden uzaklık gösterilir. İzni geri alınca kayıtlı konumun silinir.</p>
 <h3>4. Fal fotoğraflarının yapay zekayla yorumlanması</h3>
 <p>Fal isteğinde gönderdiğin fincan fotoğrafları, notun ve burç / kart bilgin, yorum taslağı hazırlanması için Google’ın yapay zeka hizmetine (Gemini API, sunucuları ABD ve diğer ülkelerde) iletilir. Adın, kullanıcı adın ve iletişim bilgilerin gönderilmez. Aktarım KVKK m.9’daki güvencelere dayanır; yine de bu ülkelerde Türkiye’deki ile aynı düzeyde koruma bulunmayabileceğini ve Google’ın verileri kendi koşullarına göre işleyebileceği gibi riskleri bilerek izin verirsin. İzin vermezsen falına Falcı Teyze kendisi bakar.</p>
+<h3>5. Kaydırma tercihi (özel nitelikli veri)</h3>
+<p>Kaydırmada yalnızca kadınları ya da yalnızca erkekleri görmek istersen bu tercihin işlenir. Tercih cinsel hayata ilişkin özel nitelikli kişisel veri sayılabildiği için KVKK m.6 uyarınca ayrıca açık rızana dayanır. Tercihin profilinde ya da başka hiçbir yerde gösterilmez, yalnızca sana ve seninle eşleşebilecek kişilere öneri hazırlanırken kullanılır, reklam ya da analiz için işlenmez. İzin vermezsen herkesi görürsün; izni geri alınca tercihin silinir.</p>
 <h3>Kayıt ve başvuru</h3>
 <p>Verdiğin ya da geri aldığın her iznin tarihi ve metin sürümü kayıt altına alınır. Sorular ve başvurular için: Ayarlar › Veri taleplerim ya da ${c.mail}${c.addr}.</p>`;
     },
@@ -269,6 +277,43 @@ ${PROVIDERS}
 <p>Uygulamadaki çizimler, simgeler, oyun karakterleri, sahneler ve ses efektleri SwipeUp için özgün olarak üretilmiştir; ses efektleri cihazında anlık olarak sentezlenir. Üyelerin yüklediği fotoğraf, video ve müziklerin hakları sahiplerine aittir.</p>
 <p>Bir içeriğin hakkını ihlal ettiğimizi düşünüyorsan <a class="link" href="#/legal/kunye">Künye</a> sayfasındaki formla bildirebilirsin.</p>`,
   },
+  saklama: {
+    ...T('saklama', 'Saklama ve imha politikası'),
+    body: () => {
+      const c = contact();
+      const rows = [
+        ['Hesap, profil, paylaşım ve mesajlar', 'Hesap açık olduğu sürece', 'Hesap silinince hemen; yedeklerden 30 gün içinde'],
+        ['Kaydırma tercihi (özel nitelikli)', 'Açık rızan sürdükçe', 'Rıza geri alınınca hemen; yanıtlanmayan eski tercih 30 gün sonra'],
+        ['Konum', 'Açık rızan sürdükçe', 'Rıza geri alınınca hemen'],
+        ['Doğrulama selfiesi', 'Karardan sonra 30 gün', 'Fotoğraf silinir, yalnız sonuç kalır'],
+        ['Bildirimler', 'Okunanlar 180 gün, tümü en çok 1 yıl', 'Periyodik imha'],
+        ['Giriş ve cihaz geçmişi', '1 yıl', 'Periyodik imha'],
+        ['5651 trafik kayıtları', '2 yıl (kanunen en az 1 yıl)', 'Süre dolunca kendiliğinden'],
+        ['Şikayet, moderasyon, itiraz ve destek kayıtları', 'Kapanıştan sonra 2 yıl', 'Periyodik imha'],
+        ['KVKK başvuruları, hak ihlali bildirimleri', 'Sonuçlandıktan sonra 3 yıl', 'Periyodik imha'],
+        ['Silinen hesabın kullanıcı adı ve silme nedeni', '1 yıl', 'Periyodik imha'],
+        ['Rıza ve belge onay kayıtları (silinen hesaplar)', '3 yıl', 'Periyodik imha'],
+        ['Sipariş, ödeme, iade, jeton ve kazanç kayıtları', '10 yıl (Vergi Usul Kanunu m.253, TTK m.82)', 'Süre dolunca'],
+        ['Buluşma paylaşımları', 'Buluşmadan sonra 7 gün', 'Periyodik imha'],
+        ['Uygulama hata kayıtları', '90 gün', 'Periyodik imha'],
+        ['Uzun süre kullanılmayan hesaplar', '24 ay hiç giriş yapılmazsa', '30 gün önce bildirim ve e-postayla uyarılır; giriş yaparsan silinmez'],
+      ];
+      return `
+<p>Bu politika, ${c.who} olarak işlediğimiz kişisel verileri ne kadar süre sakladığımızı ve süresi dolunca nasıl yok ettiğimizi açıklar (6698 sayılı KVKK m.7 ve Kişisel Verilerin Silinmesi, Yok Edilmesi veya Anonim Hale Getirilmesi Hakkında Yönetmelik).</p>
+<h3>Saklama süreleri</h3>
+<div class="legal-tbl"><table><thead><tr><th>Veri</th><th>Saklama süresi</th><th>İmha</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('')}</tbody></table></div>
+<h3>Nasıl imha ediyoruz</h3>
+<ul>
+<li><b>Silme:</b> kayıtlar veritabanından, dosyalar depolama alanından kalıcı olarak silinir; erişim kopyaları (önbellek) de temizlenir.</li>
+<li><b>Periyodik imha:</b> süresi dolan veriler otomatik olarak günde iki kez kontrol edilir ve silinir. Bu, yönetmeliğin öngördüğü en geç 6 aylık periyottan daha sıktır.</li>
+<li><b>Kayıt:</b> her imha işleminde neyin, ne kadarının, ne zaman silindiği kaydedilir; bu kayıtlar 3 yıl saklanır.</li>
+<li><b>Talep üzerine:</b> silme talebini Ayarlar › Veri taleplerim’den iletirsen en geç 30 gün içinde sonuçlandırırız; yasal saklama gerektiren kayıtlar bu süre dolana kadar erişimi kısıtlı tutulur.</li>
+</ul>
+<h3>Teknik ve idari tedbirler</h3>
+<p>Kayıtlara yalnızca görevi gereği yetkilendirilmiş yöneticiler erişebilir; toplu dışa aktarma işlemleri kayda geçer ve sahip yöneticiye bildirilir. 5651 trafik kayıtları değiştirilemezliği gösteren zincirleme özetlerle korunur.</p>
+<p>Sorular için ${c.mail}${c.addr}.</p>`;
+    },
+  },
   kurallar: {
     ...T('kurallar', 'Topluluk kuralları'),
     body: () => `
@@ -287,7 +332,7 @@ ${PROVIDERS}
 <p>Kuralları çiğneyen içerikler kaldırılır; hesaplar uyarılır, askıya alınır ya da kapatılır. Bir profili veya içeriği <b>Şikayet et</b> ile bildirebilirsin; kimin bildirdiği gizli tutulur.</p>`,
   },
 };
-const ORDER = ['kunye', 'kvkk', 'gizlilik', 'kosullar', 'riza', 'cerez', 'onbilgi', 'mesafeli', 'iade', 'kurallar', 'lisanslar'];
+const ORDER = ['kunye', 'kvkk', 'gizlilik', 'saklama', 'kosullar', 'riza', 'cerez', 'onbilgi', 'mesafeli', 'iade', 'kurallar', 'lisanslar'];
 
 export function legalHtml(doc) {
   const d = DOCS[doc] || DOCS.gizlilik; const key = DOCS[doc] ? doc : 'gizlilik';

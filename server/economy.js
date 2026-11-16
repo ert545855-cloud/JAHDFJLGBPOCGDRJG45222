@@ -59,16 +59,48 @@ module.exports = function economy(store) {
     if (!base) return plans;
     return plans.map((p) => {
       if (!/indirim|avantaj/i.test(p.tag || '') || p === base) return p;
-      const save = Math.floor((1 - (p.price / p.days) / (base.price / base.days)) * 100);
+      const save = Math.floor(Math.round((1 - (p.price / p.days) / (base.price / base.days)) * 10000) / 100);
       return { ...p, tag: save > 0 ? `%${save} avantajlı` : '' };
     });
+  };
+  // İndirimli satış (Ticari Reklam ve Haksız Ticari Uygulamalar Yönetmeliği): kampanyada "eski fiyat" olarak yalnızca indirimden
+  // önceki son 30 günde uygulanan EN DÜŞÜK fiyat gösterilebilir. Bunun için her ürünün günlük fiyatı saklanır (price_history).
+  const ymd = (t = Date.now()) => new Date(t + 3 * 3600000).toISOString().slice(0, 10); // Türkiye saati
+  const saleOn = (p, t = Date.now()) => p.salePrice > 0 && p.salePrice < p.price && p.saleUntil && ymd(t) <= p.saleUntil && (!p.saleFrom || ymd(t) >= p.saleFrom);
+  const lowestBefore = (id, fromDay) => {
+    const h = store.get('price_history', id)?.days || {};
+    const start = ymd(new Date(fromDay + 'T12:00:00+03:00').getTime() - 30 * DAY);
+    const vals = Object.entries(h).filter(([d]) => d >= start && d < fromDay).map(([, v]) => v);
+    return vals.length ? Math.min(...vals) : null;
+  };
+  const withSale = (p) => {
+    if (!saleOn(p)) return { ...p, now: p.price, was: undefined, off: undefined };
+    const was = lowestBefore(p.id, p.saleFrom || ymd());
+    const off = was && was > p.salePrice ? Math.floor(Math.round((1 - p.salePrice / was) * 10000) / 100) : 0; // aşağı yuvarlanır, abartılmaz
+    return { ...p, now: p.salePrice, was: off > 0 ? was : undefined, off: off > 0 ? off : undefined };
   };
   const get = () => {
     const s = store.get('settings', 'economy') || {};
     const out = { ...DEFAULTS, ...s, bank: { ...DEFAULTS.bank, ...(s.bank || {}) }, falPrices: { ...DEFAULTS.falPrices, ...(s.falPrices || {}) } };
-    return { ...out, plusPlans: honestPlans(out.plusPlans || []), coinPacks: (out.coinPacks || []).map((p) => (p.tag === 'Popüler' ? { ...p, tag: undefined } : p)) }; // kanıtlanamayan "popüler" iddiası gösterilmez
+    return { ...out, plusPlans: honestPlans(out.plusPlans || []).map(withSale), coinPacks: (out.coinPacks || []).map((p) => withSale(p.tag === 'Popüler' ? { ...p, tag: undefined } : p)) }; // kanıtlanamayan "popüler" iddiası gösterilmez
   };
-  const save = (patch) => store.put('settings', { ...(store.get('settings', 'economy') || {}), ...patch, id: 'economy' });
+  // Günlük fiyat kaydı: o gün uygulanan en düşük fiyat (61 gün tutulur)
+  function snapshot() {
+    const s = get(); const d = ymd();
+    for (const p of [...s.coinPacks, ...s.plusPlans]) {
+      const h = store.get('price_history', p.id) || { id: p.id, days: {} };
+      const cur = h.days[d];
+      if (cur === undefined || p.now < cur) {
+        const days = { ...h.days, [d]: p.now };
+        const cut = ymd(Date.now() - 61 * DAY);
+        for (const k of Object.keys(days)) if (k < cut) delete days[k];
+        store.put('price_history', { id: p.id, days });
+      }
+    }
+  }
+  setTimeout(snapshot, 4000); setInterval(snapshot, 3600000).unref?.();
+  const priceHistory = (id) => store.get('price_history', id)?.days || {};
+  const save = (patch) => { const r = store.put('settings', { ...(store.get('settings', 'economy') || {}), ...patch, id: 'economy' }); snapshot(); return r; };
   const isPlus = (u) => !!u && (u.plusUntil || 0) > Date.now();
   const today = () => new Date().toISOString().slice(0, 10);
 
@@ -126,10 +158,10 @@ module.exports = function economy(store) {
   function product(id) {
     const s = get();
     const c = s.coinPacks.find((p) => p.id === id);
-    if (c) return { kind: 'coins', id, title: `${c.coins} jeton`, coins: c.coins, price: c.price };
+    if (c) return { kind: 'coins', id, title: `${c.coins} jeton`, coins: c.coins, price: c.now, ...(c.was ? { was: c.was, off: c.off, saleUntil: c.saleUntil } : {}) };
     const p = s.plusPlans.find((x) => x.id === id);
-    if (p) return { kind: 'plus', id, title: `SwipeUp+ ${p.days} gün`, days: p.days, price: p.price };
+    if (p) return { kind: 'plus', id, title: `SwipeUp+ ${p.days} gün`, days: p.days, price: p.now, ...(p.was ? { was: p.was, off: p.off, saleUntil: p.saleUntil } : {}) };
     return null;
   }
-  return { DEFAULTS, get, save, isPlus, addCoins, spend, earn, grantPlus, quota, product, today };
+  return { DEFAULTS, get, save, isPlus, addCoins, spend, earn, grantPlus, quota, product, today, priceHistory, lowestBefore, ymd };
 };

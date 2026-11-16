@@ -46,6 +46,7 @@ const routes = [
   [/^\/cifte$/, 'cifte', { tabs: false }],
   [/^\/settings$/, 'settings', { tabs: false }],
   [/^\/veri-taleplerim$/, 'veri', { tabs: false }],
+  [/^\/guvenlik(?:\/(giris|paylas)\/([\w-]+))?$/, 'guvenlik', { tabs: false }],
   [/^\/fal(?:\/(\w+))?$/, 'fal', { tab: 'home' }],
   [/^\/create(?:\/(\w+))?$/, 'create', { tabs: false }],
   [/^\/p\/([\w-]+)$/, 'post', { tab: 'home' }],
@@ -415,6 +416,7 @@ async function boot() {
   setTimeout(maybeShowInstall, state.token ? 4000 : 1500);
   // Kullanım Koşulları güncellendiyse yeniden onay (sürüm ve tarih kayda geçer)
   if (state.me && !state.ban && state.config?.legalVer?.kosullar && state.me.termsV !== state.config.legalVer.kosullar) setTimeout(termsPrompt, 1800);
+  if (state.me?.lookingForPending && !state.ban) setTimeout(() => import('./consent.js').then((m) => m.orientationPending()), 3500);
   // Yeni üyeye SwipeUp+ denemesi: ilk açılışta bir kez tanıt
   if (state.me?.plusTrial && state.me.plusTrial.until > Date.now() && !state.me.plusTrial.bought) setTimeout(() => import('./trialsheet.js').then((m) => m.default(state.me.plusTrial)).catch(() => {}), 2500);
   // Beklenmeyen modül hataları (eski sürüm kalıntısı) → güncelleme ekranı

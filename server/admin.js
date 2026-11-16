@@ -94,6 +94,7 @@ module.exports = function mountAdmin(app, ctx) {
     req.adminPerms = PERM.permsOf(req.admin);
     req.permNeed = need;
     if (need && !req.adminPerms.includes(need)) return res.status(403).json({ error: need === 'owner' ? 'Bu işlem sadece sahip yöneticiye açık.' : 'Bu bölüm için yetkin yok. Sahip yöneticiden yetki iste.', perm: need });
+    try { adminPub.onAccess?.(req); } catch { /* izleme hatası paneli durdurmasın */ }
     next();
   }
   // Önceden sahibe özel işlemler: sahip ya da o bölümün yetkisi verilmiş moderatör
@@ -566,7 +567,8 @@ module.exports = function mountAdmin(app, ctx) {
   app.post('/api/admin/announcements/preview', adminAuth, (req, res) => {
     const { list: all } = audienceOf(req.body || {});
     const list = req.body?.marketing ? all.filter((u) => u.consents?.marketing?.on) : all;
-    res.json({ count: list.length, push: list.filter((u) => store.find('pushSubs', (x) => x.userId === u.id)).length, online: list.filter((u) => isOnline(u.id)).length, sample: list.slice(0, 5).map((u) => u.username) });
+    const mails = req.body?.marketing && req.body?.email ? all.filter((u) => u.email && u.consents?.marketingEmail?.on).length : 0;
+    res.json({ mails, mailOn: !!adminPub.marketingMail && require('./mail').enabled(), count: list.length, push: list.filter((u) => store.find('pushSubs', (x) => x.userId === u.id)).length, online: list.filter((u) => isOnline(u.id)).length, sample: list.slice(0, 5).map((u) => u.username) });
   });
   app.post('/api/admin/announcements', adminAuth, (req, res) => {
     const b = req.body || {};
@@ -579,7 +581,9 @@ module.exports = function mountAdmin(app, ctx) {
     // Kampanya / tanıtım bildirimi yalnızca buna açık rıza verenlere gider (KVKK, 6563 ticari ileti). Metin tanıtım gibi görünüyorsa izin şartı zorunlu.
     if (!b.marketing && aud !== 'user' && PROMO_RE.test(`${title} ${text}`)) return res.status(400).json({ error: 'Bu metin kampanya / tanıtım içeriyor gibi görünüyor (indirim, kampanya, hediye, fırsat…). Ticari ileti olduğu için yalnızca kampanya iznini verenlere gönderilebilir: “Kampanya bildirimi” kutusunu işaretle. Hizmetle ilgili bir bilgilendirmeyse tanıtım ifadelerini çıkar.' });
     const list = b.marketing ? all.filter((u) => u.consents?.marketing?.on) : all;
-    if (!list.length) return res.status(400).json({ error: 'Bu hedef kitlede kimse yok.' });
+    // Kampanya e-postası: yalnızca e-posta iznini (İYS) verenlere; her e-postada gönderen bilgisi ve tek tıkla ret bağlantısı
+    const mailList = b.marketing && b.email ? all.filter((u) => u.email && u.consents?.marketingEmail?.on) : [];
+    if (!list.length && !mailList.length) return res.status(400).json({ error: 'Bu hedef kitlede kimse yok.' });
     if (list.length > 1 && limited('ann:' + req.admin.id, 10, DAY)) return res.status(429).json({ error: 'Bugün çok fazla toplu bildirim gönderildi.' });
     const id = nanoid(10);
     const pushCount = list.filter((u) => store.find('pushSubs', (x) => x.userId === u.id)).length;
@@ -588,9 +592,10 @@ module.exports = function mountAdmin(app, ctx) {
       if (popup) emitTo(u.id, 'announce:popup', { id, title, text, url });
     });
     if (popup) store.put('settings', { id: 'popup', annId: id, title, text, url, at: now(), users: aud === 'all' ? null : list.map((u) => u.id), until: now() + 7 * DAY });
+    const emailReach = mailList.length ? (adminPub.marketingMail?.(mailList, { title, text, url }, req) || 0) : 0;
     const a = store.put('adm_announcements', {
       id, title, text, url, popup, audience: aud, audienceLabel: AUDIENCES[aud] + (aud === 'city' ? `: ${b.city}` : aud === 'user' ? `: @${b.username}` : aud === 'custom' ? `: ${label}` : ''), filters: aud === 'custom' ? b.filters || {} : undefined,
-      by: req.admin.username, at: now(), reach: list.length, pushReach: pushCount, online: list.filter((u) => isOnline(u.id)).length,
+      by: req.admin.username, at: now(), reach: list.length, pushReach: pushCount, emailReach, online: list.filter((u) => isOnline(u.id)).length,
     });
     audit(req.admin, 'bildirim gönderdi', aud === 'user' ? list[0].id : null, `${a.audienceLabel} · ${text}`);
     res.json(a);
@@ -679,8 +684,20 @@ module.exports = function mountAdmin(app, ctx) {
       if (iban && !/^TR\d{24}$/.test(iban)) return res.status(400).json({ error: 'IBAN geçersiz (TR ile başlayan 26 karakter).' });
       patch.bank = { iban, name: String(b.bank.name || '').slice(0, 80), bankName: String(b.bank.bankName || '').slice(0, 60), note: String(b.bank.note || '').slice(0, 200) };
     }
-    if (Array.isArray(b.coinPacks)) patch.coinPacks = b.coinPacks.slice(0, 6).map((p, i) => ({ id: String(p.id || `c${i}`).slice(0, 12), coins: n(p.coins, 1, 100000, 100) | 0, price: n(p.price, 0.01, 100000, 10), tag: String(p.tag || '').slice(0, 20) || undefined }));
-    if (Array.isArray(b.plusPlans)) patch.plusPlans = b.plusPlans.slice(0, 4).map((p, i) => ({ id: String(p.id || `p${i}`).slice(0, 12), days: n(p.days, 1, 3650, 30) | 0, price: n(p.price, 0.01, 100000, 10), tag: String(p.tag || '').slice(0, 20) || undefined }));
+    // Kampanya fiyatı: normal fiyattan düşük olmalı, bitiş tarihi gerekir; başlangıç günü saklanır ("eski fiyat" o günden önceki 30 güne göre hesaplanır)
+    const saleOf = (p, old) => {
+      const sp = +p.salePrice; const until = /^\d{4}-\d{2}-\d{2}$/.test(String(p.saleUntil || '')) ? String(p.saleUntil) : '';
+      if (!(sp > 0) || !until) return {};
+      if (sp >= +p.price) throw new Error(`Kampanya fiyatı normal fiyattan düşük olmalı (${p.id || ''}).`);
+      if (until < eco.ymd()) throw new Error('Kampanya bitiş tarihi geçmişte olamaz.');
+      const from = old?.salePrice > 0 && old?.saleFrom && old.saleUntil >= eco.ymd() ? old.saleFrom : eco.ymd();
+      return { salePrice: Math.round(sp * 100) / 100, saleUntil: until, saleFrom: from };
+    };
+    const tagOk = (t) => { t = String(t || '').slice(0, 20); if (/indirim/i.test(t)) throw new Error('“İndirim” etiketi kullanılamaz: kampanya fiyatı girince indirim, son 30 günün en düşük fiyatına göre kendiliğinden gösterilir.'); return t || undefined; };
+    try {
+      if (Array.isArray(b.coinPacks)) patch.coinPacks = b.coinPacks.slice(0, 6).map((p, i) => ({ id: String(p.id || `c${i}`).slice(0, 12), coins: n(p.coins, 1, 100000, 100) | 0, price: n(p.price, 0.01, 100000, 10), tag: tagOk(p.tag), ...saleOf(p, cur.coinPacks.find((x) => x.id === p.id)) }));
+      if (Array.isArray(b.plusPlans)) patch.plusPlans = b.plusPlans.slice(0, 4).map((p, i) => ({ id: String(p.id || `p${i}`).slice(0, 12), days: n(p.days, 1, 3650, 30) | 0, price: n(p.price, 0.01, 100000, 10), tag: /avantajlı$/.test(String(p.tag || '')) ? p.tag : tagOk(p.tag), ...saleOf(p, cur.plusPlans.find((x) => x.id === p.id)) }));
+    } catch (er) { return res.status(400).json({ error: er.message }); }
     if (Array.isArray(b.gifts)) patch.gifts = b.gifts.slice(0, 12).map((g, i) => ({ id: String(g.id || `g${i}`).slice(0, 12), em: String(g.em || '🎁').slice(0, 4), name: String(g.name || 'Hediye').slice(0, 20), coins: n(g.coins, 1, 100000, 10) | 0 }));
     if (b.falPrices) patch.falPrices = Object.fromEntries(['kahve', 'tarot', 'burc', 'uyum', 'ruya'].map((k) => [k, n(b.falPrices[k], 0, 10000, cur.falPrices[k]) | 0]));
     ['boostCoins', 'boostMinutes', 'freeLikes', 'freeSupers', 'plusSupers', 'superMsgCoins', 'inviteCoins', 'falSubCoins', 'plusTrialDays'].forEach((k) => { if (b[k] !== undefined) patch[k] = n(b[k], 0, 100000, cur[k]) | 0; });
@@ -721,7 +738,7 @@ module.exports = function mountAdmin(app, ctx) {
     } else {
       notify(o.userId, { type: 'order', text: `Siparişin (${o.code}) onaylanmadı.${note ? ' ' + note : ' Ödeme bulunamadı.'}`, title: 'SwipeUp', url: '/#/store' });
     }
-    store.update('orders', o.id, { status: approve ? 'approved' : 'rejected', note, closedAt: now(), by: req.admin.username });
+    store.update('orders', o.id, { status: approve ? 'approved' : 'rejected', note, closedAt: now(), ...(approve ? { approvedAt: now() } : {}), by: req.admin.username });
     emitTo(o.userId, 'wallet', {});
     audit(req.admin, approve ? 'siparişi onayladı' : 'siparişi reddetti', o.userId, `${o.code} · ${o.amount} ₺`);
     res.json({ ok: true });

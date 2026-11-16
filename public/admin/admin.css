@@ -561,3 +561,8 @@ tr.sgw td { background: color-mix(in srgb, #ffc926 10%, transparent); }
 .hk-acts { align-items: flex-start; }
 .hk-acts textarea.field { flex: 1 1 320px; max-width: 560px; height: auto; min-height: 72px; padding: 8px 10px; }
 .tabs button .n { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--brand); color: #fff; font-size: 11px; }
+.ih-cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 4px 12px; margin-top: 6px; }
+.ih-new summary, .case details summary { list-style: none; }
+.ih-new summary::-webkit-details-marker { display: none; }
+.ih-out, .ih-nf { white-space: pre-wrap; font-family: inherit; font-size: 13px; }
+.case .tbl { margin-top: 8px; }
