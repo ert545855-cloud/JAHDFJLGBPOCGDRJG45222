@@ -64,7 +64,7 @@ export default function settings(view) {
       <button class="it em">${icon('mail')}<span class="grow">E-posta<div class="sub">${esc(me.email || 'Eklenmedi — şifre sıfırlama için ekle')}</div></span></button>
       <button class="it pw">${icon('lock')}<span class="grow">${me.noPass ? 'Şifre belirle<div class="sub">Google / Apple yanında şifreyle de girebilmek için</div>' : 'Şifreyi değiştir'}</span></button>
       ${oauthCfg().google || oauthCfg().apple ? `<button class="it lgm">${icon('key')}<span class="grow">Giriş yöntemleri<div class="sub">${[!me.noPass && 'Şifre', me.logins?.google && 'Google', me.logins?.apple && 'Apple'].filter(Boolean).join(' · ') || '—'}</div></span></button>` : ''}
-      <button class="it cns">${icon('check')}<span class="grow">İzinlerim (açık rıza)<div class="sub">Kampanya bildirimleri, konum, yapay zeka fal desteği</div></span></button>
+      <button class="it cns">${icon('check')}<span class="grow">İzinlerim (açık rıza)<div class="sub">Kampanya bildirimi ve e-postası, konum, yapay zeka fal desteği</div></span></button>
       <button class="it rc">${icon('key')}<span class="grow">Yeni kurtarma kodu oluştur<div class="sub">Eski kod geçersiz olur</div></span></button>
       <button class="it lox">${icon('logout')}<span class="grow">Diğer cihazlardan çık<div class="sub">Bu telefon dışındaki bütün oturumların kapanır</div></span></button>
     </div>
@@ -80,11 +80,17 @@ export default function settings(view) {
     </div>
     <div class="group-t">Yasal ve verilerim</div>
     <div class="group">
+      <a class="it" href="#/veri-taleplerim">${icon('shield')}<span class="grow">Veri taleplerim (KVKK başvurusu)<div class="sub">Bilgi, düzeltme, silme ve diğer haklar · en geç 30 gün içinde yanıt</div></span></a>
+      <button class="it dl">${icon('download')}<span class="grow">Verilerimi indir<div class="sub">Profil, gönderi, mesaj ve diğer verilerin (JSON)</div></span></button>
+      <a class="it" href="#/legal/kvkk">${icon('doc')}<span class="grow">KVKK aydınlatma metni</span></a>
       <a class="it" href="#/legal/gizlilik">${icon('doc')}<span class="grow">Gizlilik politikası</span></a>
       <a class="it" href="#/legal/kosullar">${icon('doc')}<span class="grow">Kullanım koşulları</span></a>
-      <a class="it" href="#/legal/kvkk">${icon('doc')}<span class="grow">KVKK aydınlatma metni</span></a>
+      <a class="it" href="#/legal/riza">${icon('doc')}<span class="grow">Açık rıza metni</span></a>
+      <a class="it" href="#/legal/cerez">${icon('doc')}<span class="grow">Çerez ve yerel depolama</span></a>
+      <a class="it" href="#/legal/iade">${icon('doc')}<span class="grow">Satış belgeleri<div class="sub">Ön bilgilendirme, mesafeli satış sözleşmesi, cayma ve iade</div></span></a>
       <a class="it" href="#/legal/kurallar">${icon('users')}<span class="grow">Topluluk kuralları</span></a>
-      <button class="it dl">${icon('download')}<span class="grow">Verilerimi indir<div class="sub">Profil, gönderi, mesaj ve diğer verilerin (JSON)</div></span></button>
+      <a class="it" href="#/legal/kunye">${icon('flag')}<span class="grow">Künye ve hak ihlali bildirimi<div class="sub">Satıcı bilgileri, ETBİS, telif ve kişilik hakkı bildirimi</div></span></a>
+      <a class="it" href="#/legal/lisanslar">${icon('doc')}<span class="grow">Lisanslar ve atıflar</span></a>
     </div>
     <div class="group"><button class="it danger lo">${icon('logout')}${accounts().length > 1 ? `@${esc(me.username)} hesabından çık` : 'Çıkış yap'}</button>${accounts().length > 1 ? `<button class="it danger loa">${icon('logout')}Tüm hesaplardan çık</button>` : ''}${me.role === 'falci' ? '' : `<button class="it danger del">${icon('trash')}Hesabımı sil</button>`}</div>
     <p class="muted" style="text-align:center;font-size:12px;padding-bottom:20px">SwipeUp · @${esc(me.username)}</p>`;

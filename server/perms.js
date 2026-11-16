@@ -10,6 +10,7 @@ const PERMS = [
   ['support', 'Destek talepleri', 'Topluluk'],
   ['tags', 'Özel etiketler', 'Topluluk'],
   ['content', 'İçerik ve medya (silme dahil)', 'Topluluk'],
+  ['hukuk', 'Hukuk ve uyum (KVKK başvuruları, iadeler, hak ihlali bildirimleri, izin kayıtları)', 'Topluluk'],
   ['orders', 'Siparişler ve ödeme onayı', 'Para'],
   ['payouts', 'Kazanç ödemeleri', 'Para'],
   ['market', 'Store', 'Para'],
@@ -31,11 +32,11 @@ const PERMS = [
 const ALL = PERMS.map((p) => p[0]);
 const MOD_DEFAULT = ['users', 'users_ban', 'reports', 'appeals', 'flags', 'verify', 'support', 'content', 'notes'];
 // eski "admin" rolündekiler: sahibe özel olmayan her şey
-const LEGACY = ALL.filter((p) => !['erp', 'database', 'maintenance', 'settings'].includes(p));
+const LEGACY = ALL.filter((p) => !['erp', 'database', 'maintenance', 'settings', 'hukuk'].includes(p)); // hukuk: kişisel veri başvuruları, ayrıca verilir
 
 const PREFIX = {
   admins: 'owner', announcements: 'announce', appeals: 'appeals', audit: 'audit', content: 'content', media: 'content', database: 'database',
-  economy: 'settings', event: 'settings', legal: 'settings', rooms: 'settings', fal: 'fal', falai: 'fal', flags: 'flags', growth: 'growth', engage: 'engage', karaoke: 'engage', photomod: 'reports',
+  hukuk: 'hukuk', economy: 'settings', event: 'settings', legal: 'settings', rooms: 'settings', fal: 'fal', falai: 'fal', flags: 'flags', growth: 'growth', engage: 'engage', karaoke: 'engage', photomod: 'reports',
   ledger: 'erp', erp: 'erp', maintenance: 'maintenance', market: 'market', notes: 'notes', orders: 'orders', payouts: 'payouts', promos: 'promos',
   quests: 'quests', wheel: 'quests', reports: 'reports', songs: 'songs', contests: 'contests', support: 'support', tags: 'tags', verifications: 'verify',
 };

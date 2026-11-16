@@ -8,14 +8,14 @@ const DEFAULTS = {
   coinPacks: [
     { id: 'j50', coins: 50, price: 50 },
     { id: 'j100', coins: 100, price: 100 },
-    { id: 'j250', coins: 250, price: 250, tag: 'Popüler' },
+    { id: 'j250', coins: 250, price: 250 },
     { id: 'j500', coins: 500, price: 500 },
     { id: 'j1000', coins: 1000, price: 1000 },
   ],
   plusPlans: [
     { id: 'p30', days: 30, price: 99.99 },
-    { id: 'p90', days: 90, price: 249.99, tag: '%17 indirim' },
-    { id: 'p365', days: 365, price: 599.99, tag: '%50 indirim' },
+    { id: 'p90', days: 90, price: 249.99, tag: '%16 avantajlı' },
+    { id: 'p365', days: 365, price: 599.99, tag: '%50 avantajlı' },
   ],
   superPacks: [ // jetonla süper beğeni (günlük hakka ek, süresi dolmaz)
     { id: 's5', n: 5, coins: 40 },
@@ -50,11 +50,23 @@ module.exports = function economy(store) {
   // Kayıtlı plan listesinde yıllık plan yoksa bir kez ekle (yönetim sonradan silerse yeniden eklenmez)
   setTimeout(() => {
     const s = store.get('settings', 'economy');
-    if (s && Array.isArray(s.plusPlans) && !s.yearPlanAdded && !s.plusPlans.some((p) => p.days >= 365)) store.put('settings', { ...s, plusPlans: [...s.plusPlans, { id: 'p365', days: 365, price: 599.99, tag: '%50 indirim' }], yearPlanAdded: true });
+    if (s && Array.isArray(s.plusPlans) && !s.yearPlanAdded && !s.plusPlans.some((p) => p.days >= 365)) store.put('settings', { ...s, plusPlans: [...s.plusPlans, { id: 'p365', days: 365, price: 599.99, tag: '%50 avantajlı' }], yearPlanAdded: true });
   }, 3000);
+  // Reklam yönetmeliği: "indirim" yalnızca son 30 gündeki en düşük fiyata göre gerçek bir fiyat düşüşü için kullanılabilir.
+  // Uzun plan etiketleri bu yüzden aylık plana göre gerçek fiyattan hesaplanan "avantajlı" oranıyla gösterilir (aşağı yuvarlanır, abartılmaz).
+  const honestPlans = (plans) => {
+    const base = plans.find((p) => +p.days === 30) || [...plans].sort((a, b) => a.days - b.days)[0];
+    if (!base) return plans;
+    return plans.map((p) => {
+      if (!/indirim|avantaj/i.test(p.tag || '') || p === base) return p;
+      const save = Math.floor((1 - (p.price / p.days) / (base.price / base.days)) * 100);
+      return { ...p, tag: save > 0 ? `%${save} avantajlı` : '' };
+    });
+  };
   const get = () => {
     const s = store.get('settings', 'economy') || {};
-    return { ...DEFAULTS, ...s, bank: { ...DEFAULTS.bank, ...(s.bank || {}) }, falPrices: { ...DEFAULTS.falPrices, ...(s.falPrices || {}) } };
+    const out = { ...DEFAULTS, ...s, bank: { ...DEFAULTS.bank, ...(s.bank || {}) }, falPrices: { ...DEFAULTS.falPrices, ...(s.falPrices || {}) } };
+    return { ...out, plusPlans: honestPlans(out.plusPlans || []), coinPacks: (out.coinPacks || []).map((p) => (p.tag === 'Popüler' ? { ...p, tag: undefined } : p)) }; // kanıtlanamayan "popüler" iddiası gösterilmez
   };
   const save = (patch) => store.put('settings', { ...(store.get('settings', 'economy') || {}), ...patch, id: 'economy' });
   const isPlus = (u) => !!u && (u.plusUntil || 0) > Date.now();

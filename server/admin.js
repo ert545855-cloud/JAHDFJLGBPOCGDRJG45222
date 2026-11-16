@@ -290,6 +290,7 @@ module.exports = function mountAdmin(app, ctx) {
       verifyOpen: store.filter('verifications', (v) => v.status === 'pending').length,
       flagsOpen: store.filter('flags', (f) => f.status === 'open').length,
       payoutsOpen: store.filter('payouts', (p) => p.status === 'pending').length,
+      legalOpen: adminPub.legalOpenCount?.() || 0, // hukuk modülü ekler (KVKK başvurusu, iade, hak ihlali)
       maintenance: store.get('settings', 'maintenance')?.on ? 1 : 0,
       supportOpen: store.filter('support', (s) => s.status === 'open').length,
       songsPending: store.filter('songs', (s) => s.status === 'pending').length,
@@ -560,6 +561,7 @@ module.exports = function mountAdmin(app, ctx) {
     if (aud === 'custom') { const r = customFilter(list.filter((u) => !['falci', 'official'].includes(u.role)), b.filters || {}); list = r.list; label = r.label; }
     return { aud, list, label };
   }
+  const PROMO_RE = /indirim|kampanya|fırsat|firsat|bedava|ücretsiz|hediye|teklif|kupon|%\s?\d|\d\s?%|satın al|abone ol|kaçırma|son gün|özel fiyat/i;
   const LINKS = ['/#/', '/#/notifications', '/#/store', '/#/genel', '/#/fal', '/#/vitrin', '/#/dalga', '/#/swipe', '/#/create', '/#/verify', '/#/live', '/#/secki', '/#/soru', '/#/kulupler', '/#/seriler', '/#/karaoke', '/#/gorevler'];
   app.post('/api/admin/announcements/preview', adminAuth, (req, res) => {
     const { list: all } = audienceOf(req.body || {});
@@ -574,14 +576,15 @@ module.exports = function mountAdmin(app, ctx) {
     const url = LINKS.includes(b.url) ? b.url : '/#/notifications';
     const popup = !!b.popup;
     const { aud, list: all, label } = audienceOf(b);
-    // Kampanya / tanıtım bildirimi yalnızca buna açık rıza verenlere gider (KVKK, ticari ileti)
+    // Kampanya / tanıtım bildirimi yalnızca buna açık rıza verenlere gider (KVKK, 6563 ticari ileti). Metin tanıtım gibi görünüyorsa izin şartı zorunlu.
+    if (!b.marketing && aud !== 'user' && PROMO_RE.test(`${title} ${text}`)) return res.status(400).json({ error: 'Bu metin kampanya / tanıtım içeriyor gibi görünüyor (indirim, kampanya, hediye, fırsat…). Ticari ileti olduğu için yalnızca kampanya iznini verenlere gönderilebilir: “Kampanya bildirimi” kutusunu işaretle. Hizmetle ilgili bir bilgilendirmeyse tanıtım ifadelerini çıkar.' });
     const list = b.marketing ? all.filter((u) => u.consents?.marketing?.on) : all;
     if (!list.length) return res.status(400).json({ error: 'Bu hedef kitlede kimse yok.' });
     if (list.length > 1 && limited('ann:' + req.admin.id, 10, DAY)) return res.status(429).json({ error: 'Bugün çok fazla toplu bildirim gönderildi.' });
     const id = nanoid(10);
     const pushCount = list.filter((u) => store.find('pushSubs', (x) => x.userId === u.id)).length;
     list.forEach((u) => {
-      notify(u.id, { type: 'announce', text: `📣 ${text}`, title, url, tag: 'announce-' + id });
+      notify(u.id, { type: 'announce', text: `📣 ${text}${b.marketing ? ' · Kampanya bildirimlerini Ayarlar › İzinlerim’den kapatabilirsin.' : ''}`, title, url, tag: 'announce-' + id });
       if (popup) emitTo(u.id, 'announce:popup', { id, title, text, url });
     });
     if (popup) store.put('settings', { id: 'popup', annId: id, title, text, url, at: now(), users: aud === 'all' ? null : list.map((u) => u.id), until: now() + 7 * DAY });
@@ -690,7 +693,7 @@ module.exports = function mountAdmin(app, ctx) {
     res.json(eco.get());
   });
 
-  const orderRow = (o) => ({ ...o, user: store.get('users', o.userId) ? userRow(store.get('users', o.userId)) : null });
+  const orderRow = ({ docs, ...o }) => ({ ...o, legalOk: !!o.legal?.pre && !!o.legal?.waive, user: store.get('users', o.userId) ? userRow(store.get('users', o.userId)) : null }); // sözleşme metni listede taşınmaz
   app.get('/api/admin/orders', adminAuth, (req, res) => {
     const st = String(req.query.status || 'open');
     const list = store.filter('orders', (o) => st === 'all' || (st === 'open' ? ['pending', 'paid'].includes(o.status) : o.status === st))
@@ -805,8 +808,18 @@ module.exports = function mountAdmin(app, ctx) {
     const b = req.body || {};
     const email = String(b.email || '').trim().slice(0, 120);
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'E-posta geçersiz.' });
-    const doc = store.put('settings', { id: 'legal', company: String(b.company || '').trim().slice(0, 120), email, address: String(b.address || '').trim().slice(0, 240) });
-    audit(req.admin, 'yasal iletişim bilgilerini güncelledi');
+    const t = (k, n) => String(b[k] ?? '').trim().slice(0, n);
+    const mersis = t('mersis', 16).replace(/\D/g, ''); const vkn = t('vkn', 11).replace(/\D/g, ''); const kep = t('kep', 120);
+    if (mersis && mersis.length !== 16) return res.status(400).json({ error: 'MERSİS numarası 16 haneli olmalı.' });
+    if (vkn && !/^\d{10,11}$/.test(vkn)) return res.status(400).json({ error: 'Vergi kimlik no 10 (şirket) ya da 11 (şahıs, T.C. kimlik no) haneli olmalı.' });
+    if (kep && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(kep)) return res.status(400).json({ error: 'KEP adresi geçersiz.' });
+    const hours = (k, d, lo, hi) => { const n = parseInt(b[k], 10); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d; };
+    const etbis = t('etbis', 300); if (etbis && /^https?:/i.test(etbis) && !/^https:\/\/etbis\.ticaret\.gov\.tr\//i.test(etbis)) return res.status(400).json({ error: 'ETBİS bağlantısı etbis.ticaret.gov.tr adresinden olmalı.' });
+    const doc = store.put('settings', {
+      id: 'legal', company: t('company', 120), email, address: t('address', 240), brand: t('brand', 60), mersis, vkn, taxOffice: t('taxOffice', 60), sicil: t('sicil', 40),
+      phone: t('phone', 30), kep, etbis, deliveryHours: hours('deliveryHours', 24, 1, 72), payHours: hours('payHours', 72, 24, 168), refund14: b.refund14 !== false,
+    });
+    audit(req.admin, 'yasal / künye bilgilerini güncelledi');
     res.json(doc);
   });
 
@@ -1083,7 +1096,7 @@ module.exports = function mountAdmin(app, ctx) {
         if (u) {
           owner = u.id;
           const patch = { photos: (u.photos || []).filter((x) => x !== it.url) };
-          if (u.avatar === it.url) patch.avatar = `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(u.username)}&backgroundColor=ffe3dc`;
+          if (u.avatar === it.url) patch.avatar = require('./legal').localAvatar('notionists', u.username, 'ffe3dc');
           store.update('users', u.id, patch);
         }
       } else if (it.kind === 'selfie') {

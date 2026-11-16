@@ -14,6 +14,9 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@dicebear/core": "^9.4.3",
+    "@dicebear/notionists": "^9.4.2",
+    "@dicebear/shapes": "^9.4.2",
     "bcryptjs": "^3.0.3",
     "cannon-es": "^0.20.0",
     "compression": "^1.8.2",

@@ -3,7 +3,7 @@ import { remember, accountSheet, switchFromUrl } from './accounts.js';
 import { icon } from './icons.js';
 import { initNav } from './nav.js';
 import {
-  state, api, on, emit, connectSocket, refreshBadges, toast, esc, el, applySkin, currentSkin, setGameLook, notifHref, applyLogo, refreshStoryMap, syncPush,
+  state, api, on, emit, connectSocket, refreshBadges, toast, esc, el, applySkin, currentSkin, setGameLook, notifHref, applyLogo, refreshStoryMap, syncPush, sheet,
 } from './core.js';
 import { initCalls } from './calls.js';
 import { checkVersion, recover, afterBoot } from './update.js';
@@ -45,6 +45,7 @@ const routes = [
   [/^\/edit$/, 'edit', { tabs: false }],
   [/^\/cifte$/, 'cifte', { tabs: false }],
   [/^\/settings$/, 'settings', { tabs: false }],
+  [/^\/veri-taleplerim$/, 'veri', { tabs: false }],
   [/^\/fal(?:\/(\w+))?$/, 'fal', { tab: 'home' }],
   [/^\/create(?:\/(\w+))?$/, 'create', { tabs: false }],
   [/^\/p\/([\w-]+)$/, 'post', { tab: 'home' }],
@@ -347,6 +348,25 @@ function keyboardFit() {
   fit();
 }
 
+// Güncellenen Kullanım Koşulları: okuyup onaylamadan kapatılamaz; istemeyen hesabını silebilir
+function termsPrompt() {
+  if (document.querySelector('.terms-up')) return;
+  const close = sheet('Kullanım Koşulları güncellendi', `<div class="terms-up" style="padding:0 18px 20px;display:grid;gap:12px">
+    <p style="margin:0">Kullanım Koşulları’nı ve gizlilik belgelerimizi güncelledik: satın almalarda ön bilgilendirme ve sözleşme, cayma ve iade koşulları, kampanya e-postaları için ayrı izin, hak ihlali bildirimi ve KVKK başvuru takibi eklendi. Devam etmek için güncel koşulları okuyup onaylaman gerekiyor.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px"><a class="chip" href="#/legal/kosullar">Kullanım koşulları</a><a class="chip" href="#/legal/kvkk">KVKK aydınlatma metni</a><a class="chip" href="#/legal/gizlilik">Gizlilik politikası</a><a class="chip" href="#/legal/iade">Cayma ve iade</a></div>
+    <label class="consent"><input type="checkbox" name="ok"><span>Güncel Kullanım Koşulları’nı okudum ve kabul ediyorum; 18 yaşından büyük olduğumu beyan ederim.</span></label>
+    <button class="btn primary block go">Onayla ve devam et</button></div>`, {
+    onMount(sh) {
+      sh.querySelectorAll('a.chip').forEach((a) => { a.onclick = (e) => { e.preventDefault(); import('./views/legal.js').then((m) => m.legalSheet(a.getAttribute('href').split('/').pop())); }; });
+      sh.querySelector('.go').onclick = async () => {
+        if (!sh.querySelector('[name=ok]').checked) { toast('Devam etmek için güncel koşulları onayla.'); return; }
+        try { const r = await api('/me/terms', { body: { accept: true } }); state.me.termsV = r.termsV; close(); toast('Teşekkürler!'); } catch (er) { toast(er.message); }
+      };
+    },
+    onClose() { if (state.me && state.me.termsV !== state.config?.legalVer?.kosullar) setTimeout(termsPrompt, 400); }, // onaylamadan kapatılırsa yeniden açılır
+  });
+}
+
 async function boot() {
   // Yazı tipi açılışı bekletmesin (index.html'de media=print ile iner, burada devreye girer)
   try { const gf = document.getElementById('gfont'); if (gf) gf.media = 'all'; } catch { /* yok */ }
@@ -393,6 +413,8 @@ async function boot() {
   initEvent(state.config);
   // İlk ziyarette telefona yükleme kılavuzu (iPhone: Safari → Ana Ekrana Ekle)
   setTimeout(maybeShowInstall, state.token ? 4000 : 1500);
+  // Kullanım Koşulları güncellendiyse yeniden onay (sürüm ve tarih kayda geçer)
+  if (state.me && !state.ban && state.config?.legalVer?.kosullar && state.me.termsV !== state.config.legalVer.kosullar) setTimeout(termsPrompt, 1800);
   // Yeni üyeye SwipeUp+ denemesi: ilk açılışta bir kez tanıt
   if (state.me?.plusTrial && state.me.plusTrial.until > Date.now() && !state.me.plusTrial.bought) setTimeout(() => import('./trialsheet.js').then((m) => m.default(state.me.plusTrial)).catch(() => {}), 2500);
   // Beklenmeyen modül hataları (eski sürüm kalıntısı) → güncelleme ekranı

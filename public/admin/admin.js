@@ -5,7 +5,7 @@ import { icon } from '/js/icons.js';
 export const BASE = location.pathname.split('/').slice(0, 2).join('/');
 const S = { token: localStorage.getItem('su_admin'), me: null, counts: {} };
 const can = (p) => S.me?.role === 'owner' || (S.me?.perms || []).includes(p);
-const SEC_PERM = { growth: 'growth', users: 'users', support: 'support', reports: 'reports', appeals: 'appeals', flags: 'flags', verify: 'verify', orders: 'orders', payouts: 'payouts', market: 'market', ledger: 'erp', erp: 'erp', promos: 'promos', quests: 'quests', songs: 'songs', contests: 'contests', fal: 'fal', content: 'content', media: 'content', announce: 'announce', notes: 'notes', audit: 'audit', errors: 'audit', database: 'database', maintenance: 'maintenance', settings: 'settings', tags: 'tags', engage: 'engage', karaoke: 'engage', photomod: 'reports' };
+const SEC_PERM = { growth: 'growth', users: 'users', support: 'support', reports: 'reports', appeals: 'appeals', flags: 'flags', verify: 'verify', orders: 'orders', payouts: 'payouts', market: 'market', ledger: 'erp', erp: 'erp', promos: 'promos', quests: 'quests', songs: 'songs', contests: 'contests', fal: 'fal', content: 'content', media: 'content', announce: 'announce', notes: 'notes', audit: 'audit', errors: 'audit', database: 'database', maintenance: 'maintenance', settings: 'settings', tags: 'tags', engage: 'engage', karaoke: 'engage', photomod: 'reports', hukuk: 'hukuk' };
 const canSec = (k) => !SEC_PERM[k] || can(SEC_PERM[k]);
 const root = document.getElementById('root');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -49,6 +49,7 @@ const SECTIONS = [
   ['reports', 'Şikayetler', 'flag', 'reportsOpen'],
   ['photomod', 'Fotoğraf denetimi', 'image', 'photosOpen'],
   ['appeals', 'İtirazlar', 'reply', 'appealsOpen'],
+  ['hukuk', 'Hukuk ve uyum', 'shield', 'legalOpen'],
   ['flags', 'Moderasyon', 'shield', 'flagsOpen'],
   ['verify', 'Doğrulama', 'verified', 'verifyOpen'],
   ['orders', 'Siparişler', 'coin', 'ordersPaid'],
@@ -224,7 +225,7 @@ function paintMaintBanner() {
 async function refreshCounts() {
   try {
     const o = await api('/overview');
-    const changed = ['songsPending', 'errorsOpen', 'supportOpen', 'reportsOpen', 'photosOpen', 'appealsOpen', 'falPending', 'flagsOpen', 'verifyOpen', 'ordersPaid', 'payoutsOpen', 'marketOpen', 'maintenance'].some((k) => S.counts[k] !== o[k]);
+    const changed = ['songsPending', 'errorsOpen', 'supportOpen', 'reportsOpen', 'photosOpen', 'appealsOpen', 'falPending', 'flagsOpen', 'verifyOpen', 'ordersPaid', 'payoutsOpen', 'marketOpen', 'legalOpen', 'maintenance'].some((k) => S.counts[k] !== o[k]);
     if (S.counts.users && (o.supportOpen || 0) > (S.counts.supportOpen || 0)) { toast('🎧 Yeni destek mesajı var.'); ding(); }
     S.counts = o;
     paintMaintBanner();
@@ -254,7 +255,7 @@ VIEWS.overview = async (main) => {
       ${st(o.users, 'Toplam üye')}${st(o.newToday, 'Bugün katılan')}${st(o.new7, 'Son 7 gün katılan')}${st(o.online, 'Şu an çevrimiçi')}${st(o.active24, 'Son 24 saatte aktif')}
       ${st(o.messagesToday, 'Bugün gönderilen mesaj')}${st(o.matches, 'Toplam eşleşme')}${st(o.posts, 'Gönderi ve vitrin videosu')}${st(o.stories, 'Yayında hikaye')}${st(o.banned, 'Askıda / yasaklı', true, '#/users')}
       ${st(o.reportsOpen, 'Açık şikayet', true, '#/reports')}${st(o.appealsOpen, 'Bekleyen itiraz', true, '#/appeals')}${st(o.falPending, 'Bekleyen fal', true, '#/fal')}
-      ${st(o.flagsOpen, 'Moderasyon işareti', true, '#/flags')}${st(o.verifyOpen, 'Doğrulama bekleyen', true, '#/verify')}${st(o.ordersPaid, 'Onay bekleyen ödeme', true, '#/orders')}${st(o.payoutsOpen, 'Ödeme talebi', true, '#/payouts')}
+      ${st(o.flagsOpen, 'Moderasyon işareti', true, '#/flags')}${st(o.verifyOpen, 'Doğrulama bekleyen', true, '#/verify')}${st(o.ordersPaid, 'Onay bekleyen ödeme', true, '#/orders')}${st(o.legalOpen, 'Hukuk: açık başvuru / iade / bildirim', true, '#/hukuk')}${st(o.payoutsOpen, 'Ödeme talebi', true, '#/payouts')}
       ${st(o.plusUsers, 'SwipeUp+ üye')}${o.plusTrialTotal ? st(`${o.plusTrials} / ${o.plusTrialBought}`, `Denemede / denemeden satın alan (toplam ${o.plusTrialTotal})`) : ''}${st(o.verifiedUsers, 'Mavi tikli üye')}
       <div class="stat"><b class="money in">${tl(o.income)}</b><span>Bu ay gelir</span></div>
       <div class="stat"><b class="money out">${tl(o.expense)}</b><span>Bu ay gider</span></div>
@@ -1724,11 +1725,22 @@ VIEWS.settings = async (main) => {
         <label>Davet ödülü (iki tarafa, jeton)<input class="field" type="number" name="inviteCoins" value="${e.inviteCoins ?? 50}"></label>
         <label>Falcı Teyze aylık abonelik (jeton)<input class="field" type="number" name="falSubCoins" value="${e.falSubCoins ?? 250}"></label>
         <p class="muted" style="margin:0;font-size:12.5px">Abonelik: her pazartesi burç yorumu ve ayda bir kahve falı. Falcı Teyze payı abonelikte de geçerli.</p></div></div>
-      <div class="panel"><div class="ph"><h3>Yasal iletişim bilgileri</h3></div><div class="pb fgrid">
-        <label>Veri sorumlusu (şirket / ad soyad)<input class="field" name="lcompany" value="${esc(legal.company || '')}"></label>
+      <div class="panel"><div class="ph"><h3>Satıcı ve künye bilgileri</h3><a class="btn sm" href="#/hukuk">Hukuk ve uyum</a></div><div class="pb fgrid">
+        <label>Satıcı / veri sorumlusu (şirket unvanı ya da ad soyad)<input class="field" name="lcompany" value="${esc(legal.company || '')}"></label>
+        <label>Marka adı<input class="field" name="lbrand" value="${esc(legal.brand || '')}" placeholder="SwipeUp"></label>
+        <label>Açık adres<input class="field" name="laddress" value="${esc(legal.address || '')}" placeholder="Mahalle, cadde, no, ilçe / il"></label>
         <label>İletişim e-postası<input class="field" name="lemail" type="email" value="${esc(legal.email || '')}"></label>
-        <label>Adres<input class="field" name="laddress" value="${esc(legal.address || '')}"></label>
-        <p class="muted" style="margin:0;font-size:12.5px">Gizlilik politikası ve KVKK metninde gösterilir.</p></div></div>
+        <label>Telefon<input class="field" name="lphone" type="tel" value="${esc(legal.phone || '')}" placeholder="0 (5xx) xxx xx xx"></label>
+        <label>KEP adresi<input class="field" name="lkep" type="email" value="${esc(legal.kep || '')}" placeholder="unvan@hs01.kep.tr"></label>
+        <label>MERSİS no (şirketse, 16 hane)<input class="field" name="lmersis" inputmode="numeric" value="${esc(legal.mersis || '')}"></label>
+        <label>Vergi kimlik no (şahıs şirketinde T.C. kimlik no)<input class="field" name="lvkn" inputmode="numeric" value="${esc(legal.vkn || '')}"></label>
+        <label>Vergi dairesi<input class="field" name="ltaxOffice" value="${esc(legal.taxOffice || '')}"></label>
+        <label>Ticaret sicil no<input class="field" name="lsicil" value="${esc(legal.sicil || '')}"></label>
+        <label>ETBİS kayıt bağlantısı ya da kayıt no<input class="field" name="letbis" value="${esc(legal.etbis || '')}" placeholder="https://etbis.ticaret.gov.tr/..."></label>
+        <label>Ödeme onayından sonra teslim süresi (saat, 1–72)<input class="field" type="number" min="1" max="72" name="ldeliveryHours" value="${esc(legal.deliveryHours ?? 24)}"></label>
+        <label>Ödenmeyen siparişin iptal süresi (saat, 24–168)<input class="field" type="number" min="24" max="168" name="lpayHours" value="${esc(legal.payHours ?? 72)}"></label>
+        <label class="row" style="gap:8px;cursor:pointer;font-weight:500"><input type="checkbox" name="lrefund14" ${legal.refund14 === false ? '' : 'checked'} style="width:18px;height:18px;accent-color:var(--brand)"><span><b>14 gün içinde harcanmamış jeton iadesi</b> <span class="muted">— kanunen zorunlu değil, güven için önerilir</span></span></label>
+        <p class="muted" style="margin:0;font-size:12.5px">Bu bilgiler Künye, KVKK aydınlatma metni, ön bilgilendirme formu ve mesafeli satış sözleşmesinde gösterilir. Eksik bilgiler Hukuk ve uyum bölümünde listelenir.</p></div></div>
       ${owner ? `<div class="savebar"><button class="btn primary">${icon('check')} Kaydet</button></div>` : ''}
     </form>
     ${evs ? eventPanel(evs, owner) : ''}
@@ -1764,10 +1776,74 @@ VIEWS.settings = async (main) => {
           gifts: read('gifts', 'g').map((g, i) => ({ ...g, id: e.gifts[i]?.id || `g${i}${Date.now() % 1000}` })),
         },
       });
-      await api('/legal', { method: 'PUT', body: { company: v('lcompany'), email: v('lemail'), address: v('laddress') } });
+      await api('/legal', { method: 'PUT', body: { company: v('lcompany'), email: v('lemail'), address: v('laddress'), brand: v('lbrand'), phone: v('lphone'), kep: v('lkep'), mersis: v('lmersis'), vkn: v('lvkn'), taxOffice: v('ltaxOffice'), sicil: v('lsicil'), etbis: v('letbis'), deliveryHours: v('ldeliveryHours'), payHours: v('lpayHours'), refund14: f.elements.lrefund14.checked } });
       toast('Ayarlar kaydedildi.');
     } catch (er) { toast(er.message); }
   };
+};
+
+// ---- Hukuk ve uyum: KVKK başvuruları (m.13: 30 gün), iade talepleri, hak ihlali bildirimleri, izin kayıtları ----
+const CONSENT_NAMES = { marketing: 'Kampanya bildirimi (uygulama içi / anlık)', marketingEmail: 'Kampanya e-postası (İYS)', location: 'Yaklaşık konum', ai: 'Fal için yurt dışı yapay zeka aktarımı' };
+const TD_KIND = { telif: 'Telif hakkı', kisilik: 'Kişilik hakkı', diger: 'Diğer' };
+const left = (due) => { const n = Math.ceil((due - Date.now()) / 86400000); return n < 0 ? `<span class="chip bad">${-n} gün gecikti</span>` : `<span class="chip ${n <= 5 ? 'warn' : 'info'}">${n} gün kaldı</span>`; };
+async function download(path, name) {
+  try {
+    const r = await fetch(BASE + '/api' + path, { headers: { Authorization: 'Bearer ' + S.token } });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'İndirilemedi.');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(await r.blob()); a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  } catch (e) { toast(e.message); }
+}
+VIEWS.hukuk = async (main) => {
+  let tab = 'kvkk';
+  main.innerHTML = `${head('Hukuk ve uyum', 'KVKK başvuruları en geç 30 gün içinde, iadeler 14 gün içinde sonuçlandırılmalı. Yanıtlar kullanıcıya bildirim ve e-postayla gider.', '<div class="row" style="gap:6px"><button class="btn sm" data-dl="iys">İYS e-posta izinleri (CSV)</button><button class="btn sm" data-dl="consents">Rıza kayıtları (CSV)</button></div>')}
+    <div class="hk-top"><div class="spin"></div></div>
+    <div class="tabs">${[['kvkk', 'KVKK başvuruları'], ['refunds', 'İade talepleri'], ['takedowns', 'Hak ihlali bildirimleri']].map(([k, l], i) => `<button data-s="${k}" class="${i ? '' : 'on'}">${l}</button>`).join('')}</div>
+    <div class="panel lst"><div class="spin"></div></div>`;
+  const top = main.querySelector('.hk-top'); const lst = main.querySelector('.lst');
+  let D = null;
+  const paint = () => {
+    const open = (a) => a.filter((x) => x.status === 'open').length;
+    main.querySelectorAll('.tabs button').forEach((b) => { const n = open(D[b.dataset.s] || []); b.querySelector('.n')?.remove(); if (n) b.insertAdjacentHTML('beforeend', ` <span class="n">${n}</span>`); });
+    top.innerHTML = `${D.missing.length ? `<div class="panel hk-miss"><div class="pb"><b>Satış belgelerinde eksik bilgi var.</b> 6563 sayılı Kanun ve Mesafeli Sözleşmeler Yönetmeliği satıcının kimlik ve iletişim bilgilerinin gösterilmesini ister: ${D.missing.map(esc).join(', ')}. <a href="#/settings">Ayarlar › Satıcı ve künye bilgileri</a></div></div>` : ''}
+      <div class="stats">
+        <div class="stat ${D.termsOld ? 'alert' : ''}"><b>${D.termsOld}</b><span>Güncel koşulları henüz onaylamamış üye (sürüm ${esc(D.ver.kosullar)})</span></div>
+        ${Object.entries(CONSENT_NAMES).map(([k, l]) => `<div class="stat"><b>${D.consents[k] || 0}</b><span>${l} izni veren</span></div>`).join('')}
+        <div class="stat"><b>${Number(D.thh.limit).toLocaleString('tr-TR')} ₺</b><span>${D.thh.year} tüketici hakem heyeti sınırı</span></div>
+      </div>`;
+    const L = D[tab] || [];
+    if (!L.length) { lst.innerHTML = '<div class="empty">Bu listede kayıt yok.</div>'; return; }
+    if (tab === 'kvkk') lst.innerHTML = L.map((k) => `<div class="case" data-id="${esc(k.id)}">
+      <div class="who">${userCell(k.user)}<b>${esc(k.no)}</b><span class="muted">${dt(k.at)}</span>${k.status === 'open' ? left(k.due) : `<span class="chip ${k.status === 'answered' ? 'ok' : 'bad'}">${k.status === 'answered' ? 'Yanıtlandı' : 'Reddedildi'}</span>`}</div>
+      <div><ul class="hk-ul">${k.typeNames.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>${k.note ? `<div class="det">${esc(k.note)}</div>` : ''}
+      ${k.status === 'open' ? `<div class="acts hk-acts"><textarea class="field nt" rows="3" placeholder="Yanıt (gerekçesiyle). Kullanıcıya bildirim ve e-postayla gider."></textarea><button class="btn sm ok" data-k="answer">${icon('check')} Yanıtla</button><button class="btn sm danger" data-k="reject">Gerekçeyle reddet</button>${k.user?.id ? `<button class="btn sm" data-u="${esc(k.user.id)}">Hesabı incele</button>` : ''}</div>`
+    : `<div class="muted">Yanıt (${dt(k.answeredAt)}): ${esc(k.answer || '')}</div>`}</div>`).join('');
+    if (tab === 'refunds') lst.innerHTML = L.map((r) => `<div class="case" data-id="${esc(r.id)}">
+      <div class="who">${userCell(r.user)}<b>${esc(r.order?.code || '')}</b><span>${esc(r.order?.title || '')}</span><b>${tl(r.amount)}</b><span class="muted">${dt(r.at)}</span>${r.status === 'open' ? left(r.due) : `<span class="chip ${r.status === 'approved' ? 'ok' : 'bad'}">${r.status === 'approved' ? 'Onaylandı' : 'Reddedildi'}</span>`}</div>
+      <div class="muted">Gerekçe: <b>${esc(r.reasonText || r.reason)}</b>${r.order?.coins ? ` · paket ${r.order.coins} jeton, kullanıcının şu anki bakiyesi ${r.coinsNow}` : ''}</div>
+      <div class="det">IBAN: ${esc(r.iban)} · Alıcı: ${esc(r.name)}${r.note ? `\nNot: ${esc(r.note)}` : ''}</div>
+      ${r.status === 'open' ? `<div class="acts"><input class="field nt" placeholder="Not (reddederken gerekçe yaz)"><button class="btn sm ok" data-r="approve">${icon('check')} Onayla</button><button class="btn sm danger" data-r="reject">Reddet</button></div><div class="muted" style="font-size:12.5px">Onaylarsan tutarı 14 gün içinde bu IBAN’a gönder ve Şirket (ERP) bölümüne gider olarak işle.${r.reason === 'cayma14' ? ' Cayma iadesinde paket jetonları bakiyeden düşülür.' : ''}</div>`
+    : `<div class="muted">${esc(r.by || '')} · ${dt(r.closedAt)}${r.note2 ? ` · ${esc(r.note2)}` : ''}</div>`}</div>`).join('');
+    if (tab === 'takedowns') lst.innerHTML = L.map((t) => `<div class="case" data-id="${esc(t.id)}">
+      <div class="who"><span class="chip warn">${TD_KIND[t.kind] || t.kind}</span><b class="ell" style="max-width:420px">${esc(t.target)}</b><span class="muted">${dt(t.at)}</span>${t.status === 'open' ? '<span class="chip info">Açık</span>' : `<span class="chip ${t.status === 'removed' ? 'ok' : 'bad'}">${t.status === 'removed' ? 'İçerik kaldırıldı' : 'Kaldırılmadı'}</span>`}</div>
+      <div class="muted">Bildiren: ${esc(t.name)} · ${esc(t.email)}${t.user ? ` · üye @${esc(t.user.username)}` : ''}</div><div class="det">${esc(t.desc)}</div>
+      ${t.status === 'open' ? `<div class="acts"><input class="field nt" placeholder="Bildirene açıklama (isteğe bağlı)"><button class="btn sm ok" data-t="removed">${icon('check')} İçeriği kaldırdım</button><button class="btn sm danger" data-t="rejected">Kaldırılmayacak</button></div><div class="muted" style="font-size:12.5px">5651 sayılı Kanun: kişilik hakkı bildirimleri en geç 24 saat içinde sonuçlandırılmalı. İçeriği ilgili bölümden (Kullanıcılar, İçerik, Şikayetler) kaldırıp sonra burayı işaretle.</div>`
+    : `<div class="muted">${esc(t.by || '')} · ${dt(t.closedAt)}${t.note ? ` · ${esc(t.note)}` : ''}</div>`}</div>`).join('');
+  };
+  const load = async () => { D = await api('/hukuk'); paint(); };
+  main.querySelector('.head').onclick = (e) => { const b = e.target.closest('[data-dl]'); if (!b) return; download(`/hukuk/${b.dataset.dl}.csv`, b.dataset.dl === 'iys' ? 'iys-eposta-izinleri.csv' : 'riza-kayitlari.csv'); };
+  main.querySelector('.tabs').onclick = (e) => { const b = e.target.closest('[data-s]'); if (!b) return; tab = b.dataset.s; main.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('on', x === b)); paint(); };
+  lst.onclick = async (e) => {
+    const u = e.target.closest('[data-u]'); if (u) return userDrawer(u.dataset.u, load);
+    const b = e.target.closest('[data-k],[data-r],[data-t]'); if (!b) return;
+    const card = b.closest('.case'); const note = card.querySelector('.nt')?.value || '';
+    try {
+      if (b.dataset.k) await api(`/hukuk/kvkk/${card.dataset.id}`, { body: { action: b.dataset.k, text: note } });
+      if (b.dataset.r) await api(`/hukuk/refunds/${card.dataset.id}`, { body: { action: b.dataset.r, note } });
+      if (b.dataset.t) await api(`/hukuk/takedowns/${card.dataset.id}`, { body: { action: b.dataset.t, note } });
+      toast('Kaydedildi.'); await load(); refreshCounts();
+    } catch (er) { toast(er.message); }
+  };
+  await load();
 };
 
 document.addEventListener('error', (e) => {

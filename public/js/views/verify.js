@@ -50,7 +50,7 @@ export default async function verify(view) {
       ${v.last?.status === 'rejected' ? `<div class="note-box bad">Önceki başvurun onaylanmadı${v.last.note ? `: ${esc(v.last.note)}` : '.'} Yeni pozla tekrar dene.</div>` : ''}
       <div class="pose"><span class="em">${v.pose.em}</span><b>${esc(v.pose.text)}</b><small>Yüzün net görünsün, gözlük ve maske olmasın.</small></div>
       ${file ? `<img class="selfie" src="${URL.createObjectURL(file)}" alt="Selfie önizleme">` : ''}
-      ${!state.me.photos?.length && String(state.me.avatar || '').includes('dicebear') ? '<div class="note-box">Önce profiline kendi fotoğrafını ekle; karşılaştırma için gerekli. <a class="link" href="#/edit">Profili düzenle</a></div>' : ''}
+      ${!state.me.photos?.length && /dicebear|^\/av\//.test(String(state.me.avatar || '')) ? '<div class="note-box">Önce profiline kendi fotoğrafını ekle; karşılaştırma için gerekli. <a class="link" href="#/edit">Profili düzenle</a></div>' : ''}
       <button class="btn ${file ? '' : 'primary'} block shoot">${icon('camera')} ${file ? 'Tekrar çek' : 'Selfie çek'}</button>
       ${file ? '<button class="btn primary block send">Doğrulamaya gönder</button>' : ''}`;
     box.querySelector('.shoot').onclick = async () => { const f = await captureSelfie(); if (f) { file = f; paint(); } };

@@ -552,3 +552,12 @@ tr.sgw td { background: color-mix(in srgb, #ffc926 10%, transparent); }
 .fn-bar span, .fn-bar b { position: relative; }
 .fn-m { font-weight: 700; font-size: 14px; } .fn-m small { font-weight: 500; color: var(--muted); }
 @media (max-width: 640px) { .fn-st { grid-template-columns: 1fr; } }
+/* Hukuk ve uyum */
+.hk-top { display: grid; gap: 12px; margin-bottom: 14px; }
+.hk-miss { border-color: color-mix(in srgb, var(--warn) 55%, var(--line)); background: color-mix(in srgb, var(--warn) 8%, var(--panel)); }
+.hk-miss .pb { line-height: 1.5; }
+.hk-miss a { color: var(--info); font-weight: 650; }
+.hk-ul { margin: 0; padding-left: 18px; }
+.hk-acts { align-items: flex-start; }
+.hk-acts textarea.field { flex: 1 1 320px; max-width: 560px; height: auto; min-height: 72px; padding: 8px 10px; }
+.tabs button .n { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--brand); color: #fff; font-size: 11px; }

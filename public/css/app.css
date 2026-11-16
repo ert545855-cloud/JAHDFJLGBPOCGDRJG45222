@@ -4304,3 +4304,41 @@ html.land-game #fx-layer { display: none; }
 .np-row small { display: block; font-size: 12px; color: var(--muted); }
 .np-q { display: flex; align-items: center; gap: 8px; padding-left: 34px; }
 .np-q .field { width: auto; height: 40px; }
+
+/* Satın alma onayı: ön bilgilendirme + mesafeli sözleşme (Mesafeli Sözleşmeler Yön. m.5–7) */
+.buy { padding: 0 16px 18px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.buy > * { min-width: 0; }
+.buy-tax { margin: 0; font-size: 12.5px; }
+.buy-tabs { display: flex; gap: 6px; padding: 4px; border-radius: 14px; background: var(--surface); }
+.buy-tabs button { flex: 1; min-height: 36px; padding: 6px 8px; border-radius: 10px; font-size: 13px; font-weight: 650; color: var(--muted); }
+.buy-tabs button.on { background: var(--surface-2); color: var(--text); box-shadow: 0 1px 0 var(--line); }
+.buy-doc { max-height: min(42vh, 360px); overflow-y: auto; overscroll-behavior: contain; padding: 4px 14px 12px; border: 1px solid var(--line); border-radius: 14px; font-size: 16px; line-height: 1.55; }
+.buy-doc:focus-visible { outline: 2px solid var(--uv); outline-offset: 2px; }
+.buy-doc h3 { font-size: 16px; margin: 14px 0 4px; }
+.buy-doc .legal-tbl table { min-width: 0; }
+.buy-go[disabled] { opacity: .5; }
+.pay-warn { margin: 2px 0; padding: 10px 12px; border-radius: 12px; font-size: 13px; line-height: 1.45; background: rgba(255,170,0,.12); }
+.pay-legal { display: flex; flex-wrap: wrap; gap: 8px; }
+.shop-note { font-size: 12.5px; margin: 8px 2px 0; }
+.pack .unit { color: var(--muted); font-size: 11.5px; }
+
+/* Veri taleplerim (KVKK m.11) */
+.kv-page { padding: 12px 16px 28px; }
+.kv-lead { margin: 4px 0 12px; font-size: 14.5px; line-height: 1.55; }
+.kv-quick { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.kv-quick .btn { display: inline-flex; align-items: center; gap: 6px; }
+.kv-quick .btn svg { width: 16px; height: 16px; }
+.kv-f { padding: 12px 0; }
+.kv-types { display: grid; gap: 2px; padding: 6px; border-radius: 14px; background: var(--surface); }
+.kv-h { font-family: var(--display); font-size: 17px; margin: 18px 0 8px; }
+.kv-it { padding: 12px 14px; border-radius: var(--r-md); background: var(--surface); margin-bottom: 8px; font-size: 14px; }
+.kv-it ul { margin: 6px 0 0; padding-left: 18px; }
+.kv-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 2px; }
+.kv-note { margin: 8px 0 0; color: var(--muted); white-space: pre-wrap; }
+.kv-ans { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--uv-soft); }
+.kv-ans p { margin: 4px 0 0; white-space: pre-wrap; }
+.legal-remote { min-height: 120px; }
+.legal .td-open { margin-top: 6px; }
+.form label.consent { display: flex; font-weight: 500; font-size: 14px; }
+.kv-types .consent { padding: 8px 6px; }
+.form label .opt { font-weight: 500; color: var(--muted); }

@@ -7,13 +7,14 @@ import { LANGS, getLang, setLang } from '../i18n.js';
 
 // Kayıtta onay ve bilgilendirme (KVKK): koşullar kabul edilir; aydınlatma metni yalnızca bilgilendirir (onay istenmez);
 // zorunlu olmayan işlemeler ayrı, önceden işaretlenmemiş kutularla sorulur.
-const consentHtml = () => `<label class="consent"><input type="checkbox" name="accept"><span><a class="link" data-doc="kosullar">Kullanım Koşulları</a>’nı okudum ve kabul ediyorum.</span></label>
+const consentHtml = () => `<label class="consent"><input type="checkbox" name="accept"><span><a class="link" data-doc="kosullar">Kullanım Koşulları</a>’nı okudum ve kabul ediyorum; 18 yaşından büyük olduğumu beyan ederim.</span></label>
   <p class="muted consent-info">Kişisel verilerinin nasıl işlendiğini <a class="link" data-doc="kvkk">KVKK Aydınlatma Metni</a>’nde ve <a class="link" data-doc="gizlilik">Gizlilik Politikası</a>’nda bulabilirsin.</p>
   <fieldset class="opt-cons"><legend>İsteğe bağlı izinler · <a class="link" data-doc="riza">açık rıza metni</a></legend>
-    <label class="consent"><input type="checkbox" name="c_marketing"><span>Kampanya, etkinlik ve yeniliklerle ilgili bildirim ve e-posta almak istiyorum.</span></label>
+    <label class="consent"><input type="checkbox" name="c_marketing"><span>Kampanya, etkinlik ve yeniliklerle ilgili uygulama içi ve anlık bildirim almak istiyorum.</span></label>
+    <label class="consent"><input type="checkbox" name="c_mail"><span>Kampanya ve yeniliklerle ilgili e-posta almak istiyorum (ticari elektronik ileti onayı; İYS’ye kaydedilir).</span></label>
     <label class="consent"><input type="checkbox" name="c_location"><span>Yakınımdaki kişileri gösterebilmek için yaklaşık konumumun işlenmesine açık rıza veriyorum.</span></label>
     <p class="muted">Bunları vermesen de SwipeUp’ı kullanabilirsin; istediğin zaman Ayarlar → İzinlerim’den değiştirebilirsin.</p></fieldset>`;
-const readConsents = (f) => ({ marketing: !!f.c_marketing?.checked, location: !!f.c_location?.checked });
+const readConsents = (f) => ({ marketing: !!f.c_marketing?.checked, marketingEmail: !!f.c_mail?.checked, location: !!f.c_location?.checked });
 const wireDocs = (root) => root.querySelectorAll('[data-doc]').forEach((a) => { a.onclick = (e) => { e.preventDefault(); legalSheet(a.dataset.doc); }; });
 const goHome = (created) => { if (location.search) history.replaceState(null, '', '/' + (created ? '#/edit' : '#/')); location.hash = created ? '#/edit' : '#/'; location.reload(); };
 
@@ -164,7 +165,7 @@ export default function auth(view, mode) {
     ${oauthCfg().google || oauthCfg().apple ? `<div class="oauth"><div class="or"><span>ya da</span></div>${oauthCfg().google ? '<div class="g-btn"></div>' : ''}${oauthCfg().apple ? '<button type="button" class="btn block ap-btn">Apple ile devam et</button>' : ''}</div>` : ''}
     ${reg ? '' : '<div class="forgot"><a class="muted" href="#/forgot">Şifreni mi unuttun?</a></div>'}
     ${reg ? '' : `<a class="ins-cta" href="#/install"><img src="/icons/icon-192.png" alt=""><span><b>Uygulamayı telefona yükle</b><small>iPhone ve Android · ücretsiz</small></span>${icon('download')}</a>`}
-    ${reg ? '' : `<div class="legal-links"><a href="/tanitim">SwipeUp nedir?</a> · <a href="#/legal/gizlilik">Gizlilik</a> · <a href="#/legal/kosullar">Koşullar</a> · <a href="#/legal/kvkk">KVKK</a></div>`}
+    ${reg ? '' : `<div class="legal-links"><a href="/tanitim">SwipeUp nedir?</a> · <a href="#/legal/gizlilik">Gizlilik</a> · <a href="#/legal/kosullar">Koşullar</a> · <a href="#/legal/kvkk">KVKK</a> · <a href="#/legal/cerez">Çerezler</a> · <a href="#/legal/kunye">Künye</a></div>`}
     <div class="lang-pick" data-noi18n>${LANGS.map(([k, n]) => `<button type="button" data-l="${k}" class="${getLang() === k ? 'on' : ''}">${n}</button>`).join('<span>·</span>')}</div>
     <div class="switch">${reg ? 'Hesabın var mı? <a class="link" href="#/login">Giriş yap</a>' : 'Yeni misin? <a class="link" href="#/register">Hesap oluştur</a>'}</div>
     ${adding ? '<div class="switch"><a class="link acc-cancel" href="#/me">Vazgeç, hesabıma dön</a></div>' : ''}

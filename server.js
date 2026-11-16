@@ -92,7 +92,7 @@ function pub(u, viewerId) {
   const self = viewerId === u.id;
   // Yalnızca hesabın sahibinin görebileceği alanlar (başkasının profiline bakan bunları almaz)
   if (!self) ['paid', 'plusUntil', 'boostUntil', 'lastFreeBoost', 'lastSwipe', 'viewersSeenAt', 'verifyPose', 'banReason', 'bannedUntil', 'bannedAt', 'status', 'warned',
-    'passChangedByUser', 'prefs', 'consentAt', 'burcWeek', 'autoWeek', 'loginStreak', 'skin', 'logo', 'isBot', 'tonightUntil', 'plusTrial', 'stickerPacks', 'superBank'].forEach((k) => { delete rest[k]; });
+    'passChangedByUser', 'prefs', 'consentAt', 'burcWeek', 'autoWeek', 'loginStreak', 'skin', 'logo', 'isBot', 'tonightUntil', 'plusTrial', 'stickerPacks', 'superBank', 'termsV', 'termsAt', 'lookingFor'].forEach((k) => { delete rest[k]; });
   const hidden = !self && priv(u).hideLastSeen;
   const fdoc = viewerId && !self ? store.get('follows', `${viewerId}_${u.id}`) : null;
   return {
@@ -106,7 +106,7 @@ function pub(u, viewerId) {
     age: self ? u.age ?? null : shownAge(u), ageHidden: !!priv(u).hideAge, tags: tagsOf(u),
     prompts: (u.prompts || []).map((p) => ({ ...p, q: socialMod.PROMPTS.find((x) => x[0] === p.id)?.[1] || '' })),
     badges: (u.badges || []).filter((b) => self || !b.hidden).map(({ no, ...b }) => b),
-    ...(self ? { consents: consents || {}, noPass: !!noPass, logins: { google: !!googleSub, apple: !!appleSub }, email: email || '', hasLocation: lat != null, birthdate: birthdate || null, coins: coins || 0, earnings: earnings || 0, needsBirthdate: !birthdate, refCode: refCode || null, falSub: falSub || null, frames: frames || [] } : {}),
+    ...(self ? { consents: consents || {}, termsV: u.termsV || null, lookingFor: u.lookingFor || 'all', noPass: !!noPass, logins: { google: !!googleSub, apple: !!appleSub }, email: email || '', hasLocation: lat != null, birthdate: birthdate || null, coins: coins || 0, earnings: earnings || 0, needsBirthdate: !birthdate, refCode: refCode || null, falSub: falSub || null, frames: frames || [] } : {}),
     ...(viewerId && !self ? { isFollowing: !!fdoc && fdoc.status !== 'pending', requested: fdoc?.status === 'pending', distanceKm: distance(store.get('users', viewerId), u) } : {}),
   };
 }
@@ -257,7 +257,7 @@ function chatBetween(a, b) {
   return store.get('chats', id) || store.put('chats', { id, members: [a, b].sort(), createdAt: now(), lastAt: now() });
 }
 
-const groupAvatar = (name) => `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(name)}&backgroundColor=ff8a3d,ff3d6e,1fbf6a,2b9bff`;
+const groupAvatar = (name) => require('./server/legal').localAvatar('shapes', String(name).slice(0, 60), 'ff8a3d,ff3d6e,1fbf6a,2b9bff'); // kendi sunucumuzdan (IP üçüncü tarafa gitmesin)
 
 function chatOut(c, me) {
   const msgs = store.filter('messages', (m) => m.chatId === c.id && !(m.expiresAt && m.expiresAt < now()));
@@ -428,8 +428,8 @@ app.use(helmet({
       // Sayfa içi betik yok: yalnız bu sunucudaki dosyalar + Google / Apple ile giriş betikleri
       scriptSrc: ["'self'", 'https://accounts.google.com/gsi/client', 'https://appleid.cdn-apple.com'],
       scriptSrcAttr: ["'none'"],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://accounts.google.com/gsi/style'],
-      fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://accounts.google.com/gsi/style'],
+      fontSrc: ["'self'", 'data:'], // yazı tipi kendi sunucumuzdan (Google Fonts'a IP gitmez)
       imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
       mediaSrc: ["'self'", 'data:', 'blob:', 'https:'],
       connectSrc: ["'self'", 'https:', 'wss:', 'data:', 'blob:'],
@@ -543,7 +543,7 @@ app.get('/api/config', (req, res) => {
   let uid = null;
   try { const p = jwt.verify((req.headers.authorization || '').slice(7), JWT_SECRET, { algorithms: ['HS256'] }); if (tokenOk(p, store.get('users', p.id))) uid = p.id; } catch {}
   const { id, ...legal } = store.get('settings', 'legal') || {};
-  res.json({ vapidPublicKey: VAPID?.publicKey || null, iceServers: iceServers(uid), emailReset: mail.enabled(), legal, version: APP_VERSION, event: appEvent.current(store), now: Date.now(), maintenance: maintenance(), maintPlan: (() => { const p = store.get('settings', 'maint_plan'); return p && !p.started ? { start: p.start, end: p.end || null, message: p.message || '' } : null; })(), features: { market: !!store.get('settings', 'market')?.enabled }, superMsgCoins: eco.get().superMsgCoins, falAi: featureCtx.falAiMode?.() || 'off', oauth: oidc.publicConfig() });
+  res.json({ vapidPublicKey: VAPID?.publicKey || null, iceServers: iceServers(uid), emailReset: mail.enabled(), legal, legalVer: featureCtx.legalVer || null, version: APP_VERSION, event: appEvent.current(store), now: Date.now(), maintenance: maintenance(), maintPlan: (() => { const p = store.get('settings', 'maint_plan'); return p && !p.started ? { start: p.start, end: p.end || null, message: p.message || '' } : null; })(), features: { market: !!store.get('settings', 'market')?.enabled }, superMsgCoins: eco.get().superMsgCoins, falAi: featureCtx.falAiMode?.() || 'off', oauth: oidc.publicConfig() });
 });
 
 // ---------- Kimlik ----------
@@ -567,11 +567,11 @@ app.post('/api/auth/register', wrap(async (req, res) => {
     id: nanoid(10), username, name: name || username, email: email || null,
     bio: '', age, birthdate, consentAt: now(), gender: null, lookingFor: 'all', city: '', interests: [],
     prefs: { ageMin: 18, ageMax: 99, maxKm: null },
-    avatar: `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(username)}&backgroundColor=ffe3dc`,
+    avatar: require('./server/legal').localAvatar('notionists', username, 'ffe3dc'),
     photos: [], passHash: await bcrypt.hash(password, 10), recoveryHash: await bcrypt.hash(code, 8),
     isBot: false, createdAt: now(), lastSeen: now(),
   });
-  setConsents(u.id, req.body?.consents, req, 'kayıt');
+  setConsents(u.id, req.body?.consents, req, 'kayıt'); featureCtx.acceptTerms?.(u.id, req, 'kayıt');
   // Diğer gerçek üyelere yeni üyeyi duyur (uygulama açıksa listeleri yenilenir)
   io.emit('people:new', brief(u));
   featureCtx.attachInvite?.(u, req.body?.ref, ipOf(req));
@@ -582,11 +582,18 @@ app.post('/api/auth/register', wrap(async (req, res) => {
 // ---------- İsteğe bağlı açık rızalar (KVKK m.5/1) ----------
 // Zorunlu olmayan işlemeler ayrı ayrı, önceden işaretlenmemiş kutularla sorulur; her değişiklik kanıt olarak kayda geçer, geri alınabilir.
 const CONSENTS = {
-  marketing: 'Kampanya, etkinlik ve yeniliklerle ilgili bildirim ve e-posta almak',
+  marketing: 'Kampanya, etkinlik ve yeniliklerle ilgili uygulama içi ve anlık bildirim almak',
+  marketingEmail: 'Kampanya, etkinlik ve yeniliklerle ilgili e-posta almak (ticari elektronik ileti; İleti Yönetim Sistemi’ne kaydedilir)',
   location: 'Yakınımdaki kişileri gösterebilmek için yaklaşık konumumun işlenmesi',
   ai: 'Fal isteklerimdeki fotoğraf ve notların yorum taslağı için yurt dışındaki yapay zeka hizmetine (Google Gemini) aktarılması',
 };
-const CONSENT_VER = '2026-11-11';
+const CONSENT_VER = '2026-11-17';
+setTimeout(() => { // eski birleşik "bildirim ve e-posta" izni: e-posta kanalı ayrı kayda geçer (verilen izin aynen korunur)
+  for (const u of store.filter('users', (x) => x.consents?.marketing && !x.consents.marketingEmail)) {
+    const m = u.consents.marketing; store.update('users', u.id, { consents: { ...u.consents, marketingEmail: { on: !!m.on, at: m.at, v: m.v || '2026-11-11' } } });
+    store.put('consent_log', { id: nanoid(12), userId: u.id, kind: 'marketingEmail', on: !!m.on, text: 'Önceki birleşik izin (bildirim ve e-posta) e-posta kanalı için ayrıca kaydedildi', v: m.v || '2026-11-11', via: 'geçiş', ip: null, at: now() });
+  }
+}, 5000).unref?.();
 function setConsents(uid, input, req, via) {
   const u = store.get('users', uid); if (!u || !input || typeof input !== 'object') return u;
   const cur = { ...(u.consents || {}) };
@@ -677,11 +684,11 @@ app.post('/api/auth/oauth', wrap(async (req, res) => {
     id: nanoid(10), username, name, email: id.email || null, emailVerified: !!id.email,
     bio: '', age, birthdate, consentAt: now(), gender: null, lookingFor: 'all', city: '', interests: [],
     prefs: { ageMin: 18, ageMax: 99, maxKm: null },
-    avatar: `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(username)}&backgroundColor=ffe3dc`,
+    avatar: require('./server/legal').localAvatar('notionists', username, 'ffe3dc'),
     photos: [], passHash: await bcrypt.hash(crypto.randomBytes(24).toString('hex'), 10), noPass: true, recoveryHash: await bcrypt.hash(code, 8),
     [key]: id.sub, isBot: false, createdAt: now(), lastSeen: now(),
   });
-  setConsents(nu.id, req.body?.consents, req, `kayıt (${P})`);
+  setConsents(nu.id, req.body?.consents, req, `kayıt (${P})`); featureCtx.acceptTerms?.(nu.id, req, `kayıt (${P})`);
   io.emit('people:new', brief(nu));
   featureCtx.attachInvite?.(nu, req.body?.ref, ipOf(req));
   featureCtx.onRegister?.(nu, req);
@@ -1800,7 +1807,7 @@ const falci = () => store.find('users', (u) => u.role === 'falci');
 const official = () => store.find('users', (u) => u.role === 'official');
 const isMedia = (u) => typeof u === 'string' && /^\/media\/[\w-]+$/.test(u);
 // Profil / grup fotoğrafı: yalnız kendi sunucumuzdaki dosya ya da varsayılan çizim (dışarıdan adres verilip bakanların IP'si toplanamasın)
-function okAvatar(u) { return isMedia(u) || /^https:\/\/api\.dicebear\.com\/9\.x\/[\w-]+\/svg\?[\w=&%.-]{1,200}$/.test(String(u || '')) || /^\/(img|icons)\/[\w./-]+\.(svg|png|jpg|webp)$/.test(String(u || '')); }
+function okAvatar(u) { return isMedia(u) || /^\/av\/(notionists|shapes)\/[\w%.-]{1,200}\.svg\?bg=[0-9a-f,]{1,60}$/i.test(String(u || '')) || /^\/(img|icons)\/[\w./-]+\.(svg|png|jpg|webp)$/.test(String(u || '')); }
 
 app.get('/api/fal/falci', auth, (req, res) => {
   const f = falci();
@@ -2056,7 +2063,9 @@ const featureCtx = {
   isBlocked, limited, ipOf, markPrivate, signMedia, isMedia, isGif: (u) => GIF_HOSTS.test(String(u || '')), extractTags, cardOut, purgeUser, moderation, chatBetween, admin: adminApi,
   online, appEvent, falci, msgOut, falLock, shownAge, tagsOf, dropMediaCache: (id) => dropMediaCache(id), getMedia: (id) => getMedia(id), pushAdmins,
   storyItem, storyVisible, storyAlive, createPost: (u, b) => createPost(u, b), cleanSticker, systemMsg: (c, t) => systemMsg(c, t), groupAvatar,
+  userFromReq: (req) => { try { const p = jwt.verify((req.headers.authorization || '').slice(7), JWT_SECRET, { algorithms: ['HS256'] }); const u = store.get('users', p.id); return tokenOk(p, u) ? u : null; } catch { return null; } },
 };
+require('./server/legal')(app, featureCtx); // hukuki uyum: künye, sözleşmeler, iade, KVKK başvuruları, hak ihlali bildirimleri
 require('./server/errlog')(app, featureCtx); // hata izleme (yönetim → Hatalar)
 require('./server/features')(app, featureCtx);
 require('./server/genel')(app, featureCtx);
@@ -2498,7 +2507,7 @@ async function ensureFalci() {
       bio: 'Kahve falı, tarot, burç ve aşk uyumu ☕️🔮 Fal isteğini Fal sayfasından gönder, cevabım mesaj kutuna gelsin.',
       age: null, gender: null, lookingFor: 'all', city: '', interests: ['Kahve falı', 'Tarot', 'Burçlar'],
       prefs: { ageMin: 18, ageMax: 99, maxKm: null },
-      avatar: 'https://api.dicebear.com/9.x/notionists/svg?seed=Falci%20Teyze&backgroundColor=f0c25a',
+      avatar: require('./server/legal').localAvatar('notionists', 'Falci Teyze', 'f0c25a'),
       photos: [], passHash: await bcrypt.hash(initial, 10), isBot: false, createdAt: now(), lastSeen: now(),
     });
     console.log(`[falci] Falcı Teyze hesabı oluşturuldu (kullanıcı adı: falciteyze)${pass ? '' : `, geçici şifre: ${initial}`}`);

@@ -22,7 +22,7 @@ module.exports = function features(app, ctx) {
   const now = () => Date.now();
 
   // ---------- Mağaza ----------
-  const orderOut = (o) => ({ ...o, product: eco.product(o.productId) || { title: o.title } });
+  const orderOut = (o) => { const { docs, legal, ...x } = o; const u = store.get('users', o.userId); const can = u && ctx.refundable ? ctx.refundable(o, u) : {}; return { ...x, product: eco.product(o.productId) || { title: o.title }, hasDocs: !!docs, acceptedAt: legal?.at || null, canRefund: Object.keys(can).filter((k) => can[k]) }; };
   app.get('/api/store', auth, (req, res) => {
     const s = eco.get();
     const u = req.user;
@@ -48,11 +48,14 @@ module.exports = function features(app, ctx) {
     if (store.filter('orders', (o) => o.userId === req.user.id && ['pending', 'paid'].includes(o.status)).length >= 3) {
       return res.status(429).json({ error: 'Onay bekleyen siparişlerin var. Önce onlar sonuçlansın.' });
     }
+    // Mesafeli Sözleşmeler Yönetmeliği md. 6-8 ve 15: ön bilgilendirme ile sözleşme onayı ve cayma hakkı istisnası onayı ayrı ayrı alınmadan sipariş kurulmaz
+    const acc = req.body?.accept || {};
+    if (acc.pre !== true || acc.waive !== true) return res.status(400).json({ error: 'Siparişi verebilmek için ön bilgilendirme formunu ve sözleşmeyi onaylaman, cayma hakkı bilgilendirmesini de ayrıca kabul etmen gerekiyor.', needAccept: true });
     let code; do { code = 'SU-' + orderCode(); } while (store.find('orders', (o) => o.code === code));
-    const o = store.put('orders', {
-      id: nanoid(10), code, userId: req.user.id, productId: p.id, kind: p.kind, title: p.title, amount: p.price, ...(p.kind === 'coins' ? { coins: p.coins } : {}),
-      status: 'pending', at: now(),
-    });
+    const base = { id: nanoid(10), code, userId: req.user.id, productId: p.id, kind: p.kind, title: p.title, amount: p.price, ...(p.kind === 'coins' ? { coins: p.coins } : {}), status: 'pending', at: now() };
+    const d = ctx.orderDocs ? ctx.orderDocs(req.user, p, base) : null; // onaylanan metnin değiştirilemez kopyası ve özeti (ispat yükü satıcıda)
+    const o = store.put('orders', { ...base, ...(d ? { docs: { pre: d.pre, contract: d.contract, waive: d.waive }, legal: { v: d.v, hash: d.hash, at: now(), ip: ctx.ipOf(req), pre: true, waive: true } } : {}) });
+    ctx.orderMail?.(req.user, o);
     res.json({ ...orderOut(o), bank: s.bank });
   });
   app.get('/api/orders/:id', auth, (req, res) => {
