@@ -49,7 +49,7 @@ module.exports = function trafik(store, { ipOf, secret }) {
   async function flush() {
     if (flushing || !buf.length || !started) return; flushing = true;
     try {
-      ready ||= init(); await ready;
+      try { ready ||= init(); await ready; } catch (er) { ready = null; throw er; } // bağlantı hatasında bir sonraki denemede yeniden kurulur
       const rows = buf.splice(0, 500);
       for (const e of rows) { e.prev = prev; e.hash = mac(prev, e); prev = e.hash; }
       if (store.pg) {
@@ -66,6 +66,7 @@ module.exports = function trafik(store, { ipOf, secret }) {
   // Günlük mühür ve 2 yıldan eski kayıtların silinmesi
   async function daily() {
     if (!started) return;
+    try { ready ||= init(); await ready; } catch (er) { ready = null; console.error('[trafik] tablo hazırlanamadı:', er.message); return; }
     await flush();
     const d = new Date(Date.now() - DAY).toISOString().slice(0, 10);
     if (prev && !store.get('trafik_seal', d)) store.put('trafik_seal', { id: d, hash: prev, at: Date.now() });
