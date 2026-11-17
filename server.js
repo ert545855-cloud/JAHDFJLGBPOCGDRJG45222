@@ -2181,6 +2181,7 @@ app.get(['/hesap-silme', '/delete-account'], (req, res) => res.sendFile(path.joi
 app.get('/.well-known/assetlinks.json', (req, res) => {
   const fps = String(process.env.ANDROID_SHA256 || '').split(',').map((x) => x.trim().toUpperCase()).filter(Boolean);
   if (!fps.length) return res.status(404).json([]);
+  res.set('Cache-Control', 'public, max-age=300'); // Google'ın doğrulama önbelleği kısa tutulsun
   res.json([{ relation: ['delegate_permission/common.handle_all_urls'], target: { namespace: 'android_app', package_name: process.env.ANDROID_PACKAGE || 'app.swipeup.twa', sha256_cert_fingerprints: fps } }]);
 });
 app.get('/.well-known/apple-app-site-association', (req, res) => {
