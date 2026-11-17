@@ -110,7 +110,7 @@ module.exports = function mountAdmin(app, ctx) {
       if (own && !(own.resetAt && own.resetPass && (await bcrypt.compare(pass, own.resetPass)))) {
         const h = await bcrypt.hash(pass, 10);
         store.update('adm_admins', own.id, { passHash: h, resetPass: h, resetAt: now(), disabled: false, totpSecret: null, totpPending: null, totpRc: [], tokenVer: (own.tokenVer || 0) + 1, role: 'owner' });
-        console.warn('[admin] ADMIN_RESET: "admin" hesabının şifresi ve iki adımlı doğrulaması sıfırlandı. Render\'dan ADMIN_RESET değişkenini kaldır.');
+        console.warn('[admin] ADMIN_RESET: "admin" hesabının şifresi ve iki adımlı doğrulaması sıfırlandı. Sunucu ayarlarından (/etc/swipeup.env) ADMIN_RESET satırını kaldır.');
       }
     }
     if (store.all('adm_admins').length) {
