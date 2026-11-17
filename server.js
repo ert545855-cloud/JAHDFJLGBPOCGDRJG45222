@@ -2108,7 +2108,8 @@ const pushWarned = new Map();
 function pushResult(s, e) {
   if (!e) { if (s.lastErr || !s.lastOk || now() - s.lastOk > 3600000) store.update('pushSubs', s.id, { lastOk: now(), lastErr: null }); return; }
   const code = e.statusCode || 0; const msg = String(e.body || e.message || '').slice(0, 200);
-  if (code === 404 || code === 410) { store.del('pushSubs', s.id); return; }
+  // Kalıcı hatalar: abonelik yok olmuş ya da başka bir anahtarla (eski sunucu) oluşturulmuş; bu cihaz yeniden abone olur
+  if (code === 404 || code === 410 || /VapidPkHashMismatch|do not correspond to the credentials/i.test(msg)) { store.del('pushSubs', s.id); console.warn(`[push] geçersiz abonelik silindi (${pushHost(s)} ${code})`); return; }
   store.update('pushSubs', s.id, { lastErr: { code, msg, at: now() } });
   if (now() - (pushWarned.get(s.id) || 0) > 3600000) { pushWarned.set(s.id, now()); console.warn(`[push] ${pushHost(s)} ${code} ${msg}`); }
 }

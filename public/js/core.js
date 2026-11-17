@@ -564,6 +564,11 @@ export async function syncPush() {
     if (!pushSupported() || Notification.permission !== 'granted' || isPushOff()) return;
     const reg = await Promise.race([navigator.serviceWorker.ready, new Promise((r) => setTimeout(r, 4000))]);
     let sub = await reg?.pushManager?.getSubscription();
+    // Abonelik başka bir anahtarla yapılmışsa (eski sunucu) bildirimler reddedilir: bırakıp yeniden abone ol
+    if (sub && state.config?.vapidPublicKey && sub.options?.applicationServerKey) {
+      const cur = new Uint8Array(sub.options.applicationServerKey); const want = b64ToU8(state.config.vapidPublicKey);
+      if (cur.length !== want.length || cur.some((b, i) => b !== want[i])) { await sub.unsubscribe().catch(() => {}); sub = null; }
+    }
     // İzin var ama abonelik yoksa (tarayıcı düşürmüş ya da yeni adres) yeniden abone ol
     if (!sub && reg?.pushManager && state.config?.vapidPublicKey) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(state.config.vapidPublicKey) });
     if (sub) await api('/push/subscribe', { body: { subscription: sub.toJSON() } });
