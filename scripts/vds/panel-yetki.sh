@@ -15,6 +15,11 @@ S
 chmod 440 /etc/sudoers.d/swipeup-panel
 visudo -cf /etc/sudoers.d/swipeup-panel >/dev/null || { rm -f /etc/sudoers.d/swipeup-panel; echo "sudoers dosyası hatalı, geri alındı."; exit 1; }
 
+# Eski kurulumdaki izin hatası: /etc/gitconfig ve birim dosyaları yalnız root'a açıktı (otomatik güncelleme çalışmıyordu)
+[ -f /etc/gitconfig ] && chmod 644 /etc/gitconfig
+chmod 644 /etc/systemd/system/swipeup*.service /etc/systemd/system/swipeup*.timer 2>/dev/null || true
+systemctl daemon-reload
+
 # Kayıtları (journalctl) okuyabilsin
 usermod -aG systemd-journal swipeup
 # Yedek klasörü: yalnız root ve uygulama
@@ -29,6 +34,8 @@ if [ -n "${1:-}" ]; then
   [ "$code" = 200 ] && echo "✅ Hostinger bağlandı" || echo "⚠️  Hostinger anahtarı denendi, cevap: $code (401 ise anahtar yanlış)"
 fi
 
+# Güncel koda geç (izin düzeltmesinden sonra ilk güncelleme)
+/usr/local/bin/swipeup-guncelle || echo "⚠️  Güncelleme çalışmadı: journalctl -u swipeup-guncelle -n 20"
 systemctl restart swipeup
 sleep 3
 systemctl is-active --quiet swipeup && echo "✅ Panel izinleri kuruldu. Yönetim → Sunucu ve alan adı sekmesini yenile." || echo "❌ Uygulama başlamadı: journalctl -u swipeup -n 30"

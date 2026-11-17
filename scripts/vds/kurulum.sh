@@ -97,6 +97,7 @@ ANDROID_KEYSTORE_PASS=
 ANDROID_SHA256=
 EOF
   chmod 600 "$ENVF"
+  umask 022 # yalnız ayar dosyası gizli; sonrakiler (gitconfig, birimler) herkesçe okunur olmalı
 else
   sed -i "s#^CANONICAL_URL=.*#CANONICAL_URL=https://$DOMAIN#" "$ENVF"
 fi
@@ -136,7 +137,8 @@ systemctl restart swipeup
 logger -t swipeup "güncellendi: \${old:0:7} → \${new:0:7}"
 EOF
 chmod 755 /usr/local/bin/swipeup-guncelle
-git config --system --add safe.directory "$APP" || true
+git config --system --get-all safe.directory | grep -qx "$APP" || git config --system --add safe.directory "$APP" || true
+chmod 644 /etc/gitconfig 2>/dev/null || true
 
 # Günlük veritabanı yedeği (yalnız swipeup şeması, 7 gün saklanır)
 cat > /usr/local/bin/swipeup-yedek <<'EOF'
