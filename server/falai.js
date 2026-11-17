@@ -211,9 +211,10 @@ Akış paylaşımı kuralları (bu metin tek bir kişiye değil, akışta herkes
       if (queue.includes(m.id)) continue;
       const u = store.get('users', m.from);
       if (!u?.consents?.ai?.on) {
-        if (!m.fal.aiAsked && now() - (m.at || 0) > 60000) {
+        if (!m.fal.aiAsked && !u?.aiAskedAt && !u?.consents?.ai && now() - (m.at || 0) > 60000) {
           const chat = store.get('chats', m.chatId);
-          if (chat) {
+          if (chat && u) {
+            store.update('users', u.id, { aiAskedAt: now() }); // kişi başına bir kez: bir daha sorulmaz
             ctx.systemMsg?.(chat, 'Falcı Teyze: Kuzum, falına hemen bakabilmem için yapay zekâ desteğine izin vermen gerekiyor. Ayarlar › İzinlerim’den “Yapay zekâ” iznini açarsan birkaç dakika içinde falın gelir. İstemezsen hiç sorun değil, falına ben kendim bakacağım; biraz sürebilir. 💜');
             m.fal.aiAsked = now(); store.update('messages', m.id, {});
           }

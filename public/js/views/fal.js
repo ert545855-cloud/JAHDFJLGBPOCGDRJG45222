@@ -24,6 +24,7 @@ async function send(body, btn) {
   const old = btn.innerHTML; btn.innerHTML = 'Gönderiliyor...';
   try {
     const ok = document.querySelector('.ai-ok');
+    if (ok) markAiAsked();
     if (ok?.checked) { const c = await api('/me/consents', { method: 'PUT', body: { ai: true } }); if (state.me) state.me.consents = c.consents; }
     const r = await api('/fal', { body });
     if (shop) shop.coins = r.coins;
@@ -36,8 +37,12 @@ async function send(body, btn) {
 }
 
 // Yapay zeka desteği açıksa: isteğe bağlı, önceden işaretlenmemiş açık rıza (yurt dışına aktarım)
-const aiConsentBox = () => (state.config?.falAi && state.config.falAi !== 'off' && !state.me?.consents?.ai?.on
-  ? `<label class="consent ai-cons"><input type="checkbox" class="ai-ok"><span>İsteğe bağlı: fotoğraf ve notlarımın yorum taslağı için Google’ın yapay zeka hizmetine (yurt dışı) aktarılmasına <a class="link" href="#/legal/riza">açık rıza</a> veriyorum. Vermezsen falına Falcı Teyze kendisi bakar.</span></label>` : '');
+// Bir kez sorulur: kutu gösterilip fal gönderildiyse (işaretlesin ya da işaretlemesin) bir daha çıkmaz; fikrini Ayarlar › İzinlerim'den değiştirir
+const aiSeenKey = () => `su_ai_asked:${state.me?.id || ''}`;
+const aiAsked = () => { try { return !!localStorage.getItem(aiSeenKey()) || !!state.me?.consents?.ai; } catch { return false; } };
+const markAiAsked = () => { try { localStorage.setItem(aiSeenKey(), '1'); } catch { /* yok */ } };
+const aiConsentBox = () => (state.config?.falAi && state.config.falAi !== 'off' && !state.me?.consents?.ai?.on && !aiAsked()
+  ? `<label class="consent ai-cons"><input type="checkbox" class="ai-ok"><span>İsteğe bağlı: fotoğraf ve notlarımın yorum taslağı için Google’ın yapay zeka hizmetine (yurt dışı) aktarılmasına <a class="link" href="#/legal/riza">açık rıza</a> veriyorum. Vermezsen falına Falcı Teyze kendisi bakar. Bu bir kez sorulur; sonra Ayarlar › İzinlerim’den değiştirebilirsin.</span></label>` : '');
 const noteField = (ph) => `<label class="form" style="padding:0;gap:6px"><span class="b" style="font-size:13.5px">Falcı Teyze’ye notun</span>
   <textarea class="field nt" maxlength="1000" rows="3" placeholder="${esc(ph)}"></textarea></label>${aiConsentBox()}`;
 

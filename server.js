@@ -92,7 +92,7 @@ function pub(u, viewerId) {
   const self = viewerId === u.id;
   // Yalnızca hesabın sahibinin görebileceği alanlar (başkasının profiline bakan bunları almaz)
   if (!self) ['paid', 'plusUntil', 'boostUntil', 'lastFreeBoost', 'lastSwipe', 'viewersSeenAt', 'verifyPose', 'banReason', 'bannedUntil', 'bannedAt', 'status', 'warned',
-    'passChangedByUser', 'prefs', 'consentAt', 'burcWeek', 'autoWeek', 'loginStreak', 'skin', 'logo', 'isBot', 'tonightUntil', 'plusTrial', 'stickerPacks', 'superBank', 'termsV', 'termsAt', 'lookingFor', 'lookingForPending', 'lookingForPendingAt'].forEach((k) => { delete rest[k]; });
+    'passChangedByUser', 'prefs', 'consentAt', 'burcWeek', 'autoWeek', 'loginStreak', 'skin', 'logo', 'isBot', 'tonightUntil', 'plusTrial', 'stickerPacks', 'superBank', 'termsV', 'termsAt', 'lookingFor', 'lookingForPending', 'lookingForPendingAt', 'aiAskedAt'].forEach((k) => { delete rest[k]; });
   const hidden = !self && priv(u).hideLastSeen;
   const fdoc = viewerId && !self ? store.get('follows', `${viewerId}_${u.id}`) : null;
   return {

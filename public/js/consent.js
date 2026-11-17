@@ -33,8 +33,11 @@ export async function withOrientation(body) {
 // Eski hesaplar: rızasız saklanan tercih askıda; bir kez sorulur
 export async function orientationPending() {
   const v = state.me?.lookingForPending; if (!v) return;
+  const key = `su_orient_asked:${state.me.id}`;
+  try { if (localStorage.getItem(key)) return; } catch { /* yok */ }
   if (document.querySelector('.terms-up')) { setTimeout(orientationPending, 4000); return; }
   const ok = await askOrientation(v);
+  try { localStorage.setItem(key, '1'); } catch { /* yok */ } // bir kez sorulur; sonra Ayarlar › İzinlerim
   if (ok === null) return;
   try {
     const u = await api('/me/consents', { method: 'PUT', body: { orientation: ok } });
