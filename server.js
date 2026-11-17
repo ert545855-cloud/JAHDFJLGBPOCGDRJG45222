@@ -2118,6 +2118,7 @@ const featureCtx = {
 require('./server/legal')(app, featureCtx); // hukuki uyum: künye, sözleşmeler, iade, KVKK başvuruları, hak ihlali bildirimleri
 require('./server/uyum')(app, featureCtx); // saklama ve imha, 5651 trafik dökümü, veri ihlali kaydı, yönetici uyarıları, muhasebe dökümü
 require('./server/guvenlik')(app, featureCtx);
+require('./server/sunucu')(app, featureCtx); // yönetim → Sunucu: VDS durumu, güncelleme, yedek, kayıtlar, Hostinger DNS
 require('./server/aktivite').routes(app, featureCtx); // kullanıcı hareketleri: üyenin kendisi, yönetimde kullanıcı kartı ve genel akış // güvenlik merkezi: buluşma paylaşımı, yeni cihaz uyarısı, giriş geçmişi
 require('./server/errlog')(app, featureCtx); // hata izleme (yönetim → Hatalar)
 require('./server/features')(app, featureCtx);

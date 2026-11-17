@@ -5,7 +5,7 @@ import { icon } from '/js/icons.js';
 export const BASE = location.pathname.split('/').slice(0, 2).join('/');
 const S = { token: localStorage.getItem('su_admin'), me: null, counts: {} };
 const can = (p) => S.me?.role === 'owner' || (S.me?.perms || []).includes(p);
-const SEC_PERM = { growth: 'growth', users: 'users', support: 'support', reports: 'reports', appeals: 'appeals', flags: 'flags', verify: 'verify', orders: 'orders', payouts: 'payouts', market: 'market', ledger: 'erp', erp: 'erp', promos: 'promos', quests: 'quests', songs: 'songs', contests: 'contests', fal: 'fal', content: 'content', media: 'content', announce: 'announce', notes: 'notes', audit: 'audit', errors: 'audit', database: 'database', maintenance: 'maintenance', settings: 'settings', tags: 'tags', engage: 'engage', karaoke: 'engage', photomod: 'reports', hukuk: 'hukuk', aktivite: 'users' };
+const SEC_PERM = { growth: 'growth', users: 'users', support: 'support', reports: 'reports', appeals: 'appeals', flags: 'flags', verify: 'verify', orders: 'orders', payouts: 'payouts', market: 'market', ledger: 'erp', erp: 'erp', promos: 'promos', quests: 'quests', songs: 'songs', contests: 'contests', fal: 'fal', content: 'content', media: 'content', announce: 'announce', notes: 'notes', audit: 'audit', errors: 'audit', database: 'database', maintenance: 'maintenance', settings: 'settings', tags: 'tags', engage: 'engage', karaoke: 'engage', photomod: 'reports', hukuk: 'hukuk', aktivite: 'users', sunucu: 'owner' };
 const canSec = (k) => !SEC_PERM[k] || can(SEC_PERM[k]);
 const root = document.getElementById('root');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -70,6 +70,7 @@ const SECTIONS = [
   ['notes', 'Notlar', 'edit'],
   ['errors', 'Hatalar', 'bolt', 'errorsOpen'],
   ['audit', 'İşlem kaydı', 'eye'],
+  ['sunucu', 'Sunucu ve alan adı', 'globe'],
   ['database', 'Veritabanı', 'grid'],
   ['maintenance', 'Bakım modu', 'timer'],
   ['settings', 'Ayarlar', 'settings'],
@@ -1293,6 +1294,143 @@ VIEWS.database = async (main) => {
       toast('Yedek indirildi.');
     } catch (er) { toast(er.message); }
   });
+};
+
+// ================= Sunucu ve alan adı (Yöncü VDS + Hostinger) =================
+const bytes = (n) => { if (n == null) return '—'; const u = ['B', 'KB', 'MB', 'GB', 'TB']; let i = 0; let v = n; while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; } return `${v.toFixed(v < 10 && i ? 1 : 0)} ${u[i]}`; };
+const dur = (ms) => { const m = Math.floor(ms / 60000); const d = Math.floor(m / 1440); const h = Math.floor((m % 1440) / 60); return d ? `${d} gün ${h} sa` : h ? `${h} sa ${m % 60} dk` : `${m % 60} dk`; };
+const meter = (pct) => `<div class="dbbar"><i style="width:${Math.min(100, pct)}%;background:${pct > 90 ? 'var(--bad)' : pct > 70 ? 'var(--warn)' : 'var(--ok)'}"></i></div>`;
+const PANEL_FIX = 'curl -fsSL https://raw.githubusercontent.com/ert545855-cloud/sweep-up2/main/scripts/vds/panel-yetki.sh | bash';
+VIEWS.sunucu = async (main) => {
+  main.innerHTML = `${head('Sunucu ve alan adı', 'Uygulamanın çalıştığı sunucu (Yöncü) ve swipeup.live alan adı (Hostinger). Buradaki her işlem işlem kaydına yazılır.')}<div class="spin"></div>`;
+  let d;
+  try { d = await api('/sunucu'); } catch (e) { main.querySelector('.spin').outerHTML = `<div class="case">${esc(e.message)}</div>`; return; }
+  const memUsed = d.mem.total - d.mem.avail; const memPct = Math.round((memUsed / d.mem.total) * 100);
+  const diskPct = d.disk ? Math.round(((d.disk.total - d.disk.free) / d.disk.total) * 100) : 0;
+  const certDays = d.cert ? Math.floor((d.cert.validTo - Date.now()) / 86400000) : null;
+  const unitChip = (u) => `<span class="chip ${u.active === 'active' ? 'ok' : u.active === 'failed' ? 'bad' : 'warn'}">${u.active === 'active' ? (u.sub === 'waiting' ? 'Bekliyor' : 'Çalışıyor') : u.active === 'failed' ? 'Hata' : esc(u.active)}</span>`;
+  const permsOk = !d.vds || (d.perms?.sudo && d.perms?.journal);
+  main.innerHTML = `${head('Sunucu ve alan adı', 'Uygulamanın çalıştığı sunucu (Yöncü) ve swipeup.live alan adı (Hostinger). Buradaki her işlem işlem kaydına yazılır.',
+    `<a class="btn" href="${esc(d.links.yoncu)}" target="_blank" rel="noopener">Yöncü paneli</a> <a class="btn" href="${esc(d.links.hostinger)}" target="_blank" rel="noopener">Hostinger paneli</a>`)}
+    ${!d.vds ? '<div class="case" style="margin-bottom:14px">Uygulama şu an kendi sunucumuzda (VDS) çalışmıyor; sunucu işlemleri kapalı.</div>' : ''}
+    ${d.vds && !permsOk ? `<div class="case" style="background:color-mix(in srgb,var(--warn) 12%,transparent);border-radius:12px;margin-bottom:14px"><b>Panel izinleri bir kez kurulmalı</b>
+      <div class="muted" style="margin:4px 0 8px">Güncelle / yeniden başlat / yedek düğmeleri ve kayıtlar için sunucuya SSH ile girip şu komutu bir kez çalıştır:</div>
+      <div class="row" style="gap:8px"><code class="mono" style="flex:1;min-width:0;overflow:auto;white-space:nowrap;padding:8px;background:var(--soft);border-radius:8px">${esc(PANEL_FIX)}</code><button class="btn sm cpfix">${icon('copy')} Kopyala</button></div></div>` : ''}
+    <div class="stats">
+      <div class="stat"><b>%${d.cpu}</b><span>İşlemci · ${d.cpus} çekirdek</span>${meter(d.cpu)}<span class="muted" style="font-size:11.5px">Yük ${d.load.join(' / ')}</span></div>
+      <div class="stat"><b>${bytes(memUsed)}</b><span>Bellek · ${bytes(d.mem.total)} içinden</span>${meter(memPct)}${d.mem.swapTotal ? `<span class="muted" style="font-size:11.5px">Takas ${bytes(d.mem.swapTotal - d.mem.swapFree)} / ${bytes(d.mem.swapTotal)}</span>` : ''}</div>
+      <div class="stat"><b>${d.disk ? bytes(d.disk.total - d.disk.free) : '—'}</b><span>Disk · ${d.disk ? bytes(d.disk.total) : '?'} içinden</span>${meter(diskPct)}</div>
+      <div class="stat"><b>${dur(d.uptime)}</b><span>Sunucu açık</span><span class="muted" style="font-size:11.5px">Uygulama ${dur(d.proc.uptime)} · ${bytes(d.proc.rss)}</span></div>
+    </div>
+    <div class="grid2" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:14px">
+      <div class="panel"><div class="ph"><h3>Durum</h3></div><div class="tw"><table class="tbl"><tbody>
+        ${d.units.map((u) => `<tr><td>${esc(u.name)}</td><td>${unitChip(u)}</td><td class="muted" style="font-size:12.5px">${u.next ? `Sıradaki ${dt(u.next)}` : u.since ? `${dt(u.since)}’den beri` : ''}</td></tr>`).join('')}
+        <tr><td>HTTPS sertifikası</td><td>${d.cert ? `<span class="chip ${certDays > 14 ? 'ok' : 'warn'}">${certDays} gün</span>` : '<span class="chip bad">Okunamadı</span>'}</td><td class="muted" style="font-size:12.5px">${d.cert ? `${esc(d.cert.issuer)} · kendiliğinden yenilenir` : ''}</td></tr>
+        <tr><td>Sürüm</td><td class="mono">${esc(d.git?.hash || '?')}</td><td class="muted" style="font-size:12.5px">${d.git ? `${esc(d.git.subject).slice(0, 70)} · ${dt(d.git.at)}` : ''}</td></tr>
+        <tr><td>Sistem</td><td colspan="2" class="muted" style="font-size:12.5px">${esc(d.os)} · Node ${esc(d.node)} · ${esc(d.host)} · ${esc(d.ips.join(', '))}</td></tr>
+        ${d.updates.pending != null || d.updates.reboot ? `<tr><td>İşletim sistemi</td><td colspan="2">${d.updates.pending ? `<span class="chip ${d.updates.security ? 'warn' : ''}">${d.updates.pending} güncelleme${d.updates.security ? ` · ${d.updates.security} güvenlik` : ''}</span> ` : '<span class="chip ok">Güncel</span> '}${d.updates.reboot ? '<span class="chip warn">Yeniden başlatma bekliyor</span>' : ''}</td></tr>` : ''}
+      </tbody></table></div></div>
+      <div class="panel"><div class="ph"><h3>İşlemler</h3></div><div class="pb" style="display:grid;gap:10px">
+        <div class="row" style="gap:10px"><button class="btn primary" data-act="guncelle" ${d.vds ? '' : 'disabled'}>${icon('download')} Şimdi güncelle</button><span class="muted" style="font-size:12.5px">GitHub’daki son sürümü hemen alır. Normalde 5 dakikada bir kendisi bakar.</span></div>
+        <div class="row" style="gap:10px"><button class="btn" data-act="yedek" ${d.vds ? '' : 'disabled'}>${icon('shield')} Yedek al</button><span class="muted" style="font-size:12.5px">Veritabanının tam yedeği. Her gece 04:10’da kendiliğinden alınır, 7 gün saklanır.</span></div>
+        <div class="row" style="gap:10px"><button class="btn" data-act="yeniden-baslat" ${d.vds ? '' : 'disabled'}>${icon('undo')} Uygulamayı yeniden başlat</button><span class="muted" style="font-size:12.5px">Takılma olursa. Site birkaç saniye kesilir.</span></div>
+        <div class="row" style="gap:10px"><button class="btn danger" data-act="reboot" ${d.vds ? '' : 'disabled'}>${icon('bolt')} Sunucuyu yeniden başlat</button><span class="muted" style="font-size:12.5px">İşletim sistemi güncellemesinden sonra. Site 1–2 dakika kapanır.</span></div>
+      </div></div>
+    </div>
+    <div class="panel" style="margin-bottom:14px"><div class="ph"><h3>Sunucu yedekleri</h3><span class="muted" style="font-size:12.5px">/var/backups/swipeup · pg_restore ile geri yüklenir</span></div>
+      ${d.backups == null ? '<div class="pb muted">Yedek klasörü okunamadı (panel izinleri).</div>' : d.backups.length ? `<div class="tw"><table class="tbl"><thead><tr><th>Dosya</th><th>Tarih</th><th class="num">Boyut</th><th></th></tr></thead><tbody>${d.backups.map((b) => `<tr><td class="mono">${esc(b.name)}</td><td>${dt(b.at)}</td><td class="num">${bytes(b.size)}</td><td class="num"><button class="btn sm" data-bk="${esc(b.name)}">${icon('download')} İndir</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="pb muted">Henüz sunucu yedeği yok. İlki bu gece 04:10’da alınacak ya da “Yedek al”a bas.</div>'}</div>
+    <div class="panel dnsp" style="margin-bottom:14px"><div class="ph"><h3>Alan adı ve DNS · Hostinger</h3></div><div class="pb"><div class="spin"></div></div></div>
+    <div class="panel logp"><div class="ph"><h3>Kayıtlar</h3>
+      <div class="row" style="gap:6px;margin-left:auto"><select class="field lu" style="width:auto"><option value="swipeup">Uygulama</option><option value="caddy">HTTPS (Caddy)</option><option value="guncelle">Güncellemeler</option><option value="yedek">Yedekler</option></select>
+      <label class="row muted" style="gap:4px;font-size:13px"><input type="checkbox" class="le"> Sadece uyarı ve hatalar</label>
+      <input class="field lq" placeholder="Ara" style="width:140px"><button class="btn sm lr">${icon('undo')} Yenile</button></div></div>
+      <pre class="logbox mono"></pre></div>`;
+
+  main.querySelector('.cpfix')?.addEventListener('click', async () => { await navigator.clipboard?.writeText(PANEL_FIX); toast('Komut kopyalandı.'); });
+  main.querySelectorAll('[data-act]').forEach((b) => b.addEventListener('click', async () => {
+    const act = b.dataset.act; let confirmTxt;
+    if (act === 'reboot') { confirmTxt = prompt('Sunucu yeniden başlayacak, site 1–2 dakika kapalı kalacak. Onaylamak için YENIDEN BASLAT yaz:'); if (confirmTxt == null) return; }
+    else if (act === 'yeniden-baslat' && !confirm('Uygulama yeniden başlatılsın mı? Site birkaç saniye kesilir.')) return;
+    b.disabled = true;
+    try { const r = await api('/sunucu/islem', { body: { act, confirm: confirmTxt } }); toast(r.message, { ms: 6000 }); } catch (e) { toast(e.message); }
+    setTimeout(() => { b.disabled = false; }, 4000);
+  }));
+  main.querySelectorAll('[data-bk]').forEach((b) => b.addEventListener('click', async () => {
+    try {
+      const r = await fetch(`${BASE}/api/sunucu/yedek/${encodeURIComponent(b.dataset.bk)}`, { headers: { Authorization: 'Bearer ' + S.token } });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'İndirilemedi.');
+      const a = document.createElement('a'); a.href = URL.createObjectURL(await r.blob()); a.download = b.dataset.bk; a.click();
+    } catch (e) { toast(e.message); }
+  }));
+
+  // Kayıtlar
+  const lb = main.querySelector('.logbox'); const lu = main.querySelector('.lu'); const le = main.querySelector('.le'); const lq = main.querySelector('.lq');
+  const loadLog = async () => {
+    lb.textContent = 'Yükleniyor…';
+    try {
+      const r = await api(`/sunucu/log?unit=${lu.value}&n=200${le.checked ? '&err=1' : ''}${lq.value.trim() ? `&q=${encodeURIComponent(lq.value.trim())}` : ''}`);
+      lb.textContent = r.lines.length ? r.lines.join('\n') : (d.perms && !d.perms.journal ? 'Kayıtları görmek için yukarıdaki panel izinleri komutunu çalıştır.' : 'Kayıt yok.');
+      lb.scrollTop = lb.scrollHeight;
+    } catch (e) { lb.textContent = e.message; }
+  };
+  lu.onchange = loadLog; le.onchange = loadLog; main.querySelector('.lr').onclick = loadLog;
+  lq.onkeydown = (e) => { if (e.key === 'Enter') loadLog(); };
+  loadLog();
+
+  // Hostinger DNS
+  const dp = main.querySelector('.dnsp .pb');
+  const TYPES = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'CAA', 'NS', 'SRV'];
+  const loadDns = async () => {
+    if (!d.hostinger) {
+      dp.innerHTML = `<p class="muted" style="margin:0 0 8px">Hostinger bağlı değil. DNS kayıtlarını buradan görüp düzenlemek için Hostinger’dan bir API anahtarı al (hPanel → Profil → API → Yeni token) ve sunucudaki ayarlara ekle:</p>
+        <code class="mono" style="display:block;padding:8px;background:var(--soft);border-radius:8px;overflow:auto">echo 'HOSTINGER_API_TOKEN=anahtar' &gt;&gt; /etc/swipeup.env &amp;&amp; systemctl restart swipeup</code>`;
+      return;
+    }
+    dp.innerHTML = '<div class="spin"></div>';
+    let z;
+    try { z = await api('/sunucu/dns'); } catch (e) { dp.innerHTML = `<div class="case">${esc(e.message)}</div>`; return; }
+    const apex = z.records.find((r) => r.name === '@' && r.type === 'A');
+    const pointsHere = apex && z.ips.length && apex.records.some((r) => z.ips.includes(r.content));
+    const exp = z.info?.expires; const expDays = exp ? Math.floor((exp - Date.now()) / 86400000) : null;
+    dp.innerHTML = `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px"><b>${esc(z.domain)}</b>
+        ${z.ips.length ? (pointsHere ? '<span class="chip ok">Bu sunucuya bağlı</span>' : '<span class="chip bad">Ana kayıt bu sunucuyu göstermiyor</span>') : ''}
+        ${exp ? `<span class="chip ${expDays < 30 ? 'warn' : ''}">Bitiş ${new Date(exp).toLocaleDateString('tr-TR')} · ${expDays} gün</span>` : ''}</div>
+      <div class="tw"><table class="tbl"><thead><tr><th>Tür</th><th>Ad</th><th>İçerik</th><th class="num">TTL</th><th></th></tr></thead><tbody>
+        ${z.records.map((r, i) => `<tr><td><span class="chip">${esc(r.type)}</span></td><td class="mono">${esc(r.name)}</td><td class="mono" style="max-width:420px;word-break:break-all;font-size:12.5px">${r.records.map((x) => esc(x.content)).join('<br>')}</td><td class="num">${r.ttl}</td>
+          <td class="num" style="white-space:nowrap"><button class="btn sm" data-ed="${i}">${icon('edit')}</button> <button class="btn sm danger" data-rm="${i}" aria-label="Sil">${icon('trash')}</button></td></tr>`).join('')}
+      </tbody></table></div>
+      <form class="dnsf row" style="gap:8px;flex-wrap:wrap;margin-top:12px;align-items:flex-end">
+        <label style="display:grid;gap:3px"><span class="muted" style="font-size:12px">Tür</span><select class="field" name="type" style="width:auto">${TYPES.map((t) => `<option>${t}</option>`).join('')}</select></label>
+        <label style="display:grid;gap:3px"><span class="muted" style="font-size:12px">Ad (ana alan adı için @)</span><input class="field" name="name" value="@" style="width:150px"></label>
+        <label style="display:grid;gap:3px;flex:1;min-width:220px"><span class="muted" style="font-size:12px">İçerik (birden çok değer için her satıra bir tane)</span><textarea class="field" name="content" rows="1" placeholder="${esc(z.ips[0] || '185.114.21.168')}"></textarea></label>
+        <label style="display:grid;gap:3px"><span class="muted" style="font-size:12px">TTL (sn)</span><input class="field" name="ttl" type="number" value="300" min="60" style="width:90px"></label>
+        <button class="btn primary">${icon('check')} Kaydet</button></form>
+      <p class="muted" style="font-size:12.5px;margin:8px 0 0">Aynı ad ve türdeki kayıtların yerine geçer. Değişiklik genelde birkaç dakikada yayılır. E-posta (MX, SPF, DKIM) kayıtlarına dokunursan info@swipeup.live çalışmayabilir.</p>
+      ${z.snapshots.length ? `<details style="margin-top:12px"><summary class="muted" style="cursor:pointer">Önceki DNS hâlleri (geri al)</summary><div class="tw" style="margin-top:8px"><table class="tbl"><tbody>${z.snapshots.map((s) => `<tr><td>${s.at ? dt(s.at) : '—'}</td><td class="muted">${esc(s.reason)}</td><td class="num"><button class="btn sm" data-snap="${s.id}">${icon('undo')} Bu hâle dön</button></td></tr>`).join('')}</tbody></table></div></details>` : ''}`;
+    const f = dp.querySelector('.dnsf');
+    dp.querySelectorAll('[data-ed]').forEach((b) => b.addEventListener('click', () => {
+      const r = z.records[+b.dataset.ed];
+      f.type.value = r.type; f.name.value = r.name; f.content.value = r.records.map((x) => x.content).join('\n'); f.ttl.value = r.ttl;
+      f.content.rows = Math.min(6, r.records.length); f.content.focus(); f.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }));
+    dp.querySelectorAll('[data-rm]').forEach((b) => b.addEventListener('click', async () => {
+      const r = z.records[+b.dataset.rm];
+      let conf;
+      if (r.name === '@' && r.type === 'A') { conf = prompt('Bu kayıt siteyi sunucuya bağlıyor. Silersen swipeup.live açılmaz. Yine de silmek için SIL yaz:'); if (conf == null) return; }
+      else if (!confirm(`${r.type} ${r.name} kaydı silinsin mi?`)) return;
+      try { await api('/sunucu/dns', { method: 'DELETE', body: { name: r.name, type: r.type, confirm: conf } }); toast('Kayıt silindi.'); loadDns(); } catch (e) { toast(e.message); }
+    }));
+    dp.querySelectorAll('[data-snap]').forEach((b) => b.addEventListener('click', async () => {
+      if (!confirm('DNS kayıtları bu hâle döndürülsün mü? Sonraki değişiklikler kaybolur.')) return;
+      try { await api(`/sunucu/dns/geri/${b.dataset.snap}`, { body: {} }); toast('DNS eski hâline döndü.'); loadDns(); } catch (e) { toast(e.message); }
+    }));
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const records = f.content.value.split('\n').map((x) => x.trim()).filter(Boolean);
+      try { await api('/sunucu/dns', { method: 'PUT', body: { type: f.type.value, name: f.name.value, ttl: +f.ttl.value, records } }); toast('Kayıt kaydedildi.'); loadDns(); } catch (er) { toast(er.message); }
+    };
+  };
+  loadDns();
 };
 
 // ---- Etkinlik teması (ör. Cadılar Bayramı haftası) ----

@@ -91,6 +91,7 @@ SPOTIFY_CLIENT_SECRET=
 GMAIL_USER=
 GMAIL_APP_PASSWORD=
 GOOGLE_CLIENT_ID=
+HOSTINGER_API_TOKEN=
 ANDROID_KEYSTORE_B64=
 ANDROID_KEYSTORE_PASS=
 ANDROID_SHA256=
@@ -189,6 +190,16 @@ ufw allow 80/tcp >/dev/null
 ufw allow 443/tcp >/dev/null
 ufw allow 443/udp >/dev/null
 ufw --force enable >/dev/null
+
+say "Panel izinleri"
+# Yönetim → Sunucu sekmesi: uygulama yalnız bu sabit komutları root olarak çalıştırabilir
+cat > /etc/sudoers.d/swipeup-panel <<'S'
+swipeup ALL=(root) NOPASSWD: /usr/bin/systemctl start --no-block swipeup-guncelle.service, /usr/bin/systemctl start --no-block swipeup-yedek.service, /usr/bin/systemctl restart --no-block swipeup.service, /usr/bin/systemctl reboot
+S
+chmod 440 /etc/sudoers.d/swipeup-panel
+visudo -cf /etc/sudoers.d/swipeup-panel >/dev/null || rm -f /etc/sudoers.d/swipeup-panel
+usermod -aG systemd-journal swipeup
+chgrp swipeup /var/backups/swipeup && chmod 750 /var/backups/swipeup
 
 say "Başlatılıyor"
 timedatectl set-timezone Europe/Istanbul || true

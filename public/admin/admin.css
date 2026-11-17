@@ -580,3 +580,7 @@ tr.sgw td { background: color-mix(in srgb, #ffc926 10%, transparent); }
 .akt-u .av.sm { width: 20px; height: 20px; }
 .akt-more { margin-top: 10px; }
 .drawer .akt-box { max-height: 420px; overflow-y: auto; }
+
+/* Sunucu ve alan adı */
+.logbox { margin: 0; padding: 12px 14px; max-height: 420px; overflow: auto; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; background: var(--soft); border-top: 1px solid var(--line); border-radius: 0 0 var(--r) var(--r); }
+.dnsp .tbl td { vertical-align: top; }
