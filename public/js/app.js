@@ -3,7 +3,7 @@ import { remember, accountSheet, switchFromUrl } from './accounts.js';
 import { icon } from './icons.js';
 import { initNav } from './nav.js';
 import {
-  state, api, on, emit, connectSocket, refreshBadges, toast, esc, el, applySkin, currentSkin, setGameLook, notifHref, applyLogo, refreshStoryMap, syncPush, sheet,
+  state, api, on, emit, connectSocket, refreshBadges, toast, esc, el, applySkin, currentSkin, setGameLook, notifHref, applyLogo, refreshStoryMap, syncPush, sheet, enablePush, pushSupported, pushEnabled,
 } from './core.js';
 import { initCalls } from './calls.js';
 import { checkVersion, recover, afterBoot } from './update.js';
@@ -369,6 +369,26 @@ function keyboardFit() {
   fit();
 }
 
+// Bildirim izni: bu cihazda henüz sorulmadıysa (yeni adres, yeni kurulum) bir kez sorulur; "Şimdi değil" denirse 7 gün sorulmaz
+async function askPush() {
+  try {
+    if (!state.me || !pushSupported() || Notification.permission !== 'default') return;
+    if (await pushEnabled()) return;
+    const last = +localStorage.getItem('su_push_ask') || 0; if (Date.now() - last < 7 * 86400000) return;
+    if (document.querySelector('.sheet, .terms-up')) { setTimeout(askPush, 15000); return; }
+    localStorage.setItem('su_push_ask', String(Date.now()));
+    const close = sheet('Bildirimleri aç', `<div style="padding:0 18px 20px;display:grid;gap:12px">
+      <p style="margin:0">Mesaj, arama, eşleşme ve falın geldiğinde anında haberin olsun. Bir sonraki ekranda <b>İzin ver</b>’e dokun.</p>
+      <button class="btn primary block yes">Bildirimleri aç</button><button class="btn block outline no">Şimdi değil</button></div>`, {
+      onMount(sh, c) {
+        sh.querySelector('.no').onclick = c;
+        sh.querySelector('.yes').onclick = async () => { c(); try { await enablePush(); toast('Bildirimler açıldı.'); } catch (e) { toast(e.message); } };
+      },
+    });
+    void close;
+  } catch { /* sessiz */ }
+}
+
 // Güncellenen Kullanım Koşulları: okuyup onaylamadan kapatılamaz; istemeyen hesabını silebilir
 function termsPrompt() {
   if (document.querySelector('.terms-up')) return;
@@ -417,7 +437,7 @@ async function boot() {
       if (me.ban) state.ban = me.ban;
       if (me.skin && me.skin !== currentSkin()) applySkin(me.skin);
       applyLogo(me.plus ? me.logo : 'klasik');
-      if (!state.ban) { wireRealtime(); refreshBadges(); setTimeout(syncPush, 2500); }
+      if (!state.ban) { wireRealtime(); refreshBadges(); setTimeout(syncPush, 2500); setTimeout(askPush, 9000); }
     } catch { state.token = null; }
   }
   if (!state.config) state.config = await fetch('/api/config').then((r) => r.json()).catch(() => ({}));
