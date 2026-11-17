@@ -521,6 +521,27 @@ app.use((req, res, next) => {
 });
 app.get('/api/maintenance', (req, res) => res.json({ maintenance: maintenance() }));
 
+// ---------- Panelden yapılan değişiklikler anında uygulamaya ----------
+// Yönetimde başarılı her değişiklikten sonra: kullanıcıya özelse yalnız o kişiye "me:changed", değilse (fiyat, ayar, etkinlik,
+// görev, oda, etiket…) herkese "config:changed" gider; uygulama ayarlarını / hesabını sayfa yenilemeden tazeler.
+{
+  const QUIET = /^\/api\/admin\/(login|me|push|notes|audit|aktivite|support|errors|sunucu|backups|database|hukuk|erp|ledger|muhasebe)(\/|$)/;
+  let cfgTimer = null;
+  app.use('/api/admin', (req, res, next) => {
+    if (req.method === 'GET' || req.method === 'HEAD') return next();
+    res.on('finish', () => {
+      if (res.statusCode >= 400) return;
+      const url = (req.originalUrl || req.url).split('?')[0];
+      const full = url.startsWith('/api/admin') ? url : `/api/admin${url}`;
+      const u = full.match(/^\/api\/admin\/users\/([\w-]+)/);
+      if (u) { emitTo(u[1], 'me:changed', { at: now() }); return; }
+      if (QUIET.test(full)) return;
+      clearTimeout(cfgTimer);
+      cfgTimer = setTimeout(() => io.emit('config:changed', { at: now() }), 1500);
+    });
+    next();
+  });
+}
 const adminApi = require('./server/admin')(app, {
   store, io, emitTo, notify, brief, isOnline, online, lives, removeChat, limited, ipOf,
   secret: () => JWT_SECRET, endLive: (id) => endLive(id), eco, msgOut: (m) => msgOut(m), revokeSessions: (id) => { bumpTokens(id); disconnectUser(id); }, purgeUser: (id) => purgeUser(id), dropMediaCache: (id) => dropMediaCache(id),

@@ -311,7 +311,7 @@ export function connectSocket() {
   ['message', 'typing', 'read', 'delivered', 'notification', 'match', 'post:likes',
     'message:update', 'message:hidden', 'chat:removed', 'chat:update', 'blocked', 'stories:update', 'notes:update', 'post:poll', 'people:new', 'likes:new',
     'call:incoming', 'call:accepted', 'call:ended', 'call:taken', 'call:signal',
-    'live:viewer', 'live:viewer-left', 'live:signal', 'live:comment', 'live:heart', 'live:count', 'live:ended', 'live:gift', 'live:filter', 'live:k', 'wallet', 'people:gone', 'genel:msg', 'genel:update', 'genel:online', 'genel:typing', 'app:version', 'announce:popup', 'event', 'maintenance', 'maintenance:plan', 'falai', 'falhold', 'venue', 'support', 'quests', 'level', 'okey', 'okey:lobby', 'play', 'play:lobby', 'mini', 'k3', 'k3:snap', 'k3:tile', 'k3:ev', 'k3:rtc', 'cizbil', 'cizbil:close', 'cb:lobby', 'market', 'features', 'speed:count', 'speed:paired', 'speed:vote', 'speed:result', 'speed:signal', 'speed:left', 'streak', 'streak:login', 'karaoke', 'karaoke:turn']
+    'live:viewer', 'live:viewer-left', 'live:signal', 'live:comment', 'live:heart', 'live:count', 'live:ended', 'live:gift', 'live:filter', 'live:k', 'wallet', 'people:gone', 'genel:msg', 'genel:update', 'genel:online', 'genel:typing', 'app:version', 'announce:popup', 'event', 'maintenance', 'maintenance:plan', 'falai', 'falhold', 'venue', 'support', 'quests', 'level', 'okey', 'okey:lobby', 'play', 'play:lobby', 'mini', 'k3', 'k3:snap', 'k3:tile', 'k3:ev', 'k3:rtc', 'cizbil', 'cizbil:close', 'cb:lobby', 'market', 'features', 'speed:count', 'speed:paired', 'speed:vote', 'speed:result', 'speed:signal', 'speed:left', 'streak', 'streak:login', 'karaoke', 'karaoke:turn', 'config:changed', 'me:changed']
     .forEach((ev) => s.on(ev, (d) => emit(ev, d)));
   s.on('presence', (d) => { state.presence.set(d.userId, d); emit('presence', d); });
   s.on('presence:all', (ids) => { ids.forEach((id) => state.presence.set(id, { userId: id, online: true })); emit('presence', {}); });
@@ -563,7 +563,9 @@ export async function syncPush() {
   try {
     if (!pushSupported() || Notification.permission !== 'granted' || isPushOff()) return;
     const reg = await Promise.race([navigator.serviceWorker.ready, new Promise((r) => setTimeout(r, 4000))]);
-    const sub = await reg?.pushManager?.getSubscription();
+    let sub = await reg?.pushManager?.getSubscription();
+    // İzin var ama abonelik yoksa (tarayıcı düşürmüş ya da yeni adres) yeniden abone ol
+    if (!sub && reg?.pushManager && state.config?.vapidPublicKey) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(state.config.vapidPublicKey) });
     if (sub) await api('/push/subscribe', { body: { subscription: sub.toJSON() } });
   } catch { /* sessiz */ }
 }

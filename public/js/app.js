@@ -227,6 +227,26 @@ function wireRealtime() {
     toast(n.text, { ms: ['announce', 'warning', 'order', 'verify'].includes(n.type) ? 8000 : 3500, title: n.type === 'liked' ? 'Yeni beğeni' : n.from?.name || 'SwipeUp', img: n.type === 'liked' ? null : n.from?.avatar, href });
   });
   on('likes:new', () => refreshBadges());
+  // Panelden yapılan değişiklikler: ayarlar ve hesap sayfa yenilemeden tazelenir
+  const LIVE_VIEWS = /^#\/(store|plus|fal|gorevler|cark|settings|wallet|market|seviye|odalar|rooms|etkinlik|jeton)/;
+  const rerender = () => { if (LIVE_VIEWS.test(location.hash) && !document.querySelector('.sheet, dialog[open]') && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) router(); };
+  let cfgT = null;
+  on('config:changed', () => {
+    clearTimeout(cfgT);
+    cfgT = setTimeout(async () => {
+      const cfg = await api('/config').catch(() => null); if (!cfg) return;
+      const prevEvent = JSON.stringify(state.config?.event || null);
+      state.config = Object.assign(state.config || {}, cfg);
+      if (JSON.stringify(cfg.event || null) !== prevEvent) emit('event', { event: cfg.event, now: cfg.now });
+      emit('config', cfg); rerender();
+    }, 300 + Math.random() * 2500); // herkes aynı anda istemesin
+  });
+  on('me:changed', async () => {
+    const m = await api('/me').catch(() => null); if (!m || !state.me) return;
+    if (m.ban) { location.reload(); return; }
+    Object.assign(state.me, m); emit('me', m); emit('wallet', {}); refreshBadges(); rerender();
+  });
+
   // Günlük giriş serisi: günün ilk girişinde küçük bir kutlama
   on('streak:login', (d) => {
     if (!d?.count) return;
