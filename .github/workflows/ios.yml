@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-latest
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -32,14 +32,14 @@ jobs:
 
       - name: Xcode
         run: |
-          sudo xcode-select -s "$(ls -d /Applications/Xcode_15*.app | sort -V | tail -1)"
+          X=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1); [ -n "$X" ] && sudo xcode-select -s "$X"
           xcodebuild -version
 
       - name: iOS projesini üret
         run: |
           mkdir -p "$RUNNER_TEMP/app/www" && cd "$RUNNER_TEMP/app"
           npm init -y >/dev/null
-          npm i --no-audit --no-fund @capacitor/core@6 @capacitor/cli@6 @capacitor/ios@6
+          npm i --no-audit --no-fund @capacitor/core@7 @capacitor/cli@7 @capacitor/ios@7
           cp "$GITHUB_WORKSPACE/store/ios/capacitor.config.json" .
           printf '<!doctype html><meta charset="utf-8"><title>SwipeUp</title><meta http-equiv="refresh" content="0;url=https://swipeup.live">' > www/index.html
           npx cap add ios
