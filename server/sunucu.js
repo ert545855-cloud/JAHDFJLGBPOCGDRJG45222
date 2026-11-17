@@ -13,7 +13,7 @@ const { execFile } = require('child_process');
 const BK_DIR = '/var/backups/swipeup';
 const SYSTEMCTL = '/usr/bin/systemctl';
 const HAPI = 'https://developers.hostinger.com';
-const UNITS = { swipeup: 'Uygulama', caddy: 'HTTPS (Caddy)', 'swipeup-guncelle.timer': 'Otomatik güncelleme', 'swipeup-yedek.timer': 'Gece yedeği' };
+const UNITS = { 'swipeup.service': 'Uygulama', 'caddy.service': 'HTTPS (Caddy)', 'swipeup-guncelle.timer': 'Otomatik güncelleme', 'swipeup-yedek.timer': 'Gece yedeği' };
 const LOG_UNITS = { swipeup: 'swipeup', caddy: 'caddy', guncelle: 'swipeup-guncelle', yedek: 'swipeup-yedek' };
 const TYPES = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'CAA', 'NS', 'SRV', 'ALIAS'];
 
@@ -61,7 +61,13 @@ async function unitStates() {
   if (!r.ok && !r.out) return [];
   return r.out.trim().split(/\n\n+/).map((blk) => {
     const o = Object.fromEntries(blk.split('\n').map((l) => { const i = l.indexOf('='); return [l.slice(0, i), l.slice(i + 1)]; }));
-    const ts = (v) => { const m = String(v || '').match(/@(\d+)/); return m ? +m[1] * 1000 : null; };
+    // "@1795000000" (unix) ya da "Wed 2026-11-18 04:10:00 +03" biçimi; boş / n/a → null
+    const ts = (v) => {
+      const t = String(v || '').trim(); const m = t.match(/@(\d+)/); if (m) return +m[1] * 1000;
+      const d = t.match(/(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) ([+-]\d{2})(\d{2})?/);
+      if (d) { const x = Date.parse(`${d[1]}T${d[2]}${d[3]}:${d[4] || '00'}`); return Number.isFinite(x) ? x : null; }
+      return null;
+    };
     return { id: o.Id, name: UNITS[o.Id] || o.Id, active: o.ActiveState, sub: o.SubState, since: ts(o.ActiveEnterTimestamp), next: ts(o.NextElapseUSecRealtime), last: ts(o.LastTriggerUSec) };
   }).filter((u) => u.id);
 }

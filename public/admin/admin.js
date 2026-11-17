@@ -1324,7 +1324,7 @@ VIEWS.sunucu = async (main) => {
     </div>
     <div class="grid2" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:14px">
       <div class="panel"><div class="ph"><h3>Durum</h3></div><div class="tw"><table class="tbl"><tbody>
-        ${d.units.map((u) => `<tr><td>${esc(u.name)}</td><td>${unitChip(u)}</td><td class="muted" style="font-size:12.5px">${u.next ? `Sıradaki ${dt(u.next)}` : u.since ? `${dt(u.since)}’den beri` : ''}</td></tr>`).join('')}
+        ${d.units.map((u) => `<tr><td>${esc(u.name)}</td><td>${unitChip(u)}</td><td class="muted" style="font-size:12.5px">${u.next ? `Sıradaki ${dt(u.next)}` : u.last ? `Son çalışma ${dt(u.last)}` : u.since ? `${dt(u.since)}’den beri` : ''}</td></tr>`).join('')}
         <tr><td>HTTPS sertifikası</td><td>${d.cert ? `<span class="chip ${certDays > 14 ? 'ok' : 'warn'}">${certDays} gün</span>` : '<span class="chip bad">Okunamadı</span>'}</td><td class="muted" style="font-size:12.5px">${d.cert ? `${esc(d.cert.issuer)} · kendiliğinden yenilenir` : ''}</td></tr>
         <tr><td>Sürüm</td><td class="mono">${esc(d.git?.hash || '?')}</td><td class="muted" style="font-size:12.5px">${d.git ? `${esc(d.git.subject).slice(0, 70)} · ${dt(d.git.at)}` : ''}</td></tr>
         <tr><td>Sistem</td><td colspan="2" class="muted" style="font-size:12.5px">${esc(d.os)} · Node ${esc(d.node)} · ${esc(d.host)} · ${esc(d.ips.join(', '))}</td></tr>
