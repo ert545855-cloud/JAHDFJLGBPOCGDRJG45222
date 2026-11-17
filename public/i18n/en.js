@@ -1,6 +1,33 @@
 // SwipeUp — English interface dictionary (Turkish → English)
 import { words, tpl } from './en-extra.js';
 const D = {
+  // Şifre sıfırlama adımları
+  "Kullanıcı adını ya da kayıtlı e-postanı yaz. E-postana 6 haneli bir kod göndereceğiz.": "Enter your username or registered email. We will email you a 6-digit code.",
+  "Kullanıcı adını ya da e-postanı yaz. Sonraki adımda kurtarma kodunu gireceksin.": "Enter your username or email. You will enter your recovery code in the next step.",
+  "Devam et": "Continue",
+  "Kurtarma kodum var": "I have a recovery code",
+  "Kullanıcı adını ya da e-postanı yaz.": "Enter your username or email.",
+  "E-postana gelen kodu gir": "Enter the code from your email",
+  "Kurtarma kodunu gir": "Enter your recovery code",
+  "Hesabında kayıtlı e-postaya 6 haneli bir kod gönderdik. Birkaç dakika içinde gelmezse gereksiz (spam) klasörüne bak. Kod 15 dakika geçerli.": "We sent a 6-digit code to the email on your account. If it does not arrive in a few minutes, check your spam folder. The code is valid for 15 minutes.",
+  "Kayıt olurken sana verilen 12 karakterlik kodu yaz (ör. ABCD-EFGH-JKLM).": "Enter the 12-character code you got when you signed up (e.g. ABCD-EFGH-JKLM).",
+  "Kodu tekrar gönder": "Resend code",
+  "E-posta gelmiyorsa hesabında e-posta kayıtlı olmayabilir. O zaman": "If no email arrives, your account may not have an email. In that case",
+  "kurtarma kodunu kullan": "use your recovery code",
+  "Kurtarma kodum yok, e-postama kod gönder": "I don't have a recovery code, email me a code",
+  "Kurtarma kodunu kaybettiysen": "If you lost your recovery code, write to",
+  "adresine yaz.": ".",
+  "6 haneli kod": "6-digit code",
+  "Kod 6 haneli olmalı.": "The code must be 6 digits.",
+  "Kurtarma kodu 12 karakter olmalı.": "The recovery code must be 12 characters.",
+  "Yeni şifreni belirle": "Set your new password",
+  "En az 6 karakter. Başka sitelerde kullanmadığın bir şifre seç.": "At least 6 characters. Pick a password you don't use on other sites.",
+  "Yeni şifre (tekrar)": "New password (again)",
+  "Şifreyi göster": "Show password",
+  "İki şifre aynı değil.": "The two passwords don't match.",
+  "Yeni kod gönderildi.": "A new code was sent.",
+  "Kodun süresi dolmuş. Yeni kod iste.": "Your code has expired. Request a new one.",
+  "Kurtarma kodu hatalı.": "The recovery code is wrong.",
   // Giriş / kayıt
   'Kaydırmaya kaldığın yerden devam et.': 'Pick up swiping where you left off.',
   'Giriş yap': 'Log in', 'Şifreni mi unuttun?': 'Forgot your password?', 'Uygulamayı telefona yükle': 'Install the app on your phone',
@@ -603,6 +630,8 @@ const D = {
 
 // Sayı / isim içeren metinler
 export const patterns = [
+  [/^Kodu tekrar gönder \((\d+) sn\)$/, (_, n) => `Resend code (${n} s)`],
+  [/^Adım (\d) \/ 3$/, (_, n) => `Step ${n} of 3`],
   [/^(\d+) yorumun tümünü gör$/, (_, n) => `View all ${n} comments`],
   [/^— (\d+) yanıtı gör$/, (_, n) => `— View ${n} replies`],
   [/^(\d+) (dk|sa|g|h)$/, (_, n, u) => `${n}${{ dk: 'm', sa: 'h', g: 'd', h: 'w' }[u]}`],

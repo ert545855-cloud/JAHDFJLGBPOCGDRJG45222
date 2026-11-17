@@ -111,36 +111,126 @@ function codeScreen(view, code, next) {
   view.querySelector('.go').onclick = next;
 }
 
+// Şifre sıfırlama üç adımda: 1) hesabı yaz, 2) e-postadaki kodu (ya da kurtarma kodunu) gir, 3) yeni şifreyi belirle.
+// Her adımda tek iş var; kod 2. adımda sunucuda doğrulanır, yanlışsa kullanıcı şifre yazmadan öğrenir.
 function forgot(view) {
-  const emailOn = state.config?.emailReset;
-  view.innerHTML = `<section class="auth">
-    <div class="wordmark">${logo()}</div>
-    <h2 style="text-align:center;margin:16px 0 6px;font-size:24px">Şifreni sıfırla</h2>
-    <p class="tagline">${emailOn ? 'Kullanıcı adını ya da e-postanı yaz. Hesabına bağlı e-postaya 6 haneli bir kod göndereceğiz. Kurtarma kodunu da kullanabilirsin.' : 'Kayıt olurken aldığın 12 karakterlik kurtarma kodunu gir.'}</p>
-    <form novalidate>
-      <label class="ic-field">${icon('person')}<input class="field" name="login" placeholder="Kullanıcı adı veya e-posta" autocapitalize="none" spellcheck="false" required></label>
-      ${emailOn ? '<button type="button" class="btn outline block send">E-postama kod gönder</button>' : ''}
-      <label class="ic-field">${icon('key')}<input class="field" name="code" placeholder="${emailOn ? 'E-postadaki kod ya da kurtarma kodu' : 'Kurtarma kodu (ör. ABCD-EFGH-JKLM)'}" autocapitalize="characters" autocomplete="one-time-code"></label>
-      <label class="ic-field">${icon('lock')}<input class="field" name="password" type="password" placeholder="Yeni şifre" autocomplete="new-password"></label>
-      <button class="btn primary block">Şifreyi değiştir</button>
-      <div class="err" role="alert"></div>
-    </form>
-    <div class="switch"><a class="link" href="#/login">Girişe dön</a></div></section>`;
-  const f = view.querySelector('form'); const err = view.querySelector('.err');
-  view.querySelector('.send')?.addEventListener('click', async () => {
-    err.textContent = '';
-    if (!f.login.value.trim()) { err.textContent = 'Önce kullanıcı adını ya da e-postanı yaz.'; return; }
-    try { await api('/auth/forgot', { body: { login: f.login.value } }); toast('Hesabında e-posta kayıtlıysa kod gönderildi. Gereksiz klasörünü de kontrol et.', { ms: 5000 }); f.code.focus(); } catch (e) { err.textContent = e.message; }
-  });
-  f.onsubmit = async (e) => {
-    e.preventDefault(); err.textContent = '';
-    try {
-      const r = await api('/auth/reset', { body: { login: f.login.value, code: f.code.value, password: f.password.value } });
-      setSession(r.token, r.user);
-      const done = () => { location.hash = '#/'; location.reload(); };
-      if (r.recoveryCode) codeScreen(view, r.recoveryCode, done); else { toast('Şifren değişti.'); done(); }
-    } catch (er) { err.textContent = er.message; }
+  const emailOn = !!state.config?.emailReset;
+  const s = { step: 1, login: '', code: '', mode: emailOn ? 'email' : 'recovery', wait: 0 };
+  let timer = null;
+  const stop = () => { clearInterval(timer); timer = null; };
+  const startWait = () => {
+    s.wait = 60; stop();
+    timer = setInterval(() => {
+      s.wait -= 1;
+      const b = view.querySelector('.resend');
+      if (!b || !document.body.contains(b)) return stop();
+      b.disabled = s.wait > 0; b.textContent = s.wait > 0 ? `Kodu tekrar gönder (${s.wait} sn)` : 'Kodu tekrar gönder';
+      if (s.wait <= 0) stop();
+    }, 1000);
   };
+  const dots = () => `<ol class="rs-steps" aria-label="Adım ${s.step} / 3">${[1, 2, 3].map((n) => `<li class="${n < s.step ? 'done' : n === s.step ? 'on' : ''}"></li>`).join('')}</ol>`;
+  const shell = (title, text, body, foot = '') => {
+    view.innerHTML = `<section class="auth rs">
+      <div class="wordmark">${logo()}</div>
+      ${dots()}
+      <h2 class="rs-title">${title}</h2>
+      <p class="tagline">${text}</p>
+      <form novalidate>${body}<div class="err" role="alert"></div></form>
+      <div class="switch">${foot}<a class="link" href="#/login">Girişe dön</a></div></section>`;
+    return { f: view.querySelector('form'), err: view.querySelector('.err') };
+  };
+  const busy = (f, on) => { const b = f.querySelector('button.primary'); if (b) { b.disabled = on; b.classList.toggle('loading', on); } };
+
+  const sendCode = async (err) => {
+    try { await api('/auth/forgot', { body: { login: s.login } }); startWait(); return true; } catch (e) { err.textContent = e.message; return false; }
+  };
+
+  function step1() {
+    s.step = 1;
+    const { f, err } = shell('Şifreni sıfırla',
+      emailOn ? 'Kullanıcı adını ya da kayıtlı e-postanı yaz. E-postana 6 haneli bir kod göndereceğiz.' : 'Kullanıcı adını ya da e-postanı yaz. Sonraki adımda kurtarma kodunu gireceksin.',
+      `<label class="ic-field">${icon('person')}<input class="field" name="login" placeholder="Kullanıcı adı veya e-posta" autocapitalize="none" autocomplete="username" spellcheck="false" value="${esc(s.login)}" required></label>
+       <button class="btn primary block">${emailOn ? 'E-postama kod gönder' : 'Devam et'}</button>
+       ${emailOn ? '<button type="button" class="btn outline block rec">Kurtarma kodum var</button>' : ''}`);
+    f.login.focus();
+    const take = () => { s.login = f.login.value.trim(); if (!s.login) { err.textContent = 'Kullanıcı adını ya da e-postanı yaz.'; f.login.focus(); return false; } return true; };
+    f.querySelector('.rec')?.addEventListener('click', () => { if (take()) { s.mode = 'recovery'; step2(); } });
+    f.onsubmit = async (e) => {
+      e.preventDefault(); err.textContent = '';
+      if (!take()) return;
+      if (!emailOn) { s.mode = 'recovery'; return step2(); }
+      busy(f, true);
+      const ok = await sendCode(err);
+      busy(f, false);
+      if (ok) { s.mode = 'email'; step2(); }
+    };
+  }
+
+  function step2() {
+    s.step = 2; s.code = '';
+    const email = s.mode === 'email';
+    const { f, err } = shell(email ? 'E-postana gelen kodu gir' : 'Kurtarma kodunu gir',
+      email ? 'Hesabında kayıtlı e-postaya 6 haneli bir kod gönderdik. Birkaç dakika içinde gelmezse gereksiz (spam) klasörüne bak. Kod 15 dakika geçerli.'
+        : 'Kayıt olurken sana verilen 12 karakterlik kodu yaz (ör. ABCD-EFGH-JKLM).',
+      `<input class="field rs-code${email ? '' : ' rec'}" name="code" ${email ? 'inputmode="numeric" maxlength="6" pattern="[0-9]*" placeholder="••••••"' : 'maxlength="14" placeholder="ABCD-EFGH-JKLM" autocapitalize="characters"'} autocomplete="one-time-code" spellcheck="false" aria-label="${email ? '6 haneli kod' : 'Kurtarma kodu'}">
+       <button class="btn primary block">Devam et</button>
+       ${email ? `<button type="button" class="btn outline block resend" ${s.wait > 0 ? 'disabled' : ''}>${s.wait > 0 ? `Kodu tekrar gönder (${s.wait} sn)` : 'Kodu tekrar gönder'}</button>` : ''}
+       ${email ? '<p class="muted rs-hint">E-posta gelmiyorsa hesabında e-posta kayıtlı olmayabilir. O zaman <a class="link sw">kurtarma kodunu kullan</a>.</p>'
+        : emailOn ? '<p class="muted rs-hint"><a class="link sw">Kurtarma kodum yok, e-postama kod gönder</a></p>' : '<p class="muted rs-hint">Kurtarma kodunu kaybettiysen <a class="link" href="mailto:info@swipeup.live">info@swipeup.live</a> adresine yaz.</p>'}`,
+      '<a class="link back">Geri</a> · ');
+    const inp = f.code; inp.focus();
+    view.querySelector('.back').onclick = (e) => { e.preventDefault(); step1(); };
+    f.querySelector('.sw')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (email) { s.mode = 'recovery'; return step2(); }
+      err.textContent = '';
+      if (await sendCode(err)) { s.mode = 'email'; step2(); }
+    });
+    f.querySelector('.resend')?.addEventListener('click', async (e) => {
+      err.textContent = '';
+      if (await sendCode(err)) { e.target.disabled = true; toast('Yeni kod gönderildi.'); inp.value = ''; inp.focus(); }
+    });
+    const submit = async () => {
+      err.textContent = '';
+      const v = inp.value.trim();
+      if (email ? !/^\d{6}$/.test(v) : v.replace(/[^a-z0-9]/gi, '').length !== 12) { err.textContent = email ? 'Kod 6 haneli olmalı.' : 'Kurtarma kodu 12 karakter olmalı.'; return; }
+      busy(f, true);
+      try { await api('/auth/reset/check', { body: { login: s.login, code: v } }); s.code = v; step3(); } catch (er) { err.textContent = er.message; inp.select(); } finally { busy(f, false); }
+    };
+    inp.addEventListener('input', () => {
+      if (email) { inp.value = inp.value.replace(/\D/g, '').slice(0, 6); if (inp.value.length === 6) submit(); }
+    });
+    f.onsubmit = (e) => { e.preventDefault(); submit(); };
+  }
+
+  function step3() {
+    s.step = 3; stop();
+    const { f, err } = shell('Yeni şifreni belirle', 'En az 6 karakter. Başka sitelerde kullanmadığın bir şifre seç.',
+      `<label class="ic-field">${icon('lock')}<input class="field" name="password" type="password" placeholder="Yeni şifre" autocomplete="new-password"></label>
+       <label class="ic-field">${icon('lock')}<input class="field" name="password2" type="password" placeholder="Yeni şifre (tekrar)" autocomplete="new-password"></label>
+       <label class="switch-row rs-show"><input type="checkbox" name="show"> Şifreyi göster</label>
+       <button class="btn primary block">Şifreyi değiştir</button>`);
+    f.password.focus();
+    f.show.onchange = () => { const t = f.show.checked ? 'text' : 'password'; f.password.type = t; f.password2.type = t; };
+    f.onsubmit = async (e) => {
+      e.preventDefault(); err.textContent = '';
+      if (f.password.value.length < 6) { err.textContent = 'Yeni şifre en az 6 karakter olmalı.'; return; }
+      if (f.password.value !== f.password2.value) { err.textContent = 'İki şifre aynı değil.'; f.password2.focus(); return; }
+      busy(f, true);
+      try {
+        const r = await api('/auth/reset', { body: { login: s.login, code: s.code, password: f.password.value } });
+        setSession(r.token, r.user);
+        const done = () => { location.hash = '#/'; location.reload(); };
+        if (r.recoveryCode) codeScreen(view, r.recoveryCode, done); else { toast('Şifren değişti.'); done(); }
+      } catch (er) {
+        busy(f, false);
+        // Kod bu arada geçersiz olduysa (süre doldu) kod adımına dön
+        if (/Kod|kod/.test(er.message)) { step2(); view.querySelector('.err').textContent = er.message; } else err.textContent = er.message;
+      }
+    };
+  }
+
+  step1();
 }
 
 export default function auth(view, mode) {

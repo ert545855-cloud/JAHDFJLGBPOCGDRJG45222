@@ -774,24 +774,39 @@ app.post('/api/auth/forgot', wrap(async (req, res) => {
   res.json({ ok: true, emailReset: mail.enabled() });
 }));
 
-app.post('/api/auth/reset', wrap(async (req, res) => {
+// Şifre sıfırlama kodunu doğrular: e-postadaki 6 haneli kod ya da 12 karakterlik kurtarma kodu.
+// Yanlış e-posta kodu deneme hakkından düşer (5 hak); kod burada tüketilmez, şifre değişince silinir.
+async function checkResetCode(req) {
   const login = String(req.body?.login || '').toLowerCase().trim();
   const code = String(req.body?.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const password = String(req.body?.password || '');
-  if (limited('reset:' + ipOf(req), 10, 3600000) || limited('reset-u:' + login, 6, 3600000)) return res.status(429).json({ error: 'Çok fazla deneme. Bir saat sonra tekrar dene.' });
-  if (password.length < 6) return res.status(400).json({ error: 'Yeni şifre en az 6 karakter olmalı.' });
+  if (limited('reset:' + ipOf(req), 20, 3600000) || limited('reset-u:' + login, 10, 3600000)) return { status: 429, error: 'Çok fazla deneme. Bir saat sonra tekrar dene.' };
   const u = store.find('users', (x) => x.username === login || x.email === login);
-  const fail = () => res.status(400).json({ error: 'Kod hatalı ya da süresi dolmuş.' });
-  if (!u || !code) return fail();
-  let ok = false; let viaRecovery = false;
+  const fail = { status: 400, error: /^\d{6}$/.test(code) || !code ? 'Kod hatalı ya da süresi dolmuş.' : 'Kurtarma kodu hatalı.' };
+  if (!u || !code) return fail;
   const r = store.get('resets', u.id);
-  if (/^\d{6}$/.test(code) && r && r.exp > now() && r.tries < 5) {
-    ok = await bcrypt.compare(code, r.codeHash);
-    if (!ok) store.update('resets', u.id, { tries: r.tries + 1 });
-  } else if (code.length === 12 && u.recoveryHash) {
-    ok = await bcrypt.compare(code, u.recoveryHash); viaRecovery = ok;
+  if (/^\d{6}$/.test(code)) {
+    if (!r || r.exp <= now() || r.tries >= 5) return { status: 400, error: 'Kodun süresi dolmuş. Yeni kod iste.' };
+    if (await bcrypt.compare(code, r.codeHash)) return { u, viaRecovery: false };
+    store.update('resets', u.id, { tries: r.tries + 1 });
+    return fail;
   }
-  if (!ok) return fail();
+  if (code.length === 12 && u.recoveryHash && (await bcrypt.compare(code, u.recoveryHash))) return { u, viaRecovery: true };
+  return fail;
+}
+
+// Adım adım sıfırlama ekranı: kod doğruysa yeni şifre adımına geçilir
+app.post('/api/auth/reset/check', wrap(async (req, res) => {
+  const c = await checkResetCode(req);
+  if (c.error) return res.status(c.status).json({ error: c.error });
+  res.json({ ok: true, recovery: c.viaRecovery });
+}));
+
+app.post('/api/auth/reset', wrap(async (req, res) => {
+  const password = String(req.body?.password || '');
+  if (password.length < 6) return res.status(400).json({ error: 'Yeni şifre en az 6 karakter olmalı.' });
+  const c = await checkResetCode(req);
+  if (c.error) return res.status(c.status).json({ error: c.error });
+  const { u, viaRecovery } = c;
   const patch = { passHash: await bcrypt.hash(password, 10) };
   let newCode = null;
   if (viaRecovery) { newCode = recoveryCode(); patch.recoveryHash = await bcrypt.hash(newCode, 8); }
