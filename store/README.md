@@ -9,11 +9,11 @@ Hazır olanlar:
 | Android paket ayarları (Trusted Web Activity) | `store/android/twa-manifest.json` |
 | iOS kabuk ayarları (Capacitor) | `store/ios/capacitor.config.json` |
 | Alan adı doğrulaması | Sunucu `/.well-known/assetlinks.json` ve `/.well-known/apple-app-site-association` adreslerini ortam değişkenlerinden üretir |
-| Uygulamaya girmeden hesap silme sayfası | `https://swipeup-hh1f.onrender.com/hesap-silme` (Google Play bunu ister) |
-| Gizlilik politikası | `https://swipeup-hh1f.onrender.com/gizlilik` |
-| KVKK aydınlatma metni | `https://swipeup-hh1f.onrender.com/kvkk` |
-| Açık rıza metni | `https://swipeup-hh1f.onrender.com/acik-riza` |
-| Kullanım koşulları | `https://swipeup-hh1f.onrender.com/kosullar` |
+| Uygulamaya girmeden hesap silme sayfası | `https://swipeup-5py5.onrender.com/hesap-silme` (Google Play bunu ister) |
+| Gizlilik politikası | `https://swipeup-5py5.onrender.com/gizlilik` |
+| KVKK aydınlatma metni | `https://swipeup-5py5.onrender.com/kvkk` |
+| Açık rıza metni | `https://swipeup-5py5.onrender.com/acik-riza` |
+| Kullanım koşulları | `https://swipeup-5py5.onrender.com/kosullar` |
 | Mağaza metinleri | `store/listing.md` |
 
 Uygulama içinde hesap silme (Ayarlar → Hesabımı sil), fotoğraf denetimi, şikayet ve engelleme zaten var; tanışma uygulamaları için mağazalar bunları arar.
@@ -40,7 +40,7 @@ bubblewrap build           # app-release-bundle.aab dosyasını üretir
 - Play Console → **Uygulama bütünlüğü → Uygulama imzalama** sayfasındaki **SHA-256** parmak izini kopyala ve Render’da ortam değişkeni olarak ekle:
   - `ANDROID_SHA256` = parmak izi (birden fazlaysa virgülle; yerel anahtarınkini de ekleyebilirsin)
   - `ANDROID_PACKAGE` = `app.swipeup.twa` (paket adını değiştirdiysen onu yaz)
-- Doğrulama: `https://swipeup-hh1f.onrender.com/.well-known/assetlinks.json` parmak izini göstermeli. Göstermezse uygulamanın üstünde tarayıcı adres çubuğu görünür.
+- Doğrulama: `https://swipeup-5py5.onrender.com/.well-known/assetlinks.json` parmak izini göstermeli. Göstermezse uygulamanın üstünde tarayıcı adres çubuğu görünür.
 
 Play Console’da doldurulacaklar: içerik derecelendirme anketi (tanışma, kullanıcılar arası sohbet, canlı yayın, sanal jeton satın alma), hedef kitle **18+**, veri güvenliği formu (aşağıda), gizlilik politikası adresi, hesap silme adresi.
 
@@ -57,7 +57,7 @@ npx cap add ios && npx cap sync ios
 npx cap open ios           # Xcode açılır
 ```
 
-Xcode’da: Bundle ID `app.swipeup.ios`, ekibini seç, **Push Notifications** ve **Associated Domains** (`applinks:swipeup-hh1f.onrender.com`) yeteneklerini ekle, `Info.plist`’e kamera, mikrofon, fotoğraf ve konum izin açıklamalarını Türkçe yaz. Sonra Product → Archive → App Store Connect’e yükle.
+Xcode’da: Bundle ID `app.swipeup.ios`, ekibini seç, **Push Notifications** ve **Associated Domains** (`applinks:swipeup-5py5.onrender.com`) yeteneklerini ekle, `Info.plist`’e kamera, mikrofon, fotoğraf ve konum izin açıklamalarını Türkçe yaz. Sonra Product → Archive → App Store Connect’e yükle.
 
 Render’a ekle: `APPLE_TEAM_ID` (Apple geliştirici takım kimliğin) ve `IOS_BUNDLE` (`app.swipeup.ios`).
 
@@ -75,7 +75,7 @@ Uygulamanın topladıkları (formu doldururken kodla ve gizlilik politikasıyla 
 - Kamera ve mikrofon: canlı yayın, karaoke, aramalar, oyun sesli sohbeti (kayıt yalnızca kullanıcı paylaşırsa saklanır)
 - Üçüncü taraflarla paylaşım olarak belirtilmesi gerekenler: yüklenen fotoğraflar denetim için Sightengine’e, fal için gönderilen fincan fotoğrafları (yalnızca açık rızayla) Google Gemini’ye, GIF aramaları GIPHY’ye, müzik aramaları Spotify’a gider; Google / Apple ile giriş seçilirse kimlik numarası ve e-posta o sağlayıcıdan alınır
 - İsteğe bağlı (açık rızalı) olanlar: kampanya bildirimleri, konum, fal fotoğraflarının yapay zekayla yorumlanması; hepsi Ayarlar → İzinlerim’den geri alınabilir
-- Hesap silme: uygulama içinde Ayarlar → Hesabımı sil; web’de `https://swipeup-hh1f.onrender.com/hesap-silme`. Silinince profil, paylaşımlar, mesajlar ve yüklenen dosyalar silinir; ödeme kayıtları yasal süre (10 yıl) saklanır
+- Hesap silme: uygulama içinde Ayarlar → Hesabımı sil; web’de `https://swipeup-5py5.onrender.com/hesap-silme`. Silinince profil, paylaşımlar, mesajlar ve yüklenen dosyalar silinir; ödeme kayıtları yasal süre (10 yıl) saklanır
 - Veriler aktarım sırasında şifrelenir (HTTPS); sohbet dosyaları süreli imzalı bağlantılarla yalnızca sohbetteki kişilere açılır
 
 ## 4.1 KVKK: uygulama dışında yapılması gerekenler

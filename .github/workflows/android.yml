@@ -25,7 +25,7 @@ jobs:
       KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
       KS_SECRET: ${{ secrets.ANDROID_KEYSTORE_PASS }}
       GH_TOKEN: ${{ github.token }}
-      KEY_URL: https://swipeup-hh1f.onrender.com/api/internal/android-key
+      KEY_URL: https://swipeup-5py5.onrender.com/api/internal/android-key
     steps:
       - uses: actions/checkout@v5
 

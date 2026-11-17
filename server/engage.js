@@ -787,7 +787,7 @@ module.exports = function engage(app, ctx) {
     const qs = artist ? `track_name=${encodeURIComponent(title)}&artist_name=${encodeURIComponent(artist)}` : `q=${encodeURIComponent(title.replace(/\s[–—-]\s/g, ' '))}`;
     let out = null;
     try {
-      const r = await fetch(`https://lrclib.net/api/search?${qs}`, { headers: { 'User-Agent': 'SwipeUp-Karaoke/1.0 (https://swipeup-hh1f.onrender.com)' }, signal: AbortSignal.timeout(8000) });
+      const r = await fetch(`https://lrclib.net/api/search?${qs}`, { headers: { 'User-Agent': 'SwipeUp-Karaoke/1.0 (https://swipeup-5py5.onrender.com)' }, signal: AbortSignal.timeout(8000) });
       if (!r.ok) return null;
       const list = await r.json();
       const ok = (Array.isArray(list) ? list : []).filter((x) => x && !x.instrumental && (x.syncedLyrics || x.plainLyrics));
