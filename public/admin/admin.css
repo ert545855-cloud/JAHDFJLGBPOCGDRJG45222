@@ -566,3 +566,17 @@ tr.sgw td { background: color-mix(in srgb, #ffc926 10%, transparent); }
 .ih-new summary::-webkit-details-marker { display: none; }
 .ih-out, .ih-nf { white-space: pre-wrap; font-family: inherit; font-size: 13px; }
 .case .tbl { margin-top: 8px; }
+/* Kullanıcı hareketleri */
+.akt-f { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.akt-f .chip { cursor: pointer; border: 1px solid var(--line); background: var(--panel); }
+.akt-f .chip.on { background: var(--brand); color: #fff; border-color: transparent; }
+.akt-list { display: grid; }
+.akt { display: flex; gap: 10px; align-items: flex-start; padding: 9px 2px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.akt:last-child { border-bottom: 0; }
+.akt.bad { background: color-mix(in srgb, var(--bad) 6%, transparent); }
+.akt-ic { width: 26px; text-align: center; font-size: 16px; line-height: 22px; flex: none; }
+.akt-m { font-size: 12px; margin-top: 2px; }
+.akt-u { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; }
+.akt-u .av.sm { width: 20px; height: 20px; }
+.akt-more { margin-top: 10px; }
+.drawer .akt-box { max-height: 420px; overflow-y: auto; }

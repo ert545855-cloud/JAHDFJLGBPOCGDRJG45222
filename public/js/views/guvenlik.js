@@ -4,6 +4,7 @@ import { api, esc, toast, state, sheet, adoptToken } from '../core.js';
 
 const when = (t) => new Date(t).toLocaleString('tr-TR', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
 const ST = { planned: ['Planlandı', 'wait'], ok: ['İyi olduğunu bildirdin', 'ok'], help: ['Yardım istedin', 'bad'] };
+const akRows = (items) => items.map((x) => `<div class="gv-ak ${x.ok ? '' : 'bad'}"><span>${esc(x.text)}${x.ok ? '' : ' · başarısız'}</span><small class="muted">${when(x.at)}${x.ip ? ` · IP ${esc(x.ip)}` : ''}</small></div>`).join('') || '<p class="muted">Henüz kayıtlı hareket yok.</p>';
 const localInput = (t) => { const d = new Date(t); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
 
 function shareLink(s) {
@@ -60,7 +61,7 @@ export default async function guvenlik(view, kind, id) {
     <div class="gv"><div class="spinner"></div></div>`;
   const box = view.querySelector('.gv');
   const load = async () => {
-    const [sf, lg] = await Promise.all([api('/safety/mine').catch(() => ({ items: [] })), api('/security/logins').catch(() => null)]);
+    const [sf, lg, ak] = await Promise.all([api('/safety/mine').catch(() => ({ items: [] })), api('/security/logins').catch(() => null), api('/me/aktivite').catch(() => ({ items: [] }))]);
     const focusEv = kind === 'giris' && lg?.events.find((e) => e.id === id);
     box.innerHTML = `
       ${focusEv && !focusEv.notMe ? `<section class="gv-alert"><b>Bu giriş sen miydin?</b><p>${esc(focusEv.label)} · ${when(focusEv.at)} · IP ${esc(focusEv.ip)}</p>
@@ -80,6 +81,11 @@ export default async function guvenlik(view, kind, id) {
       <div class="gv-list">${(lg?.events || []).slice(0, 8).map((e) => `<div class="gv-card"><div class="gv-top"><b>${esc(e.label)}</b>${e.mine ? '<span class="st ok">Bu cihaz</span>' : e.notMe ? '<span class="st bad">Ben değilim dedin</span>' : e.newDevice ? '<span class="st wait">Yeni cihaz</span>' : ''}</div>
         <small class="muted">${when(e.at)} · ${esc(e.via || '')} · IP ${esc(e.ip || '')}</small>${e.newDevice && !e.notMe && !e.mine ? `<div class="gv-row"><button class="btn sm danger not-me" data-ev="${esc(e.id)}">Bu ben değilim</button></div>` : ''}</div>`).join('') || '<p class="muted">Henüz giriş kaydı yok.</p>'}</div>
       <div class="gv-row"><button class="btn sm lox">Diğer tüm cihazlardan çık</button><button class="btn sm not-me" data-ev="">Hesabıma başkası girdi</button></div>
+
+      <h3 class="gv-h">${icon('eye')} Son hareketlerin</h3>
+      <p class="gv-p">Hesabınla yapılan işlemler (mesaj ve gönderi metinleri hariç). Tanımadığın bir işlem görürsen “Hesabıma başkası girdi”ye dokun.</p>
+      <div class="gv-list gv-akt">${akRows(ak.items)}</div>
+      ${ak.items.length >= 40 ? '<button class="btn sm gv-akm">Daha eski hareketler</button>' : ''}
 
       <h3 class="gv-h">${icon('heart')} Güvenli tanışma</h3>
       <ul class="gv-ul">
@@ -107,6 +113,10 @@ export default async function guvenlik(view, kind, id) {
       </div>
       <p class="muted gv-foot">Kişisel verilerinle ilgili haklar için <a class="link" href="#/veri-taleplerim">Veri taleplerim</a> · <a class="link" href="#/legal/saklama">Saklama ve imha politikası</a></p>`;
     box.querySelector('.new').onclick = () => newShare(load);
+    let akBefore = ak.items[ak.items.length - 1]?.id;
+    box.querySelector('.gv-akm')?.addEventListener('click', async (e) => {
+      try { const r = await api(`/me/aktivite?before=${encodeURIComponent(akBefore)}`); box.querySelector('.gv-akt').insertAdjacentHTML('beforeend', akRows(r.items)); akBefore = r.items[r.items.length - 1]?.id; if (r.items.length < 40) e.target.remove(); } catch (er) { toast(er.message); }
+    });
     box.querySelector('.pw')?.addEventListener('click', passwordSheet);
     box.querySelector('.lox').onclick = async () => {
       if (!confirm('Bu cihaz dışındaki bütün oturumların kapatılsın mı?')) return;

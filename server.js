@@ -151,6 +151,7 @@ const tokenOk = (payload, u) => !!u && (payload.v || 0) === (u.tokenVer || 0);
 // Her başarılı giriş: trafik kaydı + yeni cihaz kontrolü (server/guvenlik.js)
 function signIn(req, u, via, fresh = false) {
   trafik.log('giris', { req, uid: u.id, path: via });
+  req.actorId = u.id; // giriş isteğinde henüz oturum yok: hareket kaydı bu kullanıcıya yazılsın
   try { featureCtx.onSignIn?.(req, store.get('users', u.id) || u, via, fresh); } catch (e) { console.error('[giriş]', e.message); }
   return sign(store.get('users', u.id) || u);
 }
@@ -209,6 +210,8 @@ const ipOf = (req) => {
   return String(req.socket?.remoteAddress || req.ip || '').replace(/^::ffff:/, '');
 };
 // 5651: trafik bilgisi kaydı (girişler, içerik işlemleri, canlı bağlantılar; 2 yıl, bütünlük zinciriyle)
+// Kullanıcı hareketleri: her üyenin yaptığı işlemler (metin içerikleri hariç), 1 yıl
+const aktivite = require('./server/aktivite')(store, { ipOf });
 const trafik = require('./server/trafik')(store, { ipOf, secret: () => process.env.TRAFIK_KEY || store.get('meta', 'secrets')?.trafikKey }); // ayrı anahtar: oturum anahtarı değişse de zincir doğrulanır
 
 // ================= Bildirimler =================
@@ -463,6 +466,7 @@ app.disable('x-powered-by');
 app.use(compression());
 app.use(express.json({ limit: '1mb' }));
 app.use(trafik.middleware);
+app.use(aktivite.middleware);
 // "__proto__", "constructor", "toString" gibi nesne prototipi adları ne anahtar ne değer olarak kabul edilir:
 // sabit tablolarda (ürün, fal türü, kategori…) arama yapan uçlar bu adlarla kandırılamasın, nesnelere prototip sızmasın.
 const PROTO_NAMES = new Set(Object.getOwnPropertyNames(Object.prototype));
@@ -2093,12 +2097,13 @@ const featureCtx = {
   store, io, auth, wrap, eco, notify, emitTo, brief, pub, postOut, chatOut, sendMessage, canSee, priv,
   isBlocked, limited, ipOf, markPrivate, signMedia, isMedia, isGif: (u) => GIF_HOSTS.test(String(u || '')), extractTags, cardOut, purgeUser, moderation, chatBetween, admin: adminApi,
   online, appEvent, falci, msgOut, falLock, shownAge, tagsOf, dropMediaCache: (id) => dropMediaCache(id), getMedia: (id) => getMedia(id), pushAdmins,
-  trafik, sign, bumpTokens, disconnectUser, setConsents, storyItem, storyVisible, storyAlive, createPost: (u, b) => createPost(u, b), cleanSticker, systemMsg: (c, t) => systemMsg(c, t), groupAvatar,
+  trafik, aktivite, sign, bumpTokens, disconnectUser, setConsents, storyItem, storyVisible, storyAlive, createPost: (u, b) => createPost(u, b), cleanSticker, systemMsg: (c, t) => systemMsg(c, t), groupAvatar,
   userFromReq: (req) => { try { const p = jwt.verify((req.headers.authorization || '').slice(7), JWT_SECRET, { algorithms: ['HS256'] }); const u = store.get('users', p.id); return tokenOk(p, u) ? u : null; } catch { return null; } },
 };
 require('./server/legal')(app, featureCtx); // hukuki uyum: künye, sözleşmeler, iade, KVKK başvuruları, hak ihlali bildirimleri
 require('./server/uyum')(app, featureCtx); // saklama ve imha, 5651 trafik dökümü, veri ihlali kaydı, yönetici uyarıları, muhasebe dökümü
-require('./server/guvenlik')(app, featureCtx); // güvenlik merkezi: buluşma paylaşımı, yeni cihaz uyarısı, giriş geçmişi
+require('./server/guvenlik')(app, featureCtx);
+require('./server/aktivite').routes(app, featureCtx); // kullanıcı hareketleri: üyenin kendisi, yönetimde kullanıcı kartı ve genel akış // güvenlik merkezi: buluşma paylaşımı, yeni cihaz uyarısı, giriş geçmişi
 require('./server/errlog')(app, featureCtx); // hata izleme (yönetim → Hatalar)
 require('./server/features')(app, featureCtx);
 require('./server/genel')(app, featureCtx);
@@ -2246,6 +2251,7 @@ io.on('connection', (socket) => {
   const uid = socket.data.userId;
   const sockIp = ipOf(socket.request); const sockAt = Date.now();
   trafik.log('baglanti', { uid, ip: sockIp, method: 'WS', path: 'bağlandı', dev: socket.handshake.headers['x-device'] || socket.handshake.auth?.device, ua: socket.handshake.headers['user-agent'] });
+  aktivite.socketHook(socket, uid, sockIp);
   socket.on('disconnect', () => trafik.log('baglanti', { uid, ip: sockIp, method: 'WS', path: `ayrıldı (${Math.round((Date.now() - sockAt) / 1000)} sn)`, ua: socket.handshake.headers['user-agent'] }));
   socket.use((pkt, next) => { if (pkt.slice(1).some((a) => typeof a !== 'function' && protoBad(a))) return; next(); }); // prototip adı taşıyan olayları sessizce düşür
   if (!online.has(uid)) online.set(uid, new Set());
@@ -2572,7 +2578,7 @@ async function ensureOfficial() {
 (async () => {
   await store.init();
   await store.initStorage();
-  trafik.start();
+  trafik.start(); aktivite.start();
   const coinMoved = require('./server/coinrate')(store); // 1 jeton = 1 TL geçişi (bir kez)
   // Eski sohbet dosyalarını da özel yap (bir kez; sonraki açılışlarda yalnız eksikler)
   { let n = 0; store.filter('messages', (m) => m.media && m.mediaType !== 'gif' && MEDIA_RE.test(m.media)).forEach((m) => { const id = MEDIA_RE.exec(m.media)[1]; const meta = store.get('media_meta', id); if (!meta?.private || (m.viewOnce && !meta.once)) { markPrivate(m.media, m.from, !!m.viewOnce); n++; } });

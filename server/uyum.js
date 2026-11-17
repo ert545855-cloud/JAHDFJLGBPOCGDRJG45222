@@ -31,6 +31,7 @@ const RULES = [
   ['kvkk', 'Sonuçlanan KVKK başvuruları ve hak ihlali bildirimleri', '3 yıl'],
   ['consentGone', 'Silinen hesapların rıza kayıtları', '3 yıl (İYS onay ispatı)'],
   ['loginEv', 'Giriş ve cihaz kayıtları', '1 yıl'],
+  ['aktivite', 'Uygulama içi hareket kayıtları (işlem türü, zaman, karşı taraf, IP; mesaj metni hariç)', '1 yıl'],
   ['shares', 'Buluşma paylaşım bağlantıları', 'Buluşmadan 7 gün sonra'],
   ['trafik', '5651 trafik kayıtları', '2 yıl (en az 1 yıl zorunlu)'],
   ['money', 'Sipariş, ödeme, iade ve jeton hareketleri', '10 yıl (vergi ve ticaret mevzuatı)'],
@@ -60,7 +61,7 @@ module.exports = function uyum(app, ctx) {
     if (req.method !== 'GET') return;
     const p = req.originalUrl.split('?')[0];
     const ex = EXPORTS.find(([re]) => re.test(p)); if (ex) { alert(req.admin, 'disari-aktarim', ex[1]); return; }
-    const m = /^\/api\/admin\/users\/([\w-]{6,})$/.exec(p); if (!m) return;
+    const m = /^\/api\/admin\/users\/([\w-]{6,})(?:\/aktivite)?$/.exec(p); if (!m) return;
     const s = seen.get(req.admin.id) || { ids: new Map(), warnedAt: 0 }; seen.set(req.admin.id, s);
     const t = now(); s.ids.set(m[1], t); for (const [k, v] of s.ids) if (t - v > 10 * 60000) s.ids.delete(k);
     if (s.ids.size >= 40 && t - s.warnedAt > 3600000) { s.warnedAt = t; alert(req.admin, 'toplu-inceleme', `10 dakikada ${s.ids.size} farklı kullanıcının profilini açtı`); }
@@ -91,6 +92,7 @@ module.exports = function uyum(app, ctx) {
     for (const col of ['kvkk_requests', 'takedowns']) store.filter(col, (x) => x.status !== 'open' && older(x.answeredAt || x.closedAt || x.at, KEEP.kvkk)).forEach((x) => del(col, x, 'kvkk'));
     store.filter('consent_log', (x) => !user(x.userId) && older(x.at, KEEP.consentGone)).forEach((x) => del('consent_log', x, 'consentGone'));
     store.filter('login_events', (x) => older(x.at, KEEP.loginEv)).forEach((x) => del('login_events', x, 'loginEv'));
+    { const n = await ctx.aktivite?.purge?.(); if (n) add('aktivite', n); }
     store.filter('safety', (x) => older(x.when || x.at, KEEP.shares)).forEach((x) => del('safety', x, 'shares'));
     for (const col of ['orders', 'refunds', 'coin_tx', 'earn_tx', 'payouts', 'mk_orders']) store.filter(col, (x) => older(x.closedAt || x.at, KEEP.money)).forEach((x) => del(col, x, 'money'));
     store.filter('adm_alerts', (x) => older(x.at, KEEP.alerts)).forEach((x) => store.del('adm_alerts', x.id));

@@ -5,7 +5,7 @@ import { icon } from '/js/icons.js';
 export const BASE = location.pathname.split('/').slice(0, 2).join('/');
 const S = { token: localStorage.getItem('su_admin'), me: null, counts: {} };
 const can = (p) => S.me?.role === 'owner' || (S.me?.perms || []).includes(p);
-const SEC_PERM = { growth: 'growth', users: 'users', support: 'support', reports: 'reports', appeals: 'appeals', flags: 'flags', verify: 'verify', orders: 'orders', payouts: 'payouts', market: 'market', ledger: 'erp', erp: 'erp', promos: 'promos', quests: 'quests', songs: 'songs', contests: 'contests', fal: 'fal', content: 'content', media: 'content', announce: 'announce', notes: 'notes', audit: 'audit', errors: 'audit', database: 'database', maintenance: 'maintenance', settings: 'settings', tags: 'tags', engage: 'engage', karaoke: 'engage', photomod: 'reports', hukuk: 'hukuk' };
+const SEC_PERM = { growth: 'growth', users: 'users', support: 'support', reports: 'reports', appeals: 'appeals', flags: 'flags', verify: 'verify', orders: 'orders', payouts: 'payouts', market: 'market', ledger: 'erp', erp: 'erp', promos: 'promos', quests: 'quests', songs: 'songs', contests: 'contests', fal: 'fal', content: 'content', media: 'content', announce: 'announce', notes: 'notes', audit: 'audit', errors: 'audit', database: 'database', maintenance: 'maintenance', settings: 'settings', tags: 'tags', engage: 'engage', karaoke: 'engage', photomod: 'reports', hukuk: 'hukuk', aktivite: 'users' };
 const canSec = (k) => !SEC_PERM[k] || can(SEC_PERM[k]);
 const root = document.getElementById('root');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -44,6 +44,7 @@ const SECTIONS = [
   ['overview', 'Genel bakış', 'home'],
   ['growth', 'Büyüme', 'gauge'],
   ['users', 'Kullanıcılar', 'users'],
+  ['aktivite', 'Hareketler', 'eye'],
   ['support', 'Destek', 'question', 'supportOpen'],
   ['tags', 'Etiketler', 'star'],
   ['reports', 'Şikayetler', 'flag', 'reportsOpen'],
@@ -204,7 +205,7 @@ function forgot() {
 async function render() {
   if (!S.token) return login();
   if (!S.me) { try { S.me = await api('/me'); } catch { return; } }
-  const cur = (location.hash.slice(2) || 'overview').split('/')[0];
+  const cur = (location.hash.slice(2) || 'overview').split(/[/?]/)[0];
   const nav = (cls) => SECTIONS.filter(([k]) => canSec(k)).map(([k, l, ic, cnt]) => `<a class="nav ${cur === k ? 'on' : ''}" href="#/${k}">${icon(ic)}<span>${l}</span>${cnt && S.counts[cnt] ? `<span class="n">${S.counts[cnt]}</span>` : ''}</a>`).join('');
   root.innerHTML = `<div class="shell">
     <aside class="side"><div class="brand"><img class="mark" src="/icons/mark.png" alt="">swipeup <small>yönetim</small></div>${nav()}
@@ -325,6 +326,7 @@ async function userDrawer(id, onChange) {
           <dt>Takipçi / takip</dt><dd>${u.followers} / ${u.following}</dd><dt>Gönderilen mesaj</dt><dd>${u.messagesSent}</dd><dt>Eşleşme</dt><dd>${u.matches}</dd>
           <dt>Yaptığı şikayet</dt><dd>${u.reportsBy}</dd>
           <dt>Doğum tarihi</dt><dd>${esc(u.birthdate || '—')}</dd><dt>Jeton</dt><dd>${u.coins}</dd><dt>Kazanç (bakiye)</dt><dd>${tl(u.earnings)}</dd></dl></div></div>
+        <div class="panel akt-p"><div class="ph"><h3>Hareketler</h3><a class="btn sm" href="#/aktivite?u=${encodeURIComponent(u.username)}">Tam ekran</a></div><div class="pb akt-box"><div class="spin"></div></div></div>
         ${u.recentPosts.length ? `<div class="panel"><div class="ph"><h3>Son gönderiler</h3></div><div class="pb thumbs">${u.recentPosts.map((p) => (p.type === 'reel' ? `<video src="${esc(p.media)}" ${p.poster ? `poster="${esc(p.poster)}"` : ''} muted></video>` : `<img src="${esc(p.media)}" alt="">`)).join('')}</div></div>` : ''}
         <div class="panel"><div class="ph"><h3>Hakkındaki şikayetler · ${u.reportsAbout.length}</h3></div>${u.reportsAbout.length ? u.reportsAbout.map((r) => `<div class="case"><div class="row"><span class="chip warn">${esc(REASON[r.reason] || r.reason)}</span><span class="muted">${dt(r.at)} · @${esc(r.fromUser?.username || '?')}</span><span class="chip">${r.status === 'open' ? 'Açık' : 'Kapandı'}</span></div>${r.details ? `<div class="det">${esc(r.details)}</div>` : ''}</div>`).join('') : '<div class="empty">Şikayet yok.</div>'}</div>
         ${u.appeals.length ? `<div class="panel"><div class="ph"><h3>İtirazları</h3></div>${u.appeals.map((a) => `<div class="case"><div class="row"><span class="chip">${{ open: 'Bekliyor', accepted: 'Kabul', rejected: 'Ret' }[a.status]}</span><span class="muted">${dt(a.at)}</span></div><div class="det">${esc(a.text)}</div></div>`).join('')}</div>` : ''}
@@ -332,6 +334,7 @@ async function userDrawer(id, onChange) {
       </div>`;
     const act = async (fn, msg) => { try { await fn(); toast(msg); await paint(); onChange?.(); refreshCounts(); } catch (e) { toast(e.message); } };
     dr.querySelector('.x').onclick = close;
+    const ab = dr.querySelector('.akt-box'); if (ab) aktList(ab, `/users/${id}/aktivite`, false);
     const tp = dr.querySelector('.utags-p .pb');
     if (tp) api('/tags').then((T) => {
       let sel = new Set(u.tags || []);
@@ -1792,6 +1795,53 @@ VIEWS.settings = async (main) => {
       toast('Ayarlar kaydedildi.');
     } catch (er) { toast(er.message); }
   };
+};
+
+// ---- Kullanıcı hareketleri ----
+const AKT_IC = { hesap: '👤', giris: '🔑', kaydirma: '👆', eslesme: '💞', mesaj: '💬', paylasim: '📷', hikaye: '⭕', profil: '🪪', sosyal: '❤️', oyun: '🎲', canli: '📹', magaza: '🪙', fal: '🔮', guvenlik: '🛡️', destek: '🆘', diger: '•' };
+function aktList(box, path, withUser, opts = {}) {
+  let kat = opts.kat || ''; let before = null; let K = null; const seen = new Set();
+  const rowHtml = (x) => `<div class="akt ${x.ok ? '' : 'bad'}" data-id="${esc(x.id)}"><span class="akt-ic" title="${esc(K?.[x.kat] || x.kat)}">${AKT_IC[x.kat] || '•'}</span>
+    <div class="grow">${withUser && x.user ? `<button class="akt-u" data-u="${esc(x.user.id || '')}">${x.user.avatar ? `<img class="av sm" src="${esc(x.user.avatar)}" alt="">` : ''}<b>${esc(x.user.name || '')}</b> <span class="muted">@${esc(x.user.username || '')}</span></button> ` : ''}<span>${esc(x.text)}</span>${x.ok ? '' : ' <span class="chip bad">başarısız</span>'}
+    <div class="muted akt-m">${dt(x.at)}${x.ip ? ` · IP ${esc(x.ip)}` : ''}${x.meta?.kanal ? ' · canlı bağlantı' : ''}</div></div></div>`;
+  const draw = (items, append) => {
+    const list = box.querySelector('.akt-list'); const fresh = items.filter((x) => !seen.has(x.id)); fresh.forEach((x) => seen.add(x.id));
+    if (append) list.insertAdjacentHTML('beforeend', fresh.map(rowHtml).join(''));
+    else list.innerHTML = fresh.map(rowHtml).join('') || '<div class="empty">Bu filtrede hareket yok.</div>';
+    box.querySelector('.akt-more').hidden = items.length < (withUser ? 80 : 60);
+  };
+  const q = (b) => `${path}${path.includes('?') ? '&' : '?'}${kat ? `kat=${kat}&` : ''}${b ? `before=${encodeURIComponent(b)}` : ''}`;
+  const load = async (append) => {
+    const r = await api(q(append ? before : null)); K = r.kat;
+    if (!box.querySelector('.akt-list')) {
+      box.innerHTML = `<div class="akt-f"><button class="chip on" data-k="">Tümü</button>${Object.entries(K).map(([k, l]) => `<button class="chip" data-k="${k}">${AKT_IC[k] || ''} ${esc(l)}</button>`).join('')}</div>
+        <div class="akt-list"></div><button class="btn sm akt-more" hidden>Daha eski hareketler</button>
+        <p class="muted" style="font-size:12px;margin:8px 0 0">Mesaj, yorum ve gönderi metinleri kaydedilmez; yalnızca işlemin türü, zamanı, karşı taraf ve IP adresi. Kayıtlar ${Math.round((r.keepDays || 365) / 30)} ay saklanır, görüntülemeler işlem kaydına geçer.</p>`;
+      box.querySelector('.akt-f').onclick = (e) => { const b = e.target.closest('[data-k]'); if (!b) return; kat = b.dataset.k; box.querySelectorAll('.akt-f .chip').forEach((x) => x.classList.toggle('on', x === b)); seen.clear(); before = null; load(false).catch((er) => toast(er.message)); };
+      box.querySelector('.akt-more').onclick = () => load(true).catch((er) => toast(er.message));
+      box.querySelector('.akt-list').onclick = (e) => { const u = e.target.closest('[data-u]'); if (u?.dataset.u) userDrawer(u.dataset.u); };
+    }
+    if (r.items.length) before = r.items[r.items.length - 1].id;
+    draw(r.items, append);
+    return r;
+  };
+  load(false).catch((er) => { box.innerHTML = `<div class="empty">${esc(er.message)}</div>`; });
+  return { refresh: async () => { const r = await api(q(null)); const fresh = r.items.filter((x) => !seen.has(x.id)); if (!fresh.length) return; fresh.forEach((x) => seen.add(x.id)); const list = box.querySelector('.akt-list'); list.querySelector('.empty')?.remove(); list.insertAdjacentHTML('afterbegin', fresh.map(rowHtml).join('')); } };
+}
+VIEWS.aktivite = async (main) => {
+  const pre = new URLSearchParams(location.hash.split('?')[1] || '').get('u') || '';
+  main.innerHTML = `${head('Hareketler', 'Üyelerin uygulamada yaptığı işlemler: giriş, kaydırma, mesaj, paylaşım, oyun, satın alma, güvenlik. En yeni üstte.')}
+    <form class="panel ak-f"><div class="pb row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
+      <label class="muted" style="font-size:12px">Kullanıcı adı (boşsa herkes)<input class="field" name="u" value="${esc(pre)}" placeholder="@kullanici"></label>
+      <button class="btn sm primary">${icon('search')} Göster</button>
+      <label class="row" style="gap:6px;font-size:13px"><input type="checkbox" name="live" checked> Canlı akış (10 sn’de bir yenile)</label></div></form>
+    <div class="panel"><div class="pb ak-box"><div class="spin"></div></div></div>`;
+  const f = main.querySelector('.ak-f'); const box = main.querySelector('.ak-box');
+  let ctl = null;
+  const run = () => { box.innerHTML = '<div class="spin"></div>'; const u = f.u.value.trim().replace(/^@/, ''); ctl = aktList(box, `/aktivite${u ? `?username=${encodeURIComponent(u)}` : ''}`, true); };
+  f.onsubmit = (e) => { e.preventDefault(); run(); };
+  run();
+  const t = setInterval(() => { if (!document.body.contains(box)) return clearInterval(t); if (f.live.checked && !document.hidden) ctl?.refresh().catch(() => {}); }, 10000);
 };
 
 // ---- Hukuk ve uyum: KVKK başvuruları (m.13: 30 gün), iade talepleri, hak ihlali bildirimleri, izin kayıtları ----

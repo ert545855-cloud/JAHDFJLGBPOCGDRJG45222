@@ -238,7 +238,7 @@ module.exports = function features(app, ctx) {
     purgeUser(req.user.id);
     res.json({ ok: true });
   }));
-  app.get('/api/me/export', auth, (req, res) => {
+  app.get('/api/me/export', auth, async (req, res) => {
     if (limited('export:' + req.user.id, 5, DAY)) return res.status(429).json({ error: 'Bugün çok fazla indirme yaptın.' });
     const id = req.user.id;
     const name = (uid) => store.get('users', uid)?.username || '(silinmiş)';
@@ -260,6 +260,7 @@ module.exports = function features(app, ctx) {
       reportsSent: store.filter('reports', (r) => r.from === id).map((r) => ({ user: name(r.to), reason: r.reason, at: new Date(r.at).toISOString() })),
       orders: store.filter('orders', (o) => o.userId === id),
       coinHistory: store.filter('coin_tx', (t) => t.userId === id),
+      activity: ctx.aktivite ? (await ctx.aktivite.query({ uid: id, limit: 500 })).map((x) => ({ at: new Date(x.at).toISOString(), category: x.kat, action: x.text, ok: x.ok, ip: x.ip })) : [], // son 500 hareket
       notifications: store.filter('notifications', (n) => n.userId === id).map((n) => ({ text: n.text, at: new Date(n.at).toISOString() })),
     };
     res.setHeader('Content-Disposition', `attachment; filename="swipeup-${req.user.username}-veriler.json"`);

@@ -92,6 +92,7 @@ ${sellerTable()}
 <tr><td>İşlem güvenliği: IP adresi, oturum ve giriş kayıtları, rastgele cihaz kimliği</td><td>Hesap güvenliği, sahte hesap ve dolandırıcılığın önlenmesi, 5651 s. Kanun kayıt yükümlülükleri</td><td>Hukuki yükümlülük (m.5/2-ç), meşru menfaat (m.5/2-f)</td></tr>
 <tr><td>Fal isteğindeki fotoğraf ve notlar</td><td>Yapay zekayla yorum taslağı hazırlanması</td><td>Açık rıza (m.5/1)</td></tr>
 <tr><td>E-posta ve bildirim aboneliği</td><td>Kampanya ve yenilik iletileri</td><td>Açık rıza (m.5/1) ve ticari ileti onayı (6563 s. Kanun)</td></tr>
+<tr><td>Uygulama içi hareketler: işlem türü, zamanı, karşı taraf, IP ve cihaz kimliği (mesaj ve gönderi metinleri hariç)</td><td>Hesap güvenliği, destek ve şikayetlerin incelenmesi, sahte hesap ve dolandırıcılığın önlenmesi</td><td>Meşru menfaat (m.5/2-f), hakkın tesisi ve korunması (m.5/2-e); 1 yıl saklanır</td></tr>
 <tr><td>Buluşma paylaşımı: yer, saat, kiminle buluştuğun, durumun</td><td>Senin isteğinle güvendiğin kişiye gösterilmesi (Güvenlik merkezi)</td><td>Sözleşmenin ifası (m.5/2-c); buluşmadan 7 gün sonra silinir</td></tr>
 <tr><td>Açık rıza ve onay kayıtları</td><td>Verdiğin izinleri ve kabul ettiğin belge sürümlerini ispat etmek</td><td>Hukuki yükümlülük (m.5/2-ç), hakkın tesisi (m.5/2-e)</td></tr>
 </tbody></table></div>
@@ -130,6 +131,7 @@ ${sellerTable()}
 <li><b>Ödeme kayıtları:</b> sipariş kodu, tutar, havale/EFT gönderen adı, onayladığın sözleşme metni, iade için verdiğin IBAN. Kart bilgisi toplamayız.</li>
 <li><b>Teknik veriler:</b> IP adresi ve tarayıcıda oluşturulan rastgele bir cihaz kimliği (spam ve sahte hesapları önlemek için), bildirim aboneliği, son görülme zamanı, uygulamayı hangi gün kullandığın (istatistik için).</li>
 <li><b>Giriş ve trafik kayıtları:</b> girişlerin, içerik oluşturan işlemlerin ve canlı bağlantıların IP adresi, zamanı, cihaz ve tarayıcı bilgisi. 5651 sayılı Kanun gereği 2 yıl saklanır; içeriğin kendisi bu kayıtlara girmez. Tanımadığımız bir cihazdan giriş yapılırsa seni uyarmak için de kullanılır.</li>
+<li><b>Uygulama içi hareketler:</b> hangi işlemi ne zaman yaptığın (ör. giriş, kaydırma, mesaj gönderme, paylaşım, oyun, satın alma), karşı taraf ve IP adresi. Mesaj, yorum ve gönderi metinleri bu kayda girmez. Hesap güvenliği, destek talepleri ve kötüye kullanımın önlenmesi için 1 yıl saklanır; Güvenlik merkezinde kendi hareketlerini görebilirsin.</li>
 <li><b>Buluşma paylaşımı:</b> Güvenlik merkezinden bir buluşmayı paylaşırsan yer, saat, (seçersen) kiminle buluştuğun ve durumun, bağlantıyı verdiğin kişiye gösterilir; buluşmadan 7 gün sonra silinir.</li>
 </ul>
 <h3>Neden işliyoruz</h3>
@@ -288,6 +290,7 @@ ${PROVIDERS}
         ['Doğrulama selfiesi', 'Karardan sonra 30 gün', 'Fotoğraf silinir, yalnız sonuç kalır'],
         ['Bildirimler', 'Okunanlar 180 gün, tümü en çok 1 yıl', 'Periyodik imha'],
         ['Giriş ve cihaz geçmişi', '1 yıl', 'Periyodik imha'],
+        ['Uygulama içi hareketler (işlem türü, zaman, IP; metinler hariç)', '1 yıl', 'Periyodik imha'],
         ['5651 trafik kayıtları', '2 yıl (kanunen en az 1 yıl)', 'Süre dolunca kendiliğinden'],
         ['Şikayet, moderasyon, itiraz ve destek kayıtları', 'Kapanıştan sonra 2 yıl', 'Periyodik imha'],
         ['KVKK başvuruları, hak ihlali bildirimleri', 'Sonuçlandıktan sonra 3 yıl', 'Periyodik imha'],
