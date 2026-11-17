@@ -259,7 +259,7 @@ async function notify(userId, n) {
   // Bu cihazda başka hesap da kayıtlıysa bildirimin hangi hesaba geldiği yazılır
   const shared = (s) => store.filter('pushSubs', (x) => x.sub?.endpoint === s.sub?.endpoint && x.userId !== userId).length > 0;
   await Promise.all(subs.map((s) => webpush.sendNotification(s.sub, JSON.stringify(shared(s) && me ? { ...body, title: `@${me.username} · ${body.title}` } : body), { TTL: n.type === 'call' ? 30 : 3600, urgency: n.type === 'call' || n.type === 'message' ? 'high' : 'normal' })
-    .catch((e) => { if (e.statusCode === 404 || e.statusCode === 410) store.del('pushSubs', s.id); })));
+    .then(() => pushResult(s, null)).catch((e) => pushResult(s, e))));
 }
 
 // ================= Sohbet =================
@@ -2100,6 +2100,29 @@ app.post('/api/share', auth, (req, res) => {
   }
   if (!sent) return res.status(400).json({ error: 'Gönderilemedi.' });
   res.json({ ok: true, sent, chatId: chats.length === 1 ? chats[0] : null });
+});
+
+// Bildirim sonucu: hata cihaz kaydına ve sunucu kayıtlarına yazılır (Apple / Google ne dediyse); geçersiz abonelik silinir
+const pushHost = (s) => { try { return new URL(s.sub.endpoint).hostname.replace(/^.*?(apple|fcm|mozilla|windows|wns)\..*$/, '$1'); } catch { return '?'; } };
+const pushWarned = new Map();
+function pushResult(s, e) {
+  if (!e) { if (s.lastErr || !s.lastOk || now() - s.lastOk > 3600000) store.update('pushSubs', s.id, { lastOk: now(), lastErr: null }); return; }
+  const code = e.statusCode || 0; const msg = String(e.body || e.message || '').slice(0, 200);
+  if (code === 404 || code === 410) { store.del('pushSubs', s.id); return; }
+  store.update('pushSubs', s.id, { lastErr: { code, msg, at: now() } });
+  if (now() - (pushWarned.get(s.id) || 0) > 3600000) { pushWarned.set(s.id, now()); console.warn(`[push] ${pushHost(s)} ${code} ${msg}`); }
+}
+// Yönetim → kullanıcı → Test bildirimi: görünürlük ve tercih fark etmeksizin bütün cihazlarına gönderir, sonucu döndürür
+app.post('/api/admin/users/:id/push-test', adminApi.adminAuth, async (req, res) => {
+  const u = store.get('users', req.params.id); if (!u) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+  if (!VAPID) return res.status(400).json({ error: 'Bildirim anahtarı (VAPID) yok.' });
+  const subs = store.filter('pushSubs', (x) => x.userId === u.id);
+  const body = JSON.stringify({ title: 'SwipeUp', body: 'Test bildirimi: bildirimler çalışıyor 🎉', url: '/#/notifications', tag: `${u.id.slice(0, 8)}:test`, icon: '/icons/icon-192.png', uid: u.id });
+  const results = await Promise.all(subs.map((s) => webpush.sendNotification(s.sub, body, { TTL: 600, urgency: 'high' })
+    .then(() => { pushResult(s, null); return { device: pushHost(s), ok: true }; })
+    .catch((e) => { pushResult(s, e); return { device: pushHost(s), ok: false, status: e.statusCode || 0, error: String(e.body || e.message || '').slice(0, 160) }; })));
+  adminApi.audit?.(req.admin, 'test bildirimi gönderdi', u.id);
+  res.json({ results });
 });
 
 // ---------- Yönetici telefon/masaüstü bildirimleri ----------

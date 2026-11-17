@@ -318,6 +318,7 @@ async function userDrawer(id, onChange) {
             ${u.verified && can('users_edit') ? `<button class="btn unv">${icon('close')} Mavi tiki kaldır</button>` : ''}
             ${u.status !== 'active' && can('users_ban') ? `<button class="btn ok unban">${icon('check')} Yasağı kaldır</button>` : ''}
             ${can('users_edit') ? `<button class="btn pw">${icon('key')} Geçici şifre ver</button>` : ''}
+            ${can('users_edit') ? `<button class="btn ptest">${icon('bell')} Test bildirimi</button>` : ''}
             ${can('users_edit') && u.role !== 'falci' ? `<button class="btn danger del">${icon('trash')} Hesabı sil</button>` : ''}
           </div></div></div>
         ${can('tags') ? '<div class="panel utags-p"><div class="ph"><h3>Özel etiketler</h3><a class="btn sm" href="#/tags">Etiketleri yönet</a></div><div class="pb"><div class="spin"></div></div></div>' : ''}
@@ -359,6 +360,13 @@ async function userDrawer(id, onChange) {
     };
     dr.querySelector('.unv')?.addEventListener('click', () => { if (confirm('Mavi tik kaldırılsın mı?')) act(() => api(`/users/${id}/unverify`, { body: {} }), 'Mavi tik kaldırıldı.'); });
     dr.querySelector('.unban')?.addEventListener('click', () => act(() => api(`/users/${id}/unban`, { body: {} }), 'Yasak kaldırıldı.'));
+    dr.querySelector('.ptest')?.addEventListener('click', async () => {
+      try {
+        const r = await api(`/users/${id}/push-test`, { body: {} });
+        if (!r.results.length) return alert('Bu kullanıcının kayıtlı bildirim cihazı yok. Uygulamada bildirimleri açması gerekiyor.');
+        alert(r.results.map((x) => `${x.device}: ${x.ok ? 'gönderildi ✓' : `HATA ${x.status || ''} ${x.error || ''}`}`).join('\n'));
+      } catch (e) { toast(e.message); }
+    });
     if (dr.querySelector('.pw')) dr.querySelector('.pw').onclick = async () => {
       if (!confirm('Kullanıcının şifresi sıfırlanıp geçici bir şifre üretilsin mi?')) return;
       try { const r = await api(`/users/${id}/password`, { body: {} }); prompt('Geçici şifre (kullanıcıya ilet):', r.password); } catch (e) { toast(e.message); }
