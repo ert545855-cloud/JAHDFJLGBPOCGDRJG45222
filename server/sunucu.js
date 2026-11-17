@@ -202,6 +202,56 @@ module.exports = function sunucu(app, ctx) {
     res.download(f, name);
   });
 
+  // ================= E-posta: gönderim testi ve alan adı doğrulama kayıtları =================
+  const mail = require('./mail');
+  // Hostinger e-postasının varsayılan kayıtları (SPF + DKIM); DMARC yoksa izleme modunda eklenir
+  const MAIL_DNS = [
+    { name: 'hostingermail-a._domainkey', type: 'CNAME', content: 'hostingermail-a.dkim.mail.hostinger.com' },
+    { name: 'hostingermail-b._domainkey', type: 'CNAME', content: 'hostingermail-b.dkim.mail.hostinger.com' },
+    { name: 'hostingermail-c._domainkey', type: 'CNAME', content: 'hostingermail-c.dkim.mail.hostinger.com' },
+  ];
+  async function mailDns() {
+    const zone = await hapi('GET', `/api/dns/v1/zones/${encodeURIComponent(DOM())}`);
+    const z = Array.isArray(zone) ? zone : [];
+    const txt = (name) => z.filter((r) => r.name === name && r.type === 'TXT').flatMap((r) => (r.records || []).map((x) => String(x.content || '').replace(/^"|"$/g, '')));
+    const spf = txt('@').find((t) => /^v=spf1/i.test(t)) || null;
+    const dmarc = txt('_dmarc').find((t) => /^v=DMARC1/i.test(t)) || null;
+    const dkim = z.filter((r) => /_domainkey$/.test(r.name)).map((r) => r.name);
+    const mx = z.filter((r) => r.name === '@' && r.type === 'MX').flatMap((r) => (r.records || []).map((x) => x.content));
+    const missing = MAIL_DNS.filter((d) => !dkim.includes(d.name));
+    return { spf, spfOk: !!spf && /hostinger/i.test(spf), dmarc, dkim, mx, missing: missing.map((d) => d.name) };
+  }
+  async function fixMailDns(by) {
+    const st = await mailDns(); const added = [];
+    for (const d of MAIL_DNS.filter((x) => st.missing.includes(x.name))) {
+      await hapi('PUT', `/api/dns/v1/zones/${encodeURIComponent(DOM())}`, { overwrite: false, zone: [{ name: d.name, type: d.type, ttl: 300, records: [{ content: d.content }] }] });
+      added.push(d.name);
+    }
+    if (!st.spf) { await hapi('PUT', `/api/dns/v1/zones/${encodeURIComponent(DOM())}`, { overwrite: false, zone: [{ name: '@', type: 'TXT', ttl: 3600, records: [{ content: 'v=spf1 include:_spf.mail.hostinger.com ~all' }] }] }); added.push('SPF'); }
+    if (added.length) console.log(`[eposta] DNS doğrulama kayıtları eklendi (${by}): ${added.join(', ')}`);
+    return added;
+  }
+  app.get('/api/admin/sunucu/eposta', ...gate, async (req, res) => {
+    const out = { config: mail.info(), dns: null, dnsError: null, verify: null };
+    try { await mail.verify(); out.verify = { ok: true }; } catch (e) { out.verify = { ok: false, error: e.message }; }
+    if (process.env.HOSTINGER_API_TOKEN) { try { out.dns = await mailDns(); } catch (e) { out.dnsError = e.message; } }
+    res.json(out);
+  });
+  app.post('/api/admin/sunucu/eposta/test', ...gate, async (req, res) => {
+    const to = String(req.body?.to || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/.test(to)) return res.status(400).json({ error: 'Geçerli bir e-posta adresi yaz.' });
+    try {
+      const r = await mail.send(to, 'SwipeUp test e-postası', `Merhaba,\n\nBu e-posta SwipeUp yönetim panelinden gönderilen bir denemedir. Geldiyse e-posta gönderimi çalışıyor.\n\nGelen kutusunda yoksa Spam / Gereksiz klasörüne de bak.\n\nSwipeUp`);
+      audit(req, 'test e-postası gönderdi', to.replace(/^(.).*(@.*)$/, '$1***$2'));
+      res.json({ ok: true, accepted: r?.accepted || [], rejected: r?.rejected || [], response: String(r?.response || '').slice(0, 200), messageId: r?.messageId || null });
+    } catch (e) { res.status(400).json({ error: `Gönderilemedi: ${e.message}` }); }
+  });
+  app.post('/api/admin/sunucu/eposta/dns', ...gate, async (req, res) => {
+    try { const added = await fixMailDns('panel'); audit(req, 'e-posta DNS kayıtlarını tamamladı', added.join(', ') || 'eksik yok'); res.json({ added }); } catch (e) { fail(res, e); }
+  });
+  // Açılışta: Hostinger bağlıysa ve DKIM kayıtları eksikse ekle (yalnız ekler, var olan kayda dokunmaz)
+  if (process.env.HOSTINGER_API_TOKEN && isVds()) setTimeout(() => fixMailDns('otomatik').catch((e) => console.error('[eposta] DNS kontrolü:', e.message)), 30000).unref?.();
+
   // ================= Android imza anahtarı =================
   // Anahtar sunucu ayarlarında (ANDROID_KEYSTORE_B64); kopyası /var/backups/swipeup/android. Kaybolursa uygulama güncellenemez:
   // Sahip buradan indirip sunucu dışında saklar. Her indirme işlem kaydına yazılır.

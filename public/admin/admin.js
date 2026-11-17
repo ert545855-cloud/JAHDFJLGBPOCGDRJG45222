@@ -1353,6 +1353,7 @@ VIEWS.sunucu = async (main) => {
       <div class="muted" style="font-size:12.5px;margin-top:6px">${d.media.backupDir ? `Her dosyanın ikinci kopyası ${esc(d.media.backupDir)} klasöründe; silinen dosyanın kopyası 7 gün sonra temizlenir.` : 'İkinci kopya kapalı.'}${d.media.move ? ` ${dt(d.media.move.at)} · veritabanından ${d.media.move.moved} dosya (${d.media.move.mb} MB) taşındı.` : ''}</div></div></div>` : ''}
     ${d.snapshots?.dir ? `<div class="panel" style="margin-bottom:14px"><div class="ph"><h3>5 dakikalık kayıt yedekleri</h3><span class="muted" style="font-size:12.5px">${d.snapshots.count} dosya · ${bytes(d.snapshots.bytes)} · 24 saat hepsi, 7 gün saatlik, 30 gün günlük</span></div>
       ${d.snapshots.list.length ? `<div class="tw" style="max-height:320px;overflow:auto"><table class="tbl"><thead><tr><th>Dosya</th><th>Tarih</th><th class="num">Boyut</th><th></th></tr></thead><tbody>${d.snapshots.list.map((b) => `<tr><td class="mono">${esc(b.name)}</td><td>${dt(b.at)}</td><td class="num">${bytes(b.size)}</td><td class="num"><button class="btn sm" data-bk="${esc(b.name)}">${icon('download')} İndir</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="pb muted">İlk yedek birkaç dakika içinde alınacak.</div>'}</div>` : ''}
+    <div class="panel mailp" style="margin-bottom:14px"><div class="ph"><h3>E-posta</h3></div><div class="pb"><div class="spin"></div></div></div>
     <div class="panel andp" style="margin-bottom:14px"><div class="ph"><h3>Android uygulaması</h3></div><div class="pb"><div class="spin"></div></div></div>
     <div class="panel dnsp" style="margin-bottom:14px"><div class="ph"><h3>Alan adı ve DNS · Hostinger</h3></div><div class="pb"><div class="spin"></div></div></div>
     <div class="panel logp"><div class="ph"><h3>Kayıtlar</h3>
@@ -1391,6 +1392,26 @@ VIEWS.sunucu = async (main) => {
   lu.onchange = loadLog; le.onchange = loadLog; main.querySelector('.lr').onclick = loadLog;
   lq.onkeydown = (e) => { if (e.key === 'Enter') loadLog(); };
   loadLog();
+
+  // E-posta: durum, doğrulama kayıtları, test
+  const mp = main.querySelector('.mailp .pb');
+  const loadMail = () => api('/sunucu/eposta').then((m) => {
+    const c = m.config; const d = m.dns;
+    const chip = (ok, yes, no) => `<span class="chip ${ok ? 'ok' : 'bad'}">${ok ? yes : no}</span>`;
+    mp.innerHTML = `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        ${c ? `<b>${esc(c.kind === 'gmail' ? `Gmail · ${c.user}` : `${c.from || c.user} · ${c.host}:${c.port}`)}</b>` : '<span class="chip bad">E-posta ayarlı değil</span>'}
+        ${c ? chip(m.verify?.ok, 'Sunucuya bağlanıyor', `Bağlanamıyor: ${esc(m.verify?.error || '')}`) : ''}</div>
+      ${d ? `<div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">${chip(d.spfOk, 'SPF tamam', 'SPF eksik')} ${chip(!d.missing.length, `DKIM tamam (${d.dkim.length})`, `DKIM eksik: ${d.missing.length}`)} ${chip(!!d.dmarc, 'DMARC var', 'DMARC yok')} ${chip(d.mx.length > 0, 'MX var', 'MX yok')}</div>
+        ${d.missing.length || !d.spf ? `<button class="btn sm primary mfix">${icon('check')} Eksik kayıtları ekle</button> <span class="muted" style="font-size:12.5px">E-postaların spam'e düşmemesi ve Gmail'in kabul etmesi için gerekli.</span>` : ''}` : m.dnsError ? `<div class="muted" style="font-size:12.5px">DNS okunamadı: ${esc(m.dnsError)}</div>` : ''}
+      <form class="mtest row" style="gap:8px;flex-wrap:wrap;margin-top:12px"><input class="field" name="to" type="email" placeholder="Deneme e-postası gidecek adres" style="flex:1;min-width:220px"><button class="btn">${icon('mail')} Test e-postası gönder</button></form>
+      <div class="mres muted" style="font-size:12.5px;margin-top:6px"></div>`;
+    mp.querySelector('.mfix')?.addEventListener('click', async (e) => { e.target.disabled = true; try { const r = await api('/sunucu/eposta/dns', { body: {} }); toast(r.added.length ? `Eklendi: ${r.added.join(', ')}` : 'Eksik kayıt yok.'); loadMail(); } catch (er) { toast(er.message); e.target.disabled = false; } });
+    mp.querySelector('.mtest').onsubmit = async (e) => {
+      e.preventDefault(); const out = mp.querySelector('.mres'); out.textContent = 'Gönderiliyor…';
+      try { const r = await api('/sunucu/eposta/test', { body: { to: e.target.to.value } }); out.innerHTML = r.rejected.length ? `<span style="color:var(--bad)">Reddedildi: ${esc(r.rejected.join(', '))}</span>` : `✓ Sunucu kabul etti (${esc(r.response)}). Birkaç dakika içinde gelmezse Spam klasörüne bak.`; } catch (er) { out.innerHTML = `<span style="color:var(--bad)">${esc(er.message)}</span>`; }
+    };
+  }).catch((e) => { mp.textContent = e.message; });
+  loadMail();
 
   // Android imza anahtarı
   const ap = main.querySelector('.andp .pb');
