@@ -164,7 +164,7 @@ module.exports = function aktivite(store, { ipOf }) {
     } catch (er) { console.error('[hareketler] yazılamadı:', er.message); } finally { flushing = false; }
   }
   setInterval(flush, 3000).unref();
-  const start = () => { started = true; };
+  const start = () => { started = true; ready ||= init().catch((er) => { ready = null; console.error('[hareketler] tablo hazırlanamadı:', er.message); }); }; // tablo açılışta hazırlanır
 
   // Sorgu: kullanıcıya göre ya da hepsi; en yeniden eskiye; before = sayfalama
   async function query({ uid = null, kat = null, before = null, limit = 50, from = null, to = null } = {}) {
