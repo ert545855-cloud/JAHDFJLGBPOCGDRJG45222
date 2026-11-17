@@ -1,0 +1,94 @@
+name: iOS IPA
+
+# İmzasız iOS uygulaması (IPA): swipeup.live'ı tam ekran açan kabuk (Capacitor).
+# İmzasız olduğu için doğrudan App Store'a gitmez; Sideloadly / AltStore gibi araçlarla kendi Apple kimliğinle imzalanıp kurulur.
+# App Store / TestFlight için Apple Developer hesabı (yıllık ücretli) ve imza sertifikası gerekir.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'store/ios/**'
+      - '.github/workflows/ios.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ios-ipa
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-14
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - name: Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_15*.app | sort -V | tail -1)"
+          xcodebuild -version
+
+      - name: iOS projesini üret
+        run: |
+          mkdir -p "$RUNNER_TEMP/app/www" && cd "$RUNNER_TEMP/app"
+          npm init -y >/dev/null
+          npm i --no-audit --no-fund @capacitor/core@6 @capacitor/cli@6 @capacitor/ios@6
+          cp "$GITHUB_WORKSPACE/store/ios/capacitor.config.json" .
+          printf '<!doctype html><meta charset="utf-8"><title>SwipeUp</title><meta http-equiv="refresh" content="0;url=https://swipeup.live">' > www/index.html
+          npx cap add ios
+          npx cap sync ios
+
+      - name: Simge, izin açıklamaları ve sürüm
+        run: |
+          cd "$RUNNER_TEMP/app/ios/App/App"
+          ICON=Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
+          SRC="$GITHUB_WORKSPACE/public/icons/maskable-512.png"; [ -f "$SRC" ] || SRC="$GITHUB_WORKSPACE/public/icons/icon-512.png"
+          sips -s format png -z 1024 1024 "$SRC" --out "$ICON" >/dev/null
+          P=Info.plist; PB=/usr/libexec/PlistBuddy
+          set_str() { $PB -c "Delete :$1" "$P" 2>/dev/null || true; $PB -c "Add :$1 string $2" "$P"; }
+          set_str CFBundleDisplayName "SwipeUp"
+          set_str CFBundleShortVersionString "1.0.${{ github.run_number }}"
+          set_str CFBundleVersion "${{ github.run_number }}"
+          set_str NSCameraUsageDescription "Profil fotoğrafı, hikâye, görüntülü arama ve canlı yayın için kameran kullanılır."
+          set_str NSMicrophoneUsageDescription "Sesli ve görüntülü arama, sesli mesaj, karaoke ve canlı yayın için mikrofonun kullanılır."
+          set_str NSPhotoLibraryUsageDescription "Galeriden fotoğraf ve video paylaşabilmen için."
+          set_str NSPhotoLibraryAddUsageDescription "Fotoğrafları galerine kaydedebilmen için."
+          set_str NSLocationWhenInUseUsageDescription "Yakınındaki kişileri gösterebilmek için yaklaşık konumun kullanılır (izin verirsen)."
+          $PB -c "Delete :WKAppBoundDomains" "$P" 2>/dev/null || true
+          $PB -c "Add :WKAppBoundDomains array" "$P"
+          $PB -c "Add :WKAppBoundDomains:0 string swipeup.live" "$P"
+          $PB -c "Add :WKAppBoundDomains:1 string www.swipeup.live" "$P"
+          $PB -c "Print" "$P" | head -60
+
+      - name: Derle (imzasız)
+        run: |
+          cd "$RUNNER_TEMP/app/ios/App"
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" | tee "$GITHUB_WORKSPACE/ios-build.log" | tail -40
+          test -d build/Build/Products/Release-iphoneos/App.app
+          mkdir -p Payload && cp -R build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -qry "$GITHUB_WORKSPACE/SwipeUp.ipa" Payload
+          ls -la "$GITHUB_WORKSPACE/SwipeUp.ipa"
+
+      - name: Yayınla
+        run: |
+          VER="1.0.${{ github.run_number }}"
+          cat > notes.md <<EOF
+          SwipeUp iOS $VER (imzasız)
+
+          Bu IPA imzasızdır: iPhone'a doğrudan kurulmaz. Sideloadly ya da AltStore ile kendi Apple kimliğinle imzalayıp kurabilirsin
+          (ücretsiz Apple kimliğiyle 7 gün geçerli, sonra yeniden imzalanır). App Store / TestFlight için Apple Developer hesabı gerekir.
+
+          Kaynak: ${GITHUB_REF_NAME} (${GITHUB_SHA::7})
+          EOF
+          gh release delete ios-latest -y --cleanup-tag || true
+          gh release create ios-latest SwipeUp.ipa ios-build.log --prerelease --target "$GITHUB_SHA" \
+            --title "SwipeUp iOS $VER" --notes-file notes.md
