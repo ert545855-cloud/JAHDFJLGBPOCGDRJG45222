@@ -202,6 +202,25 @@ module.exports = function sunucu(app, ctx) {
     res.download(f, name);
   });
 
+  // ================= Android imza anahtarı =================
+  // Anahtar sunucu ayarlarında (ANDROID_KEYSTORE_B64); kopyası /var/backups/swipeup/android. Kaybolursa uygulama güncellenemez:
+  // Sahip buradan indirip sunucu dışında saklar. Her indirme işlem kaydına yazılır.
+  const AND_DIR = path.join(BK_DIR, 'android');
+  app.get('/api/admin/sunucu/android', ...gate, (req, res) => {
+    let files = [];
+    try { files = fs.readdirSync(AND_DIR).filter((f) => /^swipeup-android-\d{8}-\d{4}\.(keystore|txt)$/.test(f)).sort().reverse(); } catch { /* yok */ }
+    res.json({ has: !!(process.env.ANDROID_KEYSTORE_B64 && process.env.ANDROID_KEYSTORE_PASS), sha256: String(process.env.ANDROID_SHA256 || '').split(',').filter(Boolean), files, release: 'https://github.com/ert545855-cloud/sweep-up2/releases/tag/android-latest' });
+  });
+  app.get('/api/admin/sunucu/android/:name', ...gate, (req, res) => {
+    const name = String(req.params.name || '');
+    if (!/^swipeup-android-\d{8}-\d{4}\.(keystore|txt)$/.test(name)) return res.status(400).json({ error: 'Geçersiz dosya adı.' });
+    const f = path.join(AND_DIR, name);
+    if (!fs.existsSync(f)) return res.status(404).json({ error: 'Dosya bulunamadı.' });
+    audit(req, name.endsWith('.txt') ? 'Android anahtar şifresini indirdi' : 'Android imza anahtarını indirdi', name);
+    res.setHeader('Cache-Control', 'no-store');
+    res.download(f, name);
+  });
+
   // ================= Hostinger: alan adı ve DNS =================
   const DOM = () => process.env.HOSTINGER_DOMAIN || domainOf();
   app.get('/api/admin/sunucu/dns', ...gate, async (req, res) => {

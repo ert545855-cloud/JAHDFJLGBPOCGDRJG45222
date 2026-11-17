@@ -1,5 +1,5 @@
 // Android imza anahtarını yalnızca bu deponun GitHub Actions derlemesine verir.
-// Anahtar Render ortam değişkenlerinde durur (ANDROID_KEYSTORE_B64, ANDROID_KEYSTORE_PASS);
+// Anahtar sunucu ayarlarında durur (/etc/swipeup.env: ANDROID_KEYSTORE_B64, ANDROID_KEYSTORE_PASS; scripts/vds/android-anahtar.sh üretir);
 // derleme, GitHub'ın OIDC kimlik belgesiyle kendini kanıtlar. GitHub'a gizli değişken eklemek gerekmez.
 const crypto = require('crypto');
 

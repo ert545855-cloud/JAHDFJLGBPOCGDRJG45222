@@ -1345,6 +1345,7 @@ VIEWS.sunucu = async (main) => {
       <div class="muted" style="font-size:12.5px;margin-top:6px">${d.media.backupDir ? `Her dosyanın ikinci kopyası ${esc(d.media.backupDir)} klasöründe; silinen dosyanın kopyası 7 gün sonra temizlenir.` : 'İkinci kopya kapalı.'}${d.media.move ? ` ${dt(d.media.move.at)} · veritabanından ${d.media.move.moved} dosya (${d.media.move.mb} MB) taşındı.` : ''}</div></div></div>` : ''}
     ${d.snapshots?.dir ? `<div class="panel" style="margin-bottom:14px"><div class="ph"><h3>5 dakikalık kayıt yedekleri</h3><span class="muted" style="font-size:12.5px">${d.snapshots.count} dosya · ${bytes(d.snapshots.bytes)} · 24 saat hepsi, 7 gün saatlik, 30 gün günlük</span></div>
       ${d.snapshots.list.length ? `<div class="tw" style="max-height:320px;overflow:auto"><table class="tbl"><thead><tr><th>Dosya</th><th>Tarih</th><th class="num">Boyut</th><th></th></tr></thead><tbody>${d.snapshots.list.map((b) => `<tr><td class="mono">${esc(b.name)}</td><td>${dt(b.at)}</td><td class="num">${bytes(b.size)}</td><td class="num"><button class="btn sm" data-bk="${esc(b.name)}">${icon('download')} İndir</button></td></tr>`).join('')}</tbody></table></div>` : '<div class="pb muted">İlk yedek birkaç dakika içinde alınacak.</div>'}</div>` : ''}
+    <div class="panel andp" style="margin-bottom:14px"><div class="ph"><h3>Android uygulaması</h3></div><div class="pb"><div class="spin"></div></div></div>
     <div class="panel dnsp" style="margin-bottom:14px"><div class="ph"><h3>Alan adı ve DNS · Hostinger</h3></div><div class="pb"><div class="spin"></div></div></div>
     <div class="panel logp"><div class="ph"><h3>Kayıtlar</h3>
       <div class="row" style="gap:6px;margin-left:auto"><select class="field lu" style="width:auto"><option value="swipeup">Uygulama</option><option value="caddy">HTTPS (Caddy)</option><option value="guncelle">Güncellemeler</option><option value="yedek">Yedekler</option></select>
@@ -1382,6 +1383,24 @@ VIEWS.sunucu = async (main) => {
   lu.onchange = loadLog; le.onchange = loadLog; main.querySelector('.lr').onclick = loadLog;
   lq.onkeydown = (e) => { if (e.key === 'Enter') loadLog(); };
   loadLog();
+
+  // Android imza anahtarı
+  const ap = main.querySelector('.andp .pb');
+  api('/sunucu/android').then((a) => {
+    ap.innerHTML = `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px">${a.has ? '<span class="chip ok">Kalıcı imza anahtarı sunucuda</span>' : '<span class="chip bad">İmza anahtarı yok</span>'}
+        <a class="btn sm" href="${esc(a.release)}" target="_blank" rel="noopener">${icon('download')} Son APK (GitHub)</a></div>
+      ${a.sha256.length ? `<div class="muted" style="font-size:12.5px">SHA-256: <span class="mono" style="word-break:break-all">${a.sha256.map(esc).join('<br>')}</span></div>` : ''}
+      ${a.files.length ? `<p class="muted" style="font-size:12.5px;margin:10px 0 6px">Anahtar kaybolursa uygulama bir daha güncellenemez. İkisini de indirip sunucu dışında (ör. kendi bilgisayarın ve bir USB bellek) sakla:</p>
+        <div class="row" style="gap:6px;flex-wrap:wrap">${a.files.map((f) => `<button class="btn sm" data-and="${esc(f)}">${icon(f.endsWith('.txt') ? 'key' : 'download')} ${f.endsWith('.txt') ? 'Şifre dosyası' : 'Anahtar dosyası'} · ${esc(f.slice(16, 29))}</button>`).join('')}</div>`
+      : `<p class="muted" style="font-size:12.5px;margin:8px 0 0">${a.has ? 'Anahtarın sunucuda kopya dosyası yok.' : 'Anahtar üretmek için sunucuda bir kez şunu çalıştır:'}</p>${a.has ? '' : '<code class="mono" style="display:block;padding:8px;background:var(--soft);border-radius:8px;overflow:auto">curl -fsSL https://raw.githubusercontent.com/ert545855-cloud/sweep-up2/main/scripts/vds/android-anahtar.sh | bash</code>'}`}`;
+    ap.querySelectorAll('[data-and]').forEach((b) => b.addEventListener('click', async () => {
+      try {
+        const r = await fetch(`${BASE}/api/sunucu/android/${encodeURIComponent(b.dataset.and)}`, { headers: { Authorization: 'Bearer ' + S.token } });
+        if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'İndirilemedi.');
+        const x = document.createElement('a'); x.href = URL.createObjectURL(await r.blob()); x.download = b.dataset.and; x.click();
+      } catch (e) { toast(e.message); }
+    }));
+  }).catch((e) => { ap.textContent = e.message; });
 
   // Hostinger DNS
   const dp = main.querySelector('.dnsp .pb');
