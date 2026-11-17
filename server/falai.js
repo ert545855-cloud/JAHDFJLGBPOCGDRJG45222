@@ -199,7 +199,38 @@ Akış paylaşımı kuralları (bu metin tek bir kişiye değil, akışta herkes
     busy = false;
   }
   // Yapay zeka (yurt dışı) yalnızca kullanıcı açık rıza verdiyse çalışır; vermediyse falı Falcı Teyze kendisi yorumlar
-  ctx.onFalRequest = (msg) => { if (mode() === 'off' || !msg?.fal || !store.get('users', msg.from)?.consents?.ai?.on) return; queue.push(msg.id); run().catch(() => { busy = false; }); };
+  ctx.onFalRequest = (msg) => { if (mode() === 'off' || !msg?.fal || !store.get('users', msg.from)?.consents?.ai?.on) return; if (!queue.includes(msg.id)) queue.push(msg.id); run().catch(() => { busy = false; }); };
+
+  // Kaçan fallar: anahtar yokken, uygulama yeniden başlarken ya da mod değişirken sıraya girmemiş bekleyen istekler.
+  // Dakikada bir bakılır: rızası olanlar sıraya girer (hatalılar 3 kez yeniden denenir); "otomatik" modda hazır taslaklar gönderilir.
+  // Rızası olmayana bir kez nazikçe sorulur (sistem mesajı); izni açınca falı birkaç dakika içinde gelir.
+  const retries = new Map();
+  function sweep() {
+    if (mode() === 'off' || !falci()) return;
+    for (const m of store.filter('messages', (x) => x.fal && x.fal.status === 'pending')) {
+      if (queue.includes(m.id)) continue;
+      const u = store.get('users', m.from);
+      if (!u?.consents?.ai?.on) {
+        if (!m.fal.aiAsked && now() - (m.at || 0) > 60000) {
+          const chat = store.get('chats', m.chatId);
+          if (chat) {
+            ctx.systemMsg?.(chat, 'Falcı Teyze: Kuzum, falına hemen bakabilmem için yapay zekâ desteğine izin vermen gerekiyor. Ayarlar › İzinlerim’den “Yapay zekâ” iznini açarsan birkaç dakika içinde falın gelir. İstemezsen hiç sorun değil, falına ben kendim bakacağım; biraz sürebilir. 💜');
+            m.fal.aiAsked = now(); store.update('messages', m.id, {});
+          }
+        }
+        continue;
+      }
+      const d = draftOf(m.id); const tries = retries.get(m.id) || 0;
+      const stuck = d?.status === 'working' && now() - (d.at || 0) > 5 * 60000;
+      const retry = d?.status === 'error' && tries < 3 && now() - (d.at || 0) > 60000;
+      const autoReady = mode() === 'auto' && d?.status === 'ready';
+      if (!d || stuck || retry || autoReady) { if (retry) retries.set(m.id, tries + 1); queue.push(m.id); }
+    }
+    if (queue.length) run().catch(() => { busy = false; });
+  }
+  setInterval(sweep, 60000).unref?.();
+  setTimeout(sweep, 20000).unref?.();
+  ctx.falSweep = sweep;
   ctx.falAiMode = mode;
   ctx.falDraft = (msgId) => { const d = draftOf(msgId); return d ? { status: d.status, text: d.text || '', model: d.model || null, error: d.error || null, auto: !!d.auto, edited: d.edited ?? null, dueAt: d.dueAt || null } : null; };
   ctx.falHolds = (chatId) => store.filter('fal_hold', (h) => h.chatId === chatId).sort((a, b) => a.dueAt - b.dueAt).map(holdOut);
@@ -272,6 +303,7 @@ Akış paylaşımı kuralları (bu metin tek bir kişiye değil, akışta herkes
       const m = ['off', 'draft', 'auto'].includes(req.body?.mode) ? req.body.mode : 'draft';
       store.put('settings', { id: 'falai', mode: m });
       A.audit(req.admin, 'fal yapay zeka modunu değiştirdi', null, m);
+      setTimeout(sweep, 1000); // bekleyen falları yeni moda göre hemen ele al
       res.json({ mode: mode() });
     });
     app.put('/api/admin/falai/delay', A.adminAuth, A.owner, (req, res) => {
