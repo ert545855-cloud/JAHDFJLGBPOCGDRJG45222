@@ -420,7 +420,7 @@ function removeChat(chatId) {
 app.set('trust proxy', 1);
 // Eski Render adresi (askıya alınan hesap): o hesapta servis yeniden açılıp bu sürüm yayınlanırsa ziyaretçiler yeni adrese gider
 const MOVED_FROM = /^swipeup-hh1f\.onrender\.com$/i;
-const MOVED_TO = (process.env.MOVED_TO || 'https://swipeup-5py5.onrender.com').replace(/\/$/, '');
+const MOVED_TO = (process.env.MOVED_TO || 'https://swipeup.live').replace(/\/$/, '');
 app.use((req, res, next) => (MOVED_FROM.test(req.hostname) ? res.redirect(301, MOVED_TO + req.originalUrl) : next()));
 // Her JSON yanıtında özel (sohbet) dosya adresleri süreli imzalı hâle getirilir; yanıtı alan zaten o mesajı görmeye yetkili
 app.set('json replacer', (k, v) => (typeof v === 'string' && v.startsWith('/media/') ? signMedia(v) : v));

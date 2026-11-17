@@ -1,6 +1,6 @@
 {
   "packageId": "app.swipeup.twa",
-  "host": "swipeup-5py5.onrender.com",
+  "host": "swipeup.live",
   "name": "SwipeUp",
   "launcherName": "SwipeUp",
   "display": "standalone",
@@ -12,10 +12,10 @@
   "backgroundColor": "#000000",
   "enableNotifications": true,
   "startUrl": "/#/",
-  "iconUrl": "https://swipeup-5py5.onrender.com/icons/icon-512.png",
-  "maskableIconUrl": "https://swipeup-5py5.onrender.com/icons/maskable-512.png",
-  "monochromeIconUrl": "https://swipeup-5py5.onrender.com/icons/badge-96.png",
-  "webManifestUrl": "https://swipeup-5py5.onrender.com/manifest.webmanifest",
+  "iconUrl": "https://swipeup.live/icons/icon-512.png",
+  "maskableIconUrl": "https://swipeup.live/icons/maskable-512.png",
+  "monochromeIconUrl": "https://swipeup.live/icons/badge-96.png",
+  "webManifestUrl": "https://swipeup.live/manifest.webmanifest",
   "splashScreenFadeOutDuration": 300,
   "fallbackType": "customtabs",
   "enableSiteSettingsShortcut": true,
@@ -25,8 +25,8 @@
   "minSdkVersion": 24,
   "signingKey": { "path": "./android.keystore", "alias": "swipeup" },
   "shortcuts": [
-    { "name": "Keşfet", "shortName": "Keşfet", "url": "/#/", "chosenIconUrl": "https://swipeup-5py5.onrender.com/icons/icon-192.png" },
-    { "name": "Oyunlar", "shortName": "Oyunlar", "url": "/#/oyunlar", "chosenIconUrl": "https://swipeup-5py5.onrender.com/icons/icon-192.png" }
+    { "name": "Keşfet", "shortName": "Keşfet", "url": "/#/", "chosenIconUrl": "https://swipeup.live/icons/icon-192.png" },
+    { "name": "Oyunlar", "shortName": "Oyunlar", "url": "/#/oyunlar", "chosenIconUrl": "https://swipeup.live/icons/icon-192.png" }
   ],
   "features": {},
   "alphaDependencies": { "enabled": false },

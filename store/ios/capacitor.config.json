@@ -3,9 +3,9 @@
   "appName": "SwipeUp",
   "webDir": "www",
   "server": {
-    "url": "https://swipeup-5py5.onrender.com",
+    "url": "https://swipeup.live",
     "cleartext": false,
-    "allowNavigation": ["swipeup-5py5.onrender.com"]
+    "allowNavigation": ["swipeup.live"]
   },
   "ios": {
     "contentInset": "never",
