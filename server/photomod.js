@@ -35,7 +35,7 @@ async function check(buffer, mime) {
 module.exports = function photomod(app, ctx) {
   console.log(enabled() ? '[fotoğraf denetimi] Sightengine açık' : '[fotoğraf denetimi] kapalı (SIGHTENGINE_USER / SIGHTENGINE_SECRET yok)');
   // Açılış kontrolü: anahtarın geçerli olduğunu görmek için uygulamanın kendi simgesi bir kez taranır (1 tarama harcar)
-  const site = process.env.RENDER_EXTERNAL_URL || process.env.PUBLIC_URL;
+  const site = process.env.CANONICAL_URL || process.env.RENDER_EXTERNAL_URL || process.env.PUBLIC_URL;
   if (enabled() && site && !process.env.SIGHTENGINE_URL) {
     const tm = setTimeout(async () => {
       try {
