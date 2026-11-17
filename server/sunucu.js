@@ -142,6 +142,8 @@ module.exports = function sunucu(app, ctx) {
         kernel: os.release(), uptime: os.uptime() * 1000, load: os.loadavg().map((x) => Math.round(x * 100) / 100), cpus: os.cpus().length, cpu,
         mem, disk, node: process.version, proc: { uptime: process.uptime() * 1000, rss: pr.rss, heap: pr.heapUsed },
         git, cert, updates: upd, units, perms: pm, backups: backups(),
+        snapshots: ctx.localBackups ? (({ dir, list }) => ({ dir, count: list.length, bytes: list.reduce((a, b) => a + b.size, 0), list: list.slice(0, 40) }))(ctx.localBackups()) : null,
+        media: store.mediaDisk ? { ...store.diskMedia(), backupDir: store.mediaBak || null, move: store.get('meta', 'disk_move') || null } : null,
         hostinger: !!process.env.HOSTINGER_API_TOKEN,
         links: { yoncu: 'https://www.yoncu.com', hostinger: 'https://hpanel.hostinger.com' },
       });
@@ -189,8 +191,11 @@ module.exports = function sunucu(app, ctx) {
   // Yedek indir (pg_dump özel biçim; pg_restore ile geri yüklenir)
   app.get('/api/admin/sunucu/yedek/:name', ...gate, (req, res) => {
     const name = String(req.params.name || '');
-    if (!/^swipeup-\d{4}-\d{2}-\d{2}\.dump$/.test(name)) return res.status(400).json({ error: 'Geçersiz dosya adı.' });
-    const f = path.join(BK_DIR, name);
+    const snapDir = ctx.localBackups?.().dir;
+    let f = null;
+    if (/^swipeup-\d{4}-\d{2}-\d{2}\.dump$/.test(name)) f = path.join(BK_DIR, name);
+    else if (snapDir && /^swipeup-\d{8}-\d{4}\.json\.gz$/.test(name)) f = path.join(snapDir, name);
+    if (!f) return res.status(400).json({ error: 'Geçersiz dosya adı.' });
     if (!fs.existsSync(f)) return res.status(404).json({ error: 'Yedek bulunamadı.' });
     audit(req, 'sunucu yedeğini indirdi', name);
     res.setHeader('Cache-Control', 'no-store');

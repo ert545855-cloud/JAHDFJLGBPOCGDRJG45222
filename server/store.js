@@ -27,6 +27,11 @@ class Store {
     const dir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
     fs.mkdirSync(path.join(dir, 'media'), { recursive: true });
     this.dir = dir;
+    // Kendi sunucumuzda (VDS) fotoğraf / video / ses sunucu diskinde durur (MEDIA_STORE=disk); kayıtlar veritabanında kalır.
+    // MEDIA_BACKUP_DIR: her dosyanın aynı diskte ikinci bir bağlantısı (silinse de yedekte kalır, gece temizlenir)
+    this.mediaDisk = process.env.MEDIA_STORE === 'disk';
+    this.mediaBak = process.env.MEDIA_BACKUP_DIR || '';
+    if (this.mediaDisk) setTimeout(() => this.moveMediaToDisk().catch((e) => console.error('[medya] taşıma', e.message)), 5000).unref?.();
 
     const pgUrls = [process.env.DATABASE_URL, ...String(process.env.DATABASE_URL_FALLBACKS || '').split(/\s+/)].filter(Boolean);
     if (pgUrls.length) {
@@ -227,7 +232,9 @@ class Store {
   }
 
   // --- Medya ---
-  async saveMedia(id, mime, buffer) {
+  // opts.remote: sunucu diski açık olsa bile veritabanına / Storage'a yaz (ör. sunucu dışında duran yönetim yedekleri)
+  async saveMedia(id, mime, buffer, opts = {}) {
+    if (this.mediaDisk && !opts.remote) { this.writeDisk(id, mime, buffer); return 'disk'; }
     if (this.sb) {
       try { await this.sbUpload(id, mime, buffer); return 'storage'; } catch (e) { console.error('[storage]', e.message); }
     }
@@ -244,6 +251,76 @@ class Store {
     fs.writeFileSync(path.join(this.dir, 'media', id), buffer);
     fs.writeFileSync(path.join(this.dir, 'media', id + '.mime'), mime);
     return 'disk';
+  }
+
+  // Diske güvenli yazma: önce geçici dosya, diske işlenince yerine taşınır; yedek klasörüne ikinci bağlantı
+  writeDisk(id, mime, buf) {
+    if (!/^[\w-]+$/.test(id)) throw new Error('Geçersiz medya adı');
+    const dir = path.join(this.dir, 'media'); const p = path.join(dir, id); const tmp = `${p}.tmp`;
+    const fd = fs.openSync(tmp, 'w');
+    try { fs.writeSync(fd, buf); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+    fs.writeFileSync(`${p}.mime`, mime);
+    fs.renameSync(tmp, p);
+    this.diskStat = null;
+    if (this.mediaBak) {
+      try {
+        fs.mkdirSync(this.mediaBak, { recursive: true });
+        for (const f of [id, `${id}.mime`]) {
+          const dst = path.join(this.mediaBak, f); fs.rmSync(dst, { force: true });
+          try { fs.linkSync(path.join(dir, f), dst); } catch { fs.copyFileSync(path.join(dir, f), dst); }
+        }
+      } catch (e) { console.error('[medya yedek]', e.message); }
+    }
+  }
+  readDisk(id) {
+    const p = path.join(this.dir, 'media', id);
+    try { return { mime: fs.readFileSync(`${p}.mime`, 'utf8'), data: fs.readFileSync(p) }; } catch { return null; }
+  }
+  // Diskteki medya: sayı ve boyut (1 dakika saklanır)
+  diskMedia() {
+    if (this.diskStat && Date.now() - this.diskStat.at < 60000) return this.diskStat;
+    let count = 0; let bytes = 0;
+    try { for (const f of fs.readdirSync(path.join(this.dir, 'media'))) { if (f.endsWith('.mime') || f.endsWith('.tmp')) continue; count++; bytes += fs.statSync(path.join(this.dir, 'media', f)).size; } } catch { /* yok */ }
+    this.diskStat = { at: Date.now(), count, bytes };
+    return this.diskStat;
+  }
+  // Veritabanındaki fotoğraf/videoları sunucu diskine taşı; dosya diske işlenip boyutu doğrulanmadan veritabanından silinmez.
+  // Yönetim yedekleri (bk-…) bilerek veritabanında kalır: sunucu dışındaki kopya.
+  async moveMediaToDisk() {
+    if (!this.pg || !this.mediaDisk) return;
+    const T = this.T;
+    const { rows } = await this.pg.query(`SELECT id FROM ${T('media')} WHERE id NOT LIKE 'bk-%'`);
+    if (!rows.length) return;
+    let moved = 0; let bytes = 0;
+    for (const { id } of rows) {
+      try {
+        const r = await this.pg.query(`SELECT mime, data FROM ${T('media')} WHERE id=$1`, [id]);
+        const m = r.rows[0]; if (!m) continue;
+        this.writeDisk(id, m.mime, m.data);
+        const back = fs.readFileSync(path.join(this.dir, 'media', id));
+        if (back.length !== m.data.length || !back.equals(m.data)) throw new Error('diske yazılan dosya tutmadı');
+        await this.pg.query(`DELETE FROM ${T('media')} WHERE id=$1`, [id]);
+        moved++; bytes += m.data.length;
+      } catch (e) { console.error('[medya] taşınamadı', id, e.message); }
+    }
+    this.mediaBytes = Math.max(0, (this.mediaBytes || 0) - bytes); this.mediaCount = Math.max(0, (this.mediaCount || 0) - moved);
+    const info = { id: 'disk_move', at: Date.now(), moved, mb: +(bytes / 1048576).toFixed(1) };
+    this.put('meta', info);
+    console.log(`[medya] Veritabanından sunucu diskine taşındı: ${moved} dosya (${info.mb} MB)`);
+  }
+  // Ana dosyası silinmiş yedek bağlantılarını, silinmeden 7 gün sonra kaldır (saklama ve imha)
+  pruneMediaBackup(days = 7) {
+    if (!this.mediaBak) return 0;
+    let n = 0; const lim = Date.now() - days * 86400000;
+    try {
+      for (const f of fs.readdirSync(this.mediaBak)) {
+        if (f.endsWith('.mime')) continue;
+        const p = path.join(this.mediaBak, f); const st = fs.statSync(p);
+        if (fs.existsSync(path.join(this.dir, 'media', f))) continue;
+        if (st.ctimeMs < lim) { fs.rmSync(p, { force: true }); fs.rmSync(`${p}.mime`, { force: true }); n++; }
+      }
+    } catch (e) { console.error('[medya yedek] temizlik', e.message); }
+    return n;
   }
 
   // ---- Supabase Storage (fotoğraf/video/ses ayrı depoda) ----
@@ -316,12 +393,13 @@ class Store {
       }
     }
     const p = path.join(this.dir, 'media', id);
-    try { if (fs.existsSync(p)) { freed += fs.statSync(p).size; fs.unlinkSync(p); fs.rmSync(p + '.mime', { force: true }); } } catch {}
+    try { if (fs.existsSync(p)) { freed += fs.statSync(p).size; fs.unlinkSync(p); fs.rmSync(p + '.mime', { force: true }); this.diskStat = null; } } catch {}
     return freed;
   }
 
   async loadMedia(id) {
     if (!/^[\w-]+$/.test(id)) return null;
+    if (this.mediaDisk) { const d = this.readDisk(id); if (d) return d; }
     if (this.sb) {
       try {
         const r = await this.sbFetch(`/storage/v1/object/${this.sb.bucket}/${id}`);

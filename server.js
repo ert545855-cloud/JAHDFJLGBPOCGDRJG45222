@@ -2165,7 +2165,7 @@ require('./server/farm')(app, featureCtx); // SwipeFarm: çiftlik oyunu
 require('./server/cifte')(app, featureCtx);
 require('./server/stickers')(app, featureCtx); // sohbet çıkartma paketleri
 require('./server/plusx')(app, featureCtx); // süper beğeni paketleri, profil teması
-require('./server/backup')(app, featureCtx); // gece otomatik yedek
+require('./server/backup')(app, featureCtx); // 5 dakikada bir yedek: veritabanı (sunucu dışı) + sunucu diski
 require('./server/growth2')(app, featureCtx); // davet sıralaması, kayıt hunisi, tanıtım sayfası
 require('./server/guard')(app, featureCtx); // dolandırıcılık uyarısı, sahte profil (growth'tan sonra: onMessage zinciri) // çifte buluşma (2'ye 2) ve müzik uyumu
 photomod(app, featureCtx); // fotoğraf denetimi (Sightengine)

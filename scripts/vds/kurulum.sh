@@ -92,6 +92,9 @@ GMAIL_USER=
 GMAIL_APP_PASSWORD=
 GOOGLE_CLIENT_ID=
 HOSTINGER_API_TOKEN=
+MEDIA_STORE=disk
+MEDIA_BACKUP_DIR=/var/backups/swipeup/medya
+BACKUP_DIR=/var/backups/swipeup/anlik
 ANDROID_KEYSTORE_B64=
 ANDROID_KEYSTORE_PASS=
 ANDROID_SHA256=
@@ -143,12 +146,15 @@ chmod 644 /etc/gitconfig 2>/dev/null || true
 # Günlük veritabanı yedeği (yalnız swipeup şeması, 7 gün saklanır)
 cat > /usr/local/bin/swipeup-yedek <<'EOF'
 #!/usr/bin/env bash
+# Ayar dosyası "source" edilmez (MAIL_FROM gibi değerlerdeki < > işaretleri kabukta yönlendirme sayılır); yalnız gereken satırlar okunur
 set -euo pipefail
-set -a; . /etc/swipeup.env; set +a
-[ -n "${DATABASE_URL:-}" ] || exit 0
+val() { grep -E "^$1=" /etc/swipeup.env | tail -1 | cut -d= -f2-; }
+DBURL=$(val DATABASE_URL); SCHEMA=$(val PG_SCHEMA); SCHEMA=${SCHEMA:-swipeup}
+[ -n "$DBURL" ] || exit 0
 f=/var/backups/swipeup/swipeup-$(date +%F).dump
-pg_dump --no-owner --format=custom --schema="${PG_SCHEMA:-swipeup}" --file="$f.tmp" "$DATABASE_URL" && mv "$f.tmp" "$f"
-find /var/backups/swipeup -name 'swipeup-*.dump' -mtime +7 -delete
+pg_dump --no-owner --format=custom --schema="$SCHEMA" --file="$f.tmp" "$DBURL" && mv "$f.tmp" "$f"
+chgrp swipeup "$f" 2>/dev/null; chmod 640 "$f"
+find /var/backups/swipeup -maxdepth 1 -name 'swipeup-*.dump' -mtime +7 -delete
 EOF
 chmod 700 /usr/local/bin/swipeup-yedek
 
@@ -202,6 +208,7 @@ chmod 440 /etc/sudoers.d/swipeup-panel
 visudo -cf /etc/sudoers.d/swipeup-panel >/dev/null || rm -f /etc/sudoers.d/swipeup-panel
 usermod -aG systemd-journal swipeup
 chgrp swipeup /var/backups/swipeup && chmod 750 /var/backups/swipeup
+mkdir -p /var/backups/swipeup/anlik /var/backups/swipeup/medya && chown swipeup:swipeup /var/backups/swipeup/anlik /var/backups/swipeup/medya && chmod 750 /var/backups/swipeup/anlik /var/backups/swipeup/medya
 
 say "Başlatılıyor"
 timedatectl set-timezone Europe/Istanbul || true

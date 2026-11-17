@@ -1155,6 +1155,7 @@ module.exports = function mountAdmin(app, ctx) {
       migration: store.get('meta', 'migration'),
       limitMB: store.kind === 'postgres' && /supabase/.test(store.pgHost || '') ? 500 : store.kind === 'redis' ? 25 : null,
     };
+    out.disk = store.mediaDisk ? { ...store.diskMedia(), backup: !!store.mediaBak, move: store.get('meta', 'disk_move') || null } : null;
     out.storage = store.sb ? { bucket: store.sb.bucket, limitMB: 1024, move: store.get('meta', 'storage_move') } : null;
     out.storageError = store.storageError || null;
     if (store.pg && store.sb) {
