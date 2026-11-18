@@ -69,9 +69,34 @@ scene.add(sun, sun.target);
 const SUN_OFF = new THREE.Vector3(70, 120, 45);
 
 let dpr = 1, maxDpr = 1, minDpr = 0.6;
+// Yarış her zaman yatay: telefon dikey tutuluyorsa sahne (#stage) 90° döndürülür ve yatay ölçülerle çizilir.
+const stage = $('stage');
+const RACE_STATES = ['countdown', 'race', 'paused', 'results'];
+let rot = false, lastSize = '';
+function fitStage() {
+  const W = window.innerWidth, H = window.innerHeight;
+  rot = isTouch && H > W && RACE_STATES.includes(G.state);
+  document.body.classList.toggle('rot', rot);
+  const w = rot ? H : W, h = rot ? W : H;
+  if (rot) { stage.style.width = w + 'px'; stage.style.height = h + 'px'; stage.style.left = W + 'px'; }
+  else { stage.style.width = stage.style.height = stage.style.left = ''; }
+  stage.style.setProperty('--vw', (w / 100) + 'px'); stage.style.setProperty('--vh', (h / 100) + 'px');
+  document.body.classList.toggle('port', w < h);
+  document.body.classList.toggle('short', h <= 500);
+  return [w, h];
+}
+function lockLandscape(on) {
+  try {
+    const o = screen.orientation;
+    if (!o) return;
+    if (on && o.lock) { const p = o.lock('landscape'); if (p && p.catch) p.catch(() => {}); }
+    else if (!on && o.unlock) o.unlock();
+  } catch (e) { /* desteklenmiyorsa döndürülmüş sahne yeterli */ }
+}
 function resize() {
-  const w = window.innerWidth, h = window.innerHeight;
-  renderer.setSize(w, h, false);
+  const [w, h] = fitStage();
+  const key = w + 'x' + h + '@' + renderer.getPixelRatio();
+  if (key !== lastSize) { lastSize = key; renderer.setSize(w, h, false); }
   camera.aspect = w / h;
   camera.fov = baseFov();
   camera.updateProjectionMatrix();
@@ -563,7 +588,8 @@ function bindHold(el, prop) {
 function bindSteer(el) {
   const upd = e => {
     const r = el.getBoundingClientRect();
-    touch.steer.set(e.pointerId, e.clientX < r.left + r.width / 2 ? -1 : 1);
+    const left = rot ? e.clientY < r.top + r.height / 2 : e.clientX < r.left + r.width / 2;
+    touch.steer.set(e.pointerId, left ? -1 : 1);
     refreshSteerUI();
   };
   el.addEventListener('pointerdown', e => { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch (_) { /* */ } upd(e); sfx.init(); });
@@ -628,6 +654,7 @@ function startRace() {
   G.t = 0; G.acc = 0; G.countdown = 3.5; G.lastCount = 4; G.lapNo = 0; G.lapTimes = []; G.lapStart = 0; G.finishShown = 0;
   G.state = 'countdown';
   camYaw = G.player.yaw; camInit = true;
+  if (isTouch) lockLandscape(true);
   showScreen('hud');
   $('touch').classList.toggle('hide', !isTouch);
   $('bGas').classList.toggle('hide', settings.autoGas); $('pedals').classList.toggle('auto', !!settings.autoGas);
@@ -646,7 +673,7 @@ function togglePause() {
 }
 function resume() { G.state = G.prevState || 'race'; showScreen('hud'); sfx.resume(); lastT = performance.now(); }
 function toMenu() {
-  clearCars(); G.state = 'menu'; showScreen('menu'); refreshMenu(); sfx.engine(0, 0, false); sfx.skid(0);
+  clearCars(); G.state = 'menu'; lockLandscape(false); showScreen('menu'); refreshMenu(); sfx.engine(0, 0, false); sfx.skid(0);
 }
 
 // ---------- simulation ----------
@@ -882,6 +909,7 @@ function showResults() {
 function showScreen(name) {
   for (const id of ['menu', 'hud', 'pause', 'results']) $(id).classList.toggle('hide', id !== name);
   $('touch').classList.toggle('hide', !(name === 'hud' && isTouch));
+  resize();
 }
 function statBar(v) { return '<i style="transform:scaleX(' + Math.max(0.08, Math.min(1, v)).toFixed(2) + ')"></i>'; }
 function refreshMenu() {
