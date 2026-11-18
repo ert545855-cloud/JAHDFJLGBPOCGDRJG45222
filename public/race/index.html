@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="theme-color" content="#a8dcff">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Swipe Race</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#a8dcff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#1d2433;-webkit-user-select:none;user-select:none;touch-action:none;overscroll-behavior:none}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block}
+.hide{display:none!important}
+.layer{position:fixed;inset:0;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);pointer-events:none}
+button{font:inherit;cursor:pointer;border:0;pointer-events:auto}
+/* loader */
+#loader{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:linear-gradient(#bfe6ff,#8fd0a0);z-index:20}
+#loader h1{margin:0;font-size:44px;letter-spacing:1px;color:#fff;text-shadow:0 4px 0 #e8473d,0 8px 18px rgba(0,0,0,.2);font-weight:900}
+.track{width:min(320px,70vw);height:12px;border-radius:8px;background:rgba(255,255,255,.55);overflow:hidden}
+#loadBar{height:100%;background:#e8473d;transform-origin:0 50%;transform:scaleX(0);transition:transform .15s}
+#loadText{font-size:14px;color:#1d2433;opacity:.75;text-align:center;padding:0 20px}
+/* panels */
+.panel{background:rgba(255,255,255,.93);border-radius:20px;box-shadow:0 10px 30px rgba(20,40,80,.22);pointer-events:auto}
+.btn{background:#e8473d;color:#fff;font-weight:800;border-radius:14px;padding:14px 22px;font-size:18px;box-shadow:0 4px 0 #b2322a;letter-spacing:.5px}
+.btn:active{transform:translateY(2px);box-shadow:0 2px 0 #b2322a}
+.btn.alt{background:#2f3a52;box-shadow:0 4px 0 #1b2233}
+.seg{display:flex;background:#eef1f6;border-radius:12px;padding:3px;gap:3px}
+.seg button{flex:1;background:transparent;border-radius:9px;padding:8px 6px;font-size:13px;font-weight:700;color:#55607a}
+.seg button.sel{background:#fff;color:#1d2433;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+label.tg{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;pointer-events:auto}
+label.tg input{width:20px;height:20px;accent-color:#e8473d}
+/* menu */
+#menu .panel{position:absolute;right:max(14px,env(safe-area-inset-right));top:50%;transform:translateY(-50%);width:min(340px,calc(100vw - 28px));padding:18px 18px 16px;max-height:calc(100% - 20px);overflow:auto}
+#menu h1{margin:0 0 2px;font-size:30px;font-weight:900;color:#e8473d;letter-spacing:.5px}
+#menu .sub{font-size:12px;opacity:.6;margin-bottom:12px}
+.carsel{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.carsel button{width:42px;height:42px;border-radius:12px;background:#2f3a52;color:#fff;font-size:20px;font-weight:900}
+.carsel .nm{flex:1;text-align:center}
+#carName{font-size:22px;font-weight:900}
+#carVar{font-size:12px;opacity:.6}
+.stats{display:grid;grid-template-columns:72px 1fr;gap:5px 10px;font-size:12px;font-weight:700;color:#55607a;margin:6px 0 10px}
+.stats div.b{height:8px;border-radius:5px;background:#eef1f6;overflow:hidden;align-self:center}
+.stats i{display:block;height:100%;background:linear-gradient(90deg,#f6c33f,#e8473d);transform-origin:0 50%}
+.swatches{display:flex;gap:10px;justify-content:center;margin-bottom:12px}
+.swatch{width:30px;height:30px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #d4d9e3}
+.swatch.sel{box-shadow:0 0 0 3px #e8473d}
+.row{margin:8px 0}
+.row .lbl{font-size:11px;font-weight:800;color:#8a93a8;margin-bottom:4px;text-transform:uppercase;letter-spacing:.6px}
+.toggles{display:flex;gap:16px;margin:10px 0 14px;flex-wrap:wrap}
+#startBtn{width:100%;font-size:20px;padding:16px}
+#menuBest{text-align:center;font-size:12px;margin-top:8px;opacity:.7;min-height:14px}
+#keysHelp{font-size:11px;opacity:.6;margin-top:6px;text-align:center;line-height:1.5}
+@media (max-aspect-ratio:1/1){#menu .panel{top:auto;bottom:max(12px,env(safe-area-inset-bottom));transform:none;left:50%;right:auto;translate:-50% 0;max-height:62%}}
+/* hud */
+.hbox{position:absolute;background:rgba(20,26,40,.62);color:#fff;border-radius:14px;padding:8px 12px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+#hTop{top:max(10px,env(safe-area-inset-top));left:max(10px,env(safe-area-inset-left));display:flex;gap:14px;align-items:flex-end}
+.big{font-size:34px;font-weight:900;line-height:1}
+.big small{font-size:15px;opacity:.7;margin-left:2px}
+.cap{font-size:10px;font-weight:800;opacity:.65;letter-spacing:.8px;text-transform:uppercase}
+.times{font-variant-numeric:tabular-nums;font-size:13px;line-height:1.35}
+.times b{font-size:17px}
+#hRight{top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));display:flex;flex-direction:column;align-items:flex-end;gap:8px;position:absolute}
+#map{width:132px;height:132px;background:rgba(20,26,40,.45);border-radius:14px}
+.iconbtn{width:44px;height:44px;border-radius:12px;background:rgba(20,26,40,.62);color:#fff;font-size:18px;font-weight:900;display:flex;align-items:center;justify-content:center}
+#hBtns{display:flex;gap:8px}
+#hSpeed{left:50%;transform:translateX(-50%);bottom:max(14px,env(safe-area-inset-bottom));text-align:center;min-width:150px}
+#hSpd{font-size:38px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1}
+#nitro{margin-top:6px;height:9px;border-radius:6px;background:rgba(255,255,255,.2);overflow:hidden}
+#nitroFill{height:100%;background:linear-gradient(90deg,#5cc2ff,#c48bff);transform-origin:0 50%}
+#nitro.active #nitroFill{background:linear-gradient(90deg,#ffe066,#ff7a59)}
+#nitro.pulse{box-shadow:0 0 0 3px #f6c33f}
+#msg,#count{position:absolute;left:0;right:0;top:30%;text-align:center;font-weight:900;color:#fff;text-shadow:0 4px 0 rgba(232,71,61,.95),0 10px 24px rgba(0,0,0,.25);pointer-events:none}
+#msg{font-size:40px}
+#count{font-size:96px;top:26%}
+.pop{animation:pop .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+#wrong{position:absolute;left:50%;top:44%;transform:translateX(-50%);background:#e8473d;color:#fff;font-weight:900;padding:8px 16px;border-radius:12px;font-size:20px}
+#fps{position:absolute;left:max(10px,env(safe-area-inset-left));bottom:max(10px,env(safe-area-inset-bottom));font-size:11px;padding:4px 8px}
+/* touch */
+#touch{z-index:5}
+#steer{position:absolute;left:max(10px,env(safe-area-inset-left));bottom:max(14px,env(safe-area-inset-bottom));width:min(42vw,250px);height:min(26vh,120px);display:flex;gap:8px;pointer-events:auto;touch-action:none}
+#steer div{flex:1;border-radius:20px;background:rgba(20,26,40,.42);color:#fff;font-size:34px;font-weight:900;display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,.25)}
+#steer div.on,.pbtn.on{background:rgba(232,71,61,.8)}
+#pedals{position:absolute;right:max(10px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));display:grid;grid-template-columns:auto auto;gap:8px;pointer-events:auto;align-items:end}
+.pbtn{width:min(19vw,21vh,92px);height:min(19vw,21vh,92px);border-radius:20px;background:rgba(20,26,40,.42);color:#fff;font-size:15px;font-weight:900;border:2px solid rgba(255,255,255,.25);touch-action:none}
+#bNitro{background:rgba(92,120,255,.55)}
+#bGas{background:rgba(60,170,90,.55)}
+#pedals.auto #bBrake{grid-column:2}
+@media (max-height:500px){#map{width:96px;height:96px}.big{font-size:28px}#hSpd{font-size:30px}}
+@media (max-aspect-ratio:1/1){#hSpeed{bottom:auto;top:max(96px,calc(env(safe-area-inset-top) + 86px))}#map{width:104px;height:104px}}
+/* overlays */
+.center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(20,30,50,.35);pointer-events:auto}
+.center .panel{padding:22px;width:min(380px,calc(100vw - 28px));text-align:center;max-height:calc(100% - 16px);overflow:auto}
+@media (max-height:500px){.center .panel{padding:12px 18px;width:min(460px,calc(100vw - 28px))}.center h2{font-size:20px;margin-bottom:4px}td{padding:3px 4px;font-size:13px}.stack{flex-direction:row}.stack .btn{flex:1;padding:10px;font-size:15px}}
+.center h2{margin:0 0 12px;font-size:26px;font-weight:900}
+.stack{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:15px;margin:6px 0 8px}
+td{padding:6px 4px;border-bottom:1px solid #eef1f6;text-align:left;font-variant-numeric:tabular-nums}
+td:first-child{width:28px;font-weight:900;color:#e8473d}
+td:last-child{text-align:right}
+tr.me td{background:#fff4d6;font-weight:800}
+#resLaps{font-size:12px;opacity:.7;margin-bottom:6px}
+.backApp{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#55607a;text-decoration:none;margin:-4px 0 6px;padding:4px 0}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="loader"><h1>SWIPE RACE</h1><div class="track"><div id="loadBar"></div></div><div id="loadText">Yükleniyor…</div></div>
+
+<div id="menu" class="layer hide">
+  <div class="panel">
+    <a class="backApp" href="/#/oyunlar">‹ Oyunlar</a>
+    <h1>SWIPE RACE</h1>
+    <div class="sub">3 tur · 6 araç · altınları topla, nitroya bas</div>
+    <div class="carsel"><button id="prevCar" aria-label="Önceki araç">‹</button><div class="nm"><div id="carName">Racer</div><div id="carVar"></div></div><button id="nextCar" aria-label="Sonraki araç">›</button></div>
+    <div class="swatches"><button class="swatch" style="background:linear-gradient(135deg,#e8473d,#5cc2ff)" aria-label="Klasik"></button><button class="swatch" style="background:linear-gradient(135deg,#ff9a3d,#3db36a)" aria-label="Turuncu"></button><button class="swatch" style="background:linear-gradient(135deg,#ffffff,#9aa4b8)" aria-label="Beyaz"></button></div>
+    <div class="stats">
+      <span>Hız</span><div class="b" id="stTop"></div>
+      <span>İvme</span><div class="b" id="stAcc"></div>
+      <span>Yol tutuş</span><div class="b" id="stGrip"></div>
+      <span>Arazi</span><div class="b" id="stOff"></div>
+    </div>
+    <div class="row"><div class="lbl">Zorluk</div><div class="seg" id="diff"><button>Kolay</button><button>Normal</button><button>Zor</button></div></div>
+    <div class="row"><div class="lbl">Grafik</div><div class="seg" id="qual"><button data-q="low">Düşük</button><button data-q="mid">Orta</button><button data-q="high">Yüksek</button></div></div>
+    <div class="toggles"><label class="tg"><input type="checkbox" id="optGas">Otomatik gaz</label><label class="tg"><input type="checkbox" id="optSnd">Ses</label></div>
+    <button class="btn" id="startBtn">YARIŞA BAŞLA</button>
+    <div id="menuBest"></div>
+    <div id="keysHelp" class="hide">Ok tuşları / WASD sür · Boşluk drift · Shift nitro · R piste dön · P duraklat · F fps</div>
+  </div>
+</div>
+
+<div id="hud" class="layer hide">
+  <div id="hTop" class="hbox">
+    <div><div class="cap">Sıra</div><div class="big"><span id="hPos">1</span><small>/6</small></div></div>
+    <div><div class="cap">Tur</div><div class="big" id="hLap">1/3</div></div>
+    <div class="times"><div class="cap">Süre</div><b id="hTime">0:00.00</b><div>Tur <span id="hLapT"></span></div><div>En iyi <span id="hBest"></span></div></div>
+  </div>
+  <div id="hRight"><div id="hBtns"><button class="iconbtn" id="resetBtn" aria-label="Piste dön">↺</button><button class="iconbtn" id="pauseBtn" aria-label="Duraklat">❚❚</button></div><canvas id="map"></canvas></div>
+  <div id="hSpeed" class="hbox"><div id="hSpd">0</div><div class="cap">km/sa</div><div id="nitro"><div id="nitroFill"></div></div></div>
+  <div id="count" class="hide"></div>
+  <div id="msg" class="hide"></div>
+  <div id="wrong" class="hide">TERS YÖN!</div>
+  <div id="fps" class="hbox hide"></div>
+</div>
+
+<div id="touch" class="layer hide">
+  <div id="steer"><div id="sl">◀</div><div id="sr">▶</div></div>
+  <div id="pedals">
+    <button class="pbtn" id="bNitro">NİTRO</button><button class="pbtn" id="bDrift">DRİFT</button>
+    <button class="pbtn" id="bBrake">FREN</button><button class="pbtn" id="bGas">GAZ</button>
+  </div>
+</div>
+
+<div id="pause" class="layer hide"><div class="center"><div class="panel">
+  <h2>Duraklatıldı</h2>
+  <div class="toggles" style="justify-content:center"><label class="tg"><input type="checkbox" id="pGas">Otomatik gaz</label><label class="tg"><input type="checkbox" id="pSnd">Ses</label></div>
+  <div class="stack"><button class="btn" id="resumeBtn">DEVAM ET</button><button class="btn alt" id="restartBtn">YENİDEN BAŞLAT</button><button class="btn alt" id="menuBtn">ANA MENÜ</button></div>
+</div></div></div>
+
+<div id="results" class="layer hide"><div class="center"><div class="panel">
+  <h2 id="resTitle">Yarış bitti</h2>
+  <table><tbody id="resRows"></tbody></table>
+  <div id="resLaps"></div>
+  <div class="stack"><button class="btn" id="againBtn">TEKRAR YARIŞ</button><button class="btn alt" id="resMenuBtn">ANA MENÜ</button></div>
+</div></div></div>
+
+<script src="game.js"></script>
+</body>
+</html>

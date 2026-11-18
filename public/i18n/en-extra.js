@@ -663,6 +663,8 @@ export const words = {
 "Gece vampirler avlanır, gündüz köy oylar.": "At night vampires hunt, by day the village votes.",
 "Kendi çiftliğini kur: ek, biç, üret, siparişleri yetiştir, komşularına yardım et.": "Build your own farm: plant, harvest, produce, fill orders and help your neighbors.",
 "Çiftliğe git": "Go to the farm",
+"3D yarış: aracını seç, 5 rakibe karşı 3 tur. Altınları topla, nitroya bas.": "3D racing: pick your car, 3 laps against 5 rivals. Grab the gold coins, hit the nitro.",
+"Yarışa gir": "Start racing",
 "Eşleştiğin ya da mesajlaştığın biriyle sohbetteki": "Start it with someone you've matched or chatted with from the chat's",
 "menüsünden başlat.": "menu.",
 "· oyun sürüyor, bot yerine geç": "· game in progress, take a bot's seat",
