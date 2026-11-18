@@ -10,7 +10,7 @@
 - **Arkadaşlarla:** Gerçek zamanlı oda (2–6 kişi). Bağlantı `/race/#room-<id>`, arkadaşlara bildirimle çağrı.
 
 Pistler: Park Pisti, Köprü Sekizi (rampa + köprü, 8 şeklinde), Dağ Virajları (firketeli). Her pist gece de oynanabilir.
-Araçlar: Toy Car Kit'ten 8 araç (3 renk) ve Racing Kit'ten Formula (4 renk). Kutulardan turbo, muz, kalkan; altınlardan nitro.
+Araçlar: Car Kit'ten 12 araç (hatchback, sedan, taksi, 5 renkli kart, spor sedan, lüks SUV, polis, ambulans, itfaiye, traktör, gelecek, formula). Kutulardan turbo, muz, kalkan; altınlardan nitro. Eski kayıtlardaki araçlar sunucuda yenilerine eşlenir (LEGACY_CARS).
 Telefonda yarış her zaman yatay çizilir; eğerek sürüş isteğe bağlı.
 
 ## İlerleme ve sosyal (sunucu: `server/race.js`)
@@ -51,7 +51,7 @@ games/swipe-race/build.sh   # yalnız kod; public/race/assets.json hazır durur
 Modelleri değiştirmek için iki model kitinin açılmış klasörlerini verin:
 
 ```bash
-games/swipe-race/build.sh /yol/kenney_racing-kit /yol/kenney_toy-car-kit
+games/swipe-race/build.sh /yol/kenney_racing-kit /yol/kenney_toy-car-kit /yol/kenney_car-kit
 ```
 
 ## Performans
@@ -63,5 +63,5 @@ games/swipe-race/build.sh /yol/kenney_racing-kit /yol/kenney_toy-car-kit
 
 ## Lisans notu
 
-Araç, pist ve çevre modelleri Kenney'in Toy Car Kit ve Racing Kit paketlerindendir (CC0, www.kenney.nl).
+Araç, pist ve çevre modelleri Kenney'in Car Kit, Toy Car Kit ve Racing Kit paketlerindendir (CC0, www.kenney.nl).
 Kullanıcıya görünen yerlerde marka adı geçmez.

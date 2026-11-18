@@ -103,8 +103,8 @@ function flatGeo(gltf, size, keepColor) {
 
 // Araç şablonu: iki kitte yön, tekerlek adları ve ölçek farklı; hepsi -z'ye bakan, zemine oturan,
 // tekerlekleri kendi merkezinde dönen tek biçime getirilir.
-const WHEEL = /^wheel(-[fb][lr]|(Front|Back)(Left|Right))$/;
-const isFront = n => /-f[lr]$|Front/.test(n);
+const WHEEL = /^wheel(-[fb][lr]|(Front|Back)(Left|Right)|-(front|back)-(left|right))$/;
+const isFront = n => /-f[lr]$|Front|-front-/.test(n);
 const lambertCache = new Map();
 // Tekerlekleri kendi merkezlerine al (orijinal sahnede bir kez; kopyalar bunu devralır)
 function centerWheels(scene) {
@@ -156,13 +156,14 @@ export function carMaterials() { return [...lambertCache.values()]; }
 export const isWheelName = n => WHEEL.test(n);
 export const isFrontWheel = isFront;
 
-export async function loadAll(onProg, carDefs, toyScale, racingScale) {
+export async function loadAll(onProg, carDefs, scales) {
   const ab = await fetchPack(p => onProg(p * 0.7));
   const files = unpack(ab);
   const loader = new GLTFLoader();
   const parse = buf => new Promise((res, rej) => loader.parse(buf, '', res, rej));
-  for (const k of ['tex0', 'tex1', 'tex2']) tex.push(await loadTexture(files[k]));
-  const toyMats = tex.map(t => new THREE.MeshLambertMaterial({ map: t, side: THREE.DoubleSide }));
+  for (const k of ['tex0', 'tex1', 'tex2', 'tex3']) tex.push(await loadTexture(files[k]));
+  const toyMats = tex.slice(0, 3).map(t => new THREE.MeshLambertMaterial({ map: t, side: THREE.DoubleSide }));
+  const carMat = new THREE.MeshLambertMaterial({ map: tex[3] });
   const names = Object.keys(files).filter(n => !n.startsWith('tex'));
   const gltfs = {}; let done = 0;
   await Promise.all(names.map(async n => { gltfs[n] = await parse(files[n]); onProg(0.7 + 0.25 * (++done / names.length)); }));
@@ -185,9 +186,9 @@ export async function loadAll(onProg, carDefs, toyScale, racingScale) {
       centerWheels(g.scene);
       // her şablon için ayrı sahne kopyası (geometriler paylaşılır)
       const clone = { scene: g.scene.clone(true) };
-      templates[key] = prepTemplate(clone, d.kit === 'toy' ? toyScale : racingScale, d.kit === 'toy' ? toyMats[v] : null);
+      templates[key] = prepTemplate(clone, d.scale || scales[d.kit], d.kit === 'toy' ? toyMats[v] : d.kit === 'car' ? carMat : null);
     });
   }
-  return { toyMats };
+  return { toyMats, carMat };
 }
 export function templateKey(def, variant) { return def.kit === 'toy' ? def.models[variant] + '#' + variant : def.models[variant]; }

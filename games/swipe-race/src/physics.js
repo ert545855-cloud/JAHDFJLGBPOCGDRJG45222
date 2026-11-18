@@ -5,29 +5,27 @@ export const ROAD_HALF = 0.41 * TILE;
 export const CAR_R = 1.5;
 const WB = 2.65;
 
-// kit: toy (Toy Car Kit, renk = doku) | racing (Racing Kit, renk = ayrı model)
+// Araçlar: Car Kit. models: renk seçenekleri (Kart'ta 5 sürücülü model), scale: modelin metre ölçeği.
 // lvl: açılan seviye, price: jetonla hemen açma fiyatı (0 = baştan açık)
+const C = (id, name, models, swatches, colors, st, lvl, price, scale) => ({ id, name, kit: 'car', models, swatches, colors, ...st, lvl, price, scale });
+const one = (m, sw, col = 'Standart') => [[m], [sw], [col]];
 export const CAR_DEFS = [
-  { id: 'vehicle-racer', name: 'Racer', kit: 'toy', top: 44, acc: 16, grip: 1.0, handling: 1.0, offroad: 0.55, mass: 1.0, lvl: 1, price: 0 },
-  { id: 'vehicle-vintage-racer', name: 'Vintage', kit: 'toy', top: 42, acc: 18.5, grip: 1.03, handling: 1.05, offroad: 0.55, mass: 0.9, lvl: 1, price: 0 },
-  { id: 'vehicle-suv', name: 'SUV', kit: 'toy', top: 40, acc: 14, grip: 0.99, handling: 0.93, offroad: 0.82, mass: 1.35, lvl: 1, price: 0 },
-  { id: 'vehicle-speedster', name: 'Speedster', kit: 'toy', top: 47.5, acc: 14.5, grip: 0.95, handling: 0.96, offroad: 0.5, mass: 0.95, lvl: 3, price: 25 },
-  { id: 'vehicle-truck', name: 'Kamyonet', kit: 'toy', top: 38.5, acc: 13.5, grip: 0.97, handling: 0.9, offroad: 0.85, mass: 1.5, lvl: 4, price: 20 },
-  { id: 'vehicle-racer-low', name: 'Low Racer', kit: 'toy', top: 43, acc: 15.5, grip: 1.12, handling: 1.1, offroad: 0.45, mass: 0.95, lvl: 5, price: 35 },
-  { id: 'vehicle-monster-truck', name: 'Monster', kit: 'toy', top: 39, acc: 15, grip: 0.93, handling: 0.9, offroad: 0.98, mass: 1.6, lvl: 7, price: 40 },
-  { id: 'vehicle-drag-racer', name: 'Drag Racer', kit: 'toy', top: 51, acc: 17, grip: 0.86, handling: 0.86, offroad: 0.45, mass: 1.0, lvl: 9, price: 55 },
-  {
-    id: 'formula', name: 'Formula', kit: 'racing', models: ['raceCarRed', 'raceCarGreen', 'raceCarOrange', 'raceCarWhite'],
-    colors: ['Kırmızı', 'Yeşil', 'Turuncu', 'Beyaz'], swatches: ['#e8554f', '#4d8f6e', '#f2a541', '#f1f2f6'],
-    top: 50, acc: 18, grip: 1.16, handling: 1.08, offroad: 0.35, mass: 0.85, lvl: 12, price: 90,
-  },
+  C('hatchback', 'Hatchback', ...one('ck-hatchback-sports', '#3fae5a'), { top: 42, acc: 16, grip: 1.0, handling: 1.03, offroad: 0.55, mass: 1.0 }, 1, 0),
+  C('sedan', 'Sedan', ...one('ck-sedan', '#e0573c'), { top: 41, acc: 15.5, grip: 1.0, handling: 1.0, offroad: 0.55, mass: 1.05 }, 1, 0),
+  C('taxi', 'Taksi', ...one('ck-taxi', '#f6c33f'), { top: 40, acc: 16, grip: 1.03, handling: 1.0, offroad: 0.55, mass: 1.05 }, 1, 0),
+  C('kart', 'Kart', ['ck-kart-oobi', 'ck-kart-oodi', 'ck-kart-ooli', 'ck-kart-oopi', 'ck-kart-oozi'], ['#5cc2ff', '#ff7a59', '#9fe36b', '#c48bff', '#f6c33f'], ['Mavi', 'Turuncu', 'Yeşil', 'Mor', 'Sarı'], { top: 39, acc: 19, grip: 1.15, handling: 1.15, offroad: 0.5, mass: 0.7 }, 2, 15, 2.3),
+  C('sedan-sports', 'Spor Sedan', ...one('ck-sedan-sports', '#e2433b'), { top: 46, acc: 15.5, grip: 1.0, handling: 1.0, offroad: 0.5, mass: 1.0 }, 3, 25),
+  C('suv-luxury', 'Lüks SUV', ...one('ck-suv-luxury', '#f2b631'), { top: 43, acc: 15, grip: 1.0, handling: 0.95, offroad: 0.85, mass: 1.35 }, 4, 30),
+  C('police', 'Polis', ...one('ck-police', '#2f3a52'), { top: 47, acc: 16.5, grip: 1.05, handling: 1.0, offroad: 0.6, mass: 1.2 }, 6, 40),
+  C('ambulance', 'Ambulans', ...one('ck-ambulance', '#f1f2f6'), { top: 44, acc: 15, grip: 1.0, handling: 0.92, offroad: 0.7, mass: 1.45 }, 7, 40),
+  C('firetruck', 'İtfaiye', ...one('ck-firetruck', '#d93b2f'), { top: 42, acc: 14.5, grip: 1.0, handling: 0.9, offroad: 0.8, mass: 1.7 }, 8, 45),
+  C('tractor', 'Traktör', ...one('ck-tractor', '#3db36a'), { top: 35, acc: 17, grip: 1.1, handling: 1.0, offroad: 1.0, mass: 1.6 }, 9, 35),
+  C('race-future', 'Gelecek', ...one('ck-race-future', '#7a6cf0'), { top: 50, acc: 17, grip: 1.1, handling: 1.05, offroad: 0.4, mass: 0.95 }, 10, 70),
+  C('race', 'Formula', ...one('ck-race', '#e8473d'), { top: 51, acc: 18.5, grip: 1.18, handling: 1.08, offroad: 0.35, mass: 0.85 }, 12, 90),
 ];
-const TOY_COLORS = ['Klasik', 'Turuncu', 'Beyaz'];
-const TOY_SW = ['linear-gradient(135deg,#e8473d,#5cc2ff)', 'linear-gradient(135deg,#ff9a3d,#3db36a)', 'linear-gradient(135deg,#ffffff,#9aa4b8)'];
-for (const d of CAR_DEFS) {
-  if (d.kit === 'toy') { d.models = [d.id, d.id, d.id]; d.colors = TOY_COLORS; d.swatches = TOY_SW; }
-  d.variants = d.models.length;
-}
+for (const d of CAR_DEFS) d.variants = d.models.length;
+// Eski sürümde jetonla alınmış araçlar: aynı ya da daha pahalı yeni araca eşlenir (sunucu da kullanır)
+export const LEGACY_CARS = { 'vehicle-speedster': 'sedan-sports', 'vehicle-truck': 'suv-luxury', 'vehicle-racer-low': 'police', 'vehicle-monster-truck': 'firetruck', 'vehicle-drag-racer': 'race-future', formula: 'race' };
 export const carIndex = id => Math.max(0, CAR_DEFS.findIndex(d => d.id === id));
 
 export const ITEMS = ['turbo', 'banana', 'shield'];

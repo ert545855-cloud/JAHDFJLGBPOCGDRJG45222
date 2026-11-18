@@ -8,10 +8,10 @@ module.exports = function race(app, ctx) {
   const { store, auth, eco, notify, isBlocked, limited, io, brief } = ctx;
   const now = () => Date.now();
   const user = (id) => store.get('users', id);
-  let T = null; let CARS = []; const TRK = {};
+  let T = null; let CARS = []; let LEGACY = {}; const TRK = {};
   import('../games/swipe-race/src/physics.js').then(async (p) => {
     T = await import('../games/swipe-race/src/track.js');
-    CARS = p.CAR_DEFS;
+    CARS = p.CAR_DEFS; LEGACY = p.LEGACY_CARS || {};
     for (const d of T.TRACKS) { const lay = T.buildLayout(d.seq); const cl = T.buildCenterline(lay.pieces); TRK[d.id] = { cl, name: d.name, minLap: Math.round((cl.L / 62) * 1000) }; }
   }).catch((e) => console.error('[race] pistler yüklenemedi', e));
   const trackOk = (id) => !!TRK[id];
@@ -20,7 +20,9 @@ module.exports = function race(app, ctx) {
   const LVL = 150; const levelOf = (xp) => 1 + Math.floor((xp || 0) / LVL);
   const prof = (uid) => store.get('race_profile', uid) || { id: uid, xp: 0, wins: 0, races: 0, cars: [], dayXp: 0, day: '' };
   const save = (p) => store.put('race_profile', { ...p, at: now() });
-  const owns = (p, d) => !!d && (d.price === 0 || levelOf(p.xp) >= d.lvl || (p.cars || []).includes(d.id));
+  // eski sürümde jetonla alınan araç yeni karşılığına sayılır
+  const bought = (p) => (p.cars || []).map((id) => LEGACY[id] || id);
+  const owns = (p, d) => !!d && (d.price === 0 || levelOf(p.xp) >= d.lvl || bought(p).includes(d.id));
   const today = () => new Date(now() + 3 * 3600000).toISOString().slice(0, 10);
   const DAY_XP = 2500;
   function addXp(p, n) {
@@ -149,7 +151,7 @@ module.exports = function race(app, ctx) {
     const lap = b.lap && Number(b.lap.ms);
     if (lap && laps.includes(lap) && checkGhost(track, lap, b.lap.ghost)) {
       const id = `${track}:${uid}`; const prev = store.get('race_laps', id);
-      const car = CARS.find((d) => d.id === b.car) ? b.car : CARS[0].id;
+      const bc = LEGACY[b.car] || b.car; const car = CARS.find((d) => d.id === bc) ? bc : CARS[0].id;
       if (!prev || lap < prev.ms) { store.put('race_laps', { id, uid, track, ms: lap, car, variant: Math.max(0, Math.min(3, b.variant | 0)), ghost: b.lap.ghost, at: now() }); record = { ms: lap, prev: prev ? prev.ms : null }; }
       const w = weekId();
       if (track === weekTrack(w)) {
@@ -160,7 +162,7 @@ module.exports = function race(app, ctx) {
     }
     save(p);
     const after = levelOf(p.xp);
-    const unlocked = after > before ? CARS.filter((d) => d.price > 0 && d.lvl > before && d.lvl <= after && !(p.cars || []).includes(d.id)).map((d) => d.name) : [];
+    const unlocked = after > before ? CARS.filter((d) => d.price > 0 && d.lvl > before && d.lvl <= after && !bought(p).includes(d.id)).map((d) => d.name) : [];
     res.json({ gained, ...meOut(uid), leveledUp: after > before, unlocked, record, weekRank });
   });
 
@@ -176,7 +178,7 @@ module.exports = function race(app, ctx) {
   });
 
   app.post('/api/race/unlock', auth, (req, res) => {
-    const d = CARS.find((c) => c.id === req.body?.car); if (!d) return res.status(404).json({ error: 'Araç bulunamadı.' });
+    const cid = LEGACY[req.body?.car] || req.body?.car; const d = CARS.find((c) => c.id === cid); if (!d) return res.status(404).json({ error: 'Araç bulunamadı.' });
     const p = prof(req.user.id);
     if (owns(p, d)) return res.json(meOut(req.user.id));
     if (!eco.spend(req.user.id, d.price, 'race_car', { car: d.id })) return res.status(402).json({ error: `Yeterli jetonun yok. ${d.name} ${d.price} jeton.`, need: d.price });
@@ -283,7 +285,7 @@ module.exports = function race(app, ctx) {
   app.post('/api/race/room/:id/car', auth, (req, res) => {
     const r = getRoom(req, res); if (!r) return;
     const p = r.players.find((x) => x.uid === req.user.id); if (!p || r.status !== 'lobby') return res.status(409).json({ error: 'Şu an değiştirilemez.' });
-    const d = CARS.find((c) => c.id === req.body?.car); if (!d || !owns(prof(req.user.id), d)) return res.status(403).json({ error: 'Bu araç açık değil.' });
+    const cid = LEGACY[req.body?.car] || req.body?.car; const d = CARS.find((c) => c.id === cid); if (!d || !owns(prof(req.user.id), d)) return res.status(403).json({ error: 'Bu araç açık değil.' });
     p.car = d.id; p.variant = Math.max(0, Math.min(d.models.length - 1, req.body?.variant | 0));
     cast(r, 'race:room', roomView(r)); res.json(roomView(r));
   });

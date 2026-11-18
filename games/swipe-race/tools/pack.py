@@ -1,18 +1,17 @@
 # Swipe Race model paketi: seçili GLB'ler + dokular tek dosyada.
 # Biçim: [u32 başlık uzunluğu][başlık JSON][veriler], base64 olarak tek elemanlı bir JSON dizisine yazılır.
-# Kullanım: python3 pack.py <racing-kit-dir> <toy-car-kit-dir> <cikti.json>
+# Kullanım: python3 pack.py <racing-kit-dir> <toy-car-kit-dir> <car-kit-dir> <cikti.json>
 import json,struct,sys,os,base64
-RK, TK, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
+RK, TK, CK, OUT = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 R=os.path.join(RK,'Models','GLTF format')+'/'
 T=os.path.join(TK,'Models','GLB format')+'/'
+C=os.path.join(CK,'Models','GLB format')+'/'
 racing='''roadStraight roadStart roadStartPositions roadCornerSmall roadCornerSmallBorder roadCornerLarge roadCornerLargeBorder roadCornerLargeBorderInner
 roadCornerLarger roadCornerLargerBorder roadCornerLargerBorderInner roadRampLong roadStraightBridge roadStraightBridgeMid
 grandStand grandStandCovered grandStandRound grandStandCoveredRound pitsGarage pitsGarageClosed pitsOffice pitsOfficeRoof
 treeLarge treeSmall lightPostModern billboard billboardLow billboardDouble_exclusive overheadLights overheadRoundColored camera_exclusive
-tent tentLong tentRoof tentClosed flagCheckers bannerTowerRed bannerTowerGreen barrierRed barrierWhite rail lightRedDouble
-raceCarRed raceCarGreen raceCarOrange raceCarWhite'''.split()
-toy='''vehicle-racer vehicle-racer-low vehicle-speedster vehicle-vintage-racer vehicle-drag-racer vehicle-suv vehicle-truck vehicle-monster-truck
-item-coin-gold item-box item-banana smoke tree tree-pine'''.split()
+tent tentLong tentRoof tentClosed flagCheckers bannerTowerRed bannerTowerGreen barrierRed barrierWhite rail lightRedDouble'''.split()
+toy='''item-coin-gold item-box item-banana smoke tree tree-pine'''.split()
 def glb_parts(b):
     l=struct.unpack('<I',b[12:16])[0]; j=json.loads(b[20:20+l]); off=20+l
     bl,bt=struct.unpack('<II',b[off:off+8]); return j,b[off+8:off+8+bl]
@@ -21,6 +20,33 @@ def glb_build(j,bin_):
     bin_+=b'\0'*((4-len(bin_)%4)%4)
     total=12+8+len(js)+8+len(bin_)
     return struct.pack('<III',0x46546C67,2,total)+struct.pack('<II',len(js),0x4E4F534A)+js+struct.pack('<II',len(bin_),0x004E4942)+bin_
+def compact(j,bin_):
+    # Kullanılmayan veriyi at: tangent öznitelikleri ve hiçbir erişimcinin göstermediği bufferView'lar (gömülü doku vb.)
+    for m in j.get('meshes',[]):
+        for pr in m['primitives']: pr['attributes'].pop('TANGENT',None)
+    used=[]
+    for m in j.get('meshes',[]):
+        for pr in m['primitives']:
+            used+=list(pr['attributes'].values())
+            if 'indices' in pr: used.append(pr['indices'])
+    used=sorted(set(used)); amap={o:n for n,o in enumerate(used)}
+    accs=[j['accessors'][i] for i in used]
+    views=sorted(set([a['bufferView'] for a in accs if 'bufferView' in a]+[im['bufferView'] for im in j.get('images',[]) if 'bufferView' in im])); vmap={}
+    out=bytearray(); nviews=[]
+    for o in views:
+        v=dict(j['bufferViews'][o]); st=v.get('byteOffset',0); data=bin_[st:st+v['byteLength']]
+        while len(out)%4: out.append(0)
+        v['byteOffset']=len(out); v['buffer']=0; out.extend(data); vmap[o]=len(nviews); nviews.append(v)
+    for a in accs:
+        if 'bufferView' in a: a['bufferView']=vmap[a['bufferView']]
+    for im in j.get('images',[]):
+        if 'bufferView' in im: im['bufferView']=vmap[im['bufferView']]
+    for m in j.get('meshes',[]):
+        for pr in m['primitives']:
+            pr['attributes']={k:amap[v] for k,v in pr['attributes'].items()}
+            if 'indices' in pr: pr['indices']=amap[pr['indices']]
+    j['accessors']=accs; j['bufferViews']=nviews; j['buffers']=[{'byteLength':len(out)}]
+    return j,bytes(out)
 def strip_tex(j):
     for k in ('images','textures','samplers'): j.pop(k,None)
     for m in j.get('materials',[]):
@@ -36,10 +62,14 @@ for n in racing:
     b=open(R+n+'.glb','rb').read(); j,bi=glb_parts(b)
     for m in j.get('materials',[]): m.pop('extensions',None)
     j.pop('extensionsUsed',None); j.pop('extensionsRequired',None)
-    add(n,glb_build(j,bi))
+    add(n,glb_build(*compact(j,bi)))
 for n in toy:
-    b=open(T+n+'.glb','rb').read(); j,bi=glb_parts(b); add(n,glb_build(strip_tex(j),bi))
-for n,p in [('tex0',T+'Textures/colormap.png'),('tex1',os.path.join(TK,'Models','Textures','variation-a.png')),('tex2',os.path.join(TK,'Models','Textures','variation-b.png'))]:
+    b=open(T+n+'.glb','rb').read(); j,bi=glb_parts(b); add(n,glb_build(*compact(strip_tex(j),bi)))
+# Car Kit araçları ('ck-' önekiyle; doku ayrı gönderilir: tex3)
+cars='''hatchback-sports sedan taxi kart-oobi kart-oodi kart-ooli kart-oopi kart-oozi sedan-sports suv-luxury police ambulance firetruck tractor race-future race'''.split()
+for n in cars:
+    b=open(C+n+'.glb','rb').read(); j,bi=glb_parts(b); add('ck-'+n,glb_build(*compact(strip_tex(j),bi)))
+for n,p in [('tex3',C+'Textures/colormap.png'),('tex0',T+'Textures/colormap.png'),('tex1',os.path.join(TK,'Models','Textures','variation-a.png')),('tex2',os.path.join(TK,'Models','Textures','variation-b.png'))]:
     add(n,open(p,'rb').read())
 hdr=json.dumps(entries,separators=(',',':')).encode(); hdr+=b' '*((4-(len(hdr)+4)%4)%4)
 raw=struct.pack('<I',len(hdr))+hdr+bytes(blob)

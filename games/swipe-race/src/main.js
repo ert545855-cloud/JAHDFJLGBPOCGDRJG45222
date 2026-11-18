@@ -1,7 +1,7 @@
 // Swipe Race: 3D yarış. Modlar: yarış (5 bot), kupa (3 pist), zamana karşı (hayaletle), arkadaşlarla (çok oyunculu).
 // Derleme: games/swipe-race/README.md
 import * as THREE from 'three';
-import { $, isTouch, store, settings, QUALITY, renderer, scene, camera, sun, view, resize, baseFov, lockLandscape, setDpr, warmup, applyQuality, qualityHooks } from './core.js';
+import { $, isTouch, store, settings, QUALITY, renderer, scene, camera, sun, view, resize, baseFov, lockLandscape, setDpr, warmup, applyQuality, qualityHooks, allMats } from './core.js';
 import { TILE, TRACKS, project, nearestGlobal } from './track.js';
 import { CarSim, CAR_DEFS, aiDrive, collideCars, mulberry32, carIndex, ITEMS } from './physics.js';
 import { loadAll } from './assets.js';
@@ -15,7 +15,7 @@ import { api, online, socket, serverNow, encodeGhost, decodeGhost } from './net.
 const LAPS = 3;
 const STEP = 1 / 120;
 const NCARS = 6;
-const TOY_SCALE = 0.33 * TILE, RACING_SCALE = 3.3;
+const CAR_SCALES = { toy: 0.33 * TILE, racing: 3.3, car: 1.75 };
 const DIFFS = [{ name: 'Kolay', skill: 0.86 }, { name: 'Normal', skill: 0.95 }, { name: 'Zor', skill: 1.03 }];
 const CUP_PTS = [10, 8, 6, 5, 4, 3];
 const ITEM_ICON = { turbo: '🚀', banana: '🍌', shield: '🛡️' };
@@ -1010,7 +1010,8 @@ async function boot() {
   const bar = $('loadBar');
   const setP = p => { bar.style.transform = 'scaleX(' + p.toFixed(3) + ')'; };
   if (online()) api('/me').then(r => { G.me = r; if (G.state === 'menu') refreshMenu(); }).catch(() => {});
-  await loadAll(p => setP(p * 0.9), CAR_DEFS, TOY_SCALE, RACING_SCALE);
+  const lm = await loadAll(p => setP(p * 0.9), CAR_DEFS, CAR_SCALES);
+  allMats.push(...lm.toyMats, lm.carMat);
   $('loadText').textContent = 'Pist kuruluyor…';
   smoke = new Smoke(64); skids = new Skids(360); pickups = new Pickups();
   bindUI();
