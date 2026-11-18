@@ -92,7 +92,7 @@ function pub(u, viewerId) {
   const self = viewerId === u.id;
   // Yalnızca hesabın sahibinin görebileceği alanlar (başkasının profiline bakan bunları almaz)
   if (!self) ['paid', 'plusUntil', 'boostUntil', 'lastFreeBoost', 'lastSwipe', 'viewersSeenAt', 'verifyPose', 'banReason', 'bannedUntil', 'bannedAt', 'status', 'warned',
-    'passChangedByUser', 'prefs', 'consentAt', 'burcWeek', 'autoWeek', 'loginStreak', 'skin', 'logo', 'isBot', 'tonightUntil', 'plusTrial', 'stickerPacks', 'superBank', 'termsV', 'termsAt', 'lookingFor', 'lookingForPending', 'lookingForPendingAt', 'aiAskedAt'].forEach((k) => { delete rest[k]; });
+    'passChangedByUser', 'prefs', 'consentAt', 'burcWeek', 'autoWeek', 'loginStreak', 'skin', 'logo', 'isBot', 'tonightUntil', 'plusTrial', 'stickerPacks', 'superBank', 'termsV', 'termsAt', 'lookingFor', 'lookingForPending', 'lookingForPendingAt', 'aiAskedAt', 'consentsDone'].forEach((k) => { delete rest[k]; });
   const hidden = !self && priv(u).hideLastSeen;
   const fdoc = viewerId && !self ? store.get('follows', `${viewerId}_${u.id}`) : null;
   return {
@@ -106,7 +106,7 @@ function pub(u, viewerId) {
     age: self ? u.age ?? null : shownAge(u), ageHidden: !!priv(u).hideAge, tags: tagsOf(u),
     prompts: (u.prompts || []).map((p) => ({ ...p, q: socialMod.PROMPTS.find((x) => x[0] === p.id)?.[1] || '' })),
     badges: (u.badges || []).filter((b) => self || !b.hidden).map(({ no, ...b }) => b),
-    ...(self ? { consents: consents || {}, termsV: u.termsV || null, lookingFor: u.lookingFor || 'all', lookingForPending: u.lookingForPending || null, noPass: !!noPass, logins: { google: !!googleSub, apple: !!appleSub }, email: email || '', hasLocation: lat != null, birthdate: birthdate || null, coins: coins || 0, earnings: earnings || 0, needsBirthdate: !birthdate, refCode: refCode || null, falSub: falSub || null, frames: frames || [] } : {}),
+    ...(self ? { consents: consents || {}, consentsDone: !!u.consentsDone, termsV: u.termsV || null, lookingFor: u.lookingFor || 'all', lookingForPending: u.lookingForPending || null, noPass: !!noPass, logins: { google: !!googleSub, apple: !!appleSub }, email: email || '', hasLocation: lat != null, birthdate: birthdate || null, coins: coins || 0, earnings: earnings || 0, needsBirthdate: !birthdate, refCode: refCode || null, falSub: falSub || null, frames: frames || [] } : {}),
     ...(viewerId && !self ? { isFollowing: !!fdoc && fdoc.status !== 'pending', requested: fdoc?.status === 'pending', distanceKm: distance(store.get('users', viewerId), u) } : {}),
   };
 }
@@ -609,7 +609,8 @@ app.post('/api/auth/register', wrap(async (req, res) => {
     photos: [], passHash: await bcrypt.hash(password, 10), recoveryHash: await bcrypt.hash(code, 8),
     isBot: false, createdAt: now(), lastSeen: now(),
   });
-  setConsents(u.id, req.body?.consents, req, 'kayıt'); featureCtx.acceptTerms?.(u.id, req, 'kayıt');
+  setConsents(u.id, { ...Object.fromEntries(Object.keys(CONSENTS).map((k) => [k, false])), ...(req.body?.consents || {}) }, req, 'kayıt'); featureCtx.acceptTerms?.(u.id, req, 'kayıt');
+  store.update('users', u.id, { consentsDone: now() }); // isteğe bağlı izinler kayıtta bir kez soruldu
   // Diğer gerçek üyelere yeni üyeyi duyur (uygulama açıksa listeleri yenilenir)
   io.emit('people:new', brief(u));
   featureCtx.attachInvite?.(u, req.body?.ref, ipOf(req));
@@ -655,9 +656,22 @@ function setConsents(uid, input, req, via) {
 }
 const hasConsent = (u, k) => !!u?.consents?.[k]?.on;
 app.get('/api/me/consents', auth, (req, res) => res.json({ items: Object.entries(CONSENTS).map(([k, text]) => ({ kind: k, text, on: hasConsent(req.user, k), at: req.user.consents?.[k]?.at || null })) }));
+// İsteğe bağlı izinler hesap başına BİR KEZ sorulur (kayıtta ya da ilk açılışta, tek ekranda, her biri ayrı kutu).
+// Sonradan yeni izin verilmez; verilmiş izin ise KVKK gereği her zaman geri alınabilir (yalnız geri alma açıktır).
+app.post('/api/me/consents/once', auth, (req, res) => {
+  if (req.user.consentsDone) return res.status(409).json({ error: 'İzinlerini daha önce belirledin.' });
+  const input = Object.fromEntries(Object.keys(CONSENTS).map((k) => [k, req.body?.consents?.[k] === true]));
+  setConsents(req.user.id, input, req, 'ilk açılış');
+  const u = store.update('users', req.user.id, { consentsDone: now() });
+  res.json({ consents: u.consents || {}, ...pub(u, u.id) });
+});
 app.put('/api/me/consents', auth, (req, res) => {
   if (limited('consent:' + req.user.id, 60, 3600000)) return res.status(429).json({ error: 'Biraz sonra tekrar dene.' });
-  const u = setConsents(req.user.id, req.body || {}, req, 'ayarlar');
+  const body = req.body || {};
+  if (req.user.consentsDone && Object.keys(CONSENTS).some((k) => body[k] === true && !hasConsent(req.user, k))) {
+    return res.status(403).json({ error: 'İzinler hesap başına bir kez, ilk girişte belirlenir. Verdiğin izinleri geri alabilirsin.' });
+  }
+  const u = setConsents(req.user.id, body, req, 'ayarlar');
   res.json({ consents: u.consents || {}, ...pub(u, u.id) });
 });
 

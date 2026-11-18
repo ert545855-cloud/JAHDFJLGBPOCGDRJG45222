@@ -25,13 +25,14 @@ export function askOrientation(value) {
 // PATCH /me gövdesine rıza ekler; kullanıcı vazgeçerse null döner (kaydetme yapılmaz)
 export async function withOrientation(body) {
   if (!body.lookingFor || body.lookingFor === 'all' || state.me?.consents?.orientation?.on) return body;
-  const ok = await askOrientation(body.lookingFor);
-  if (ok === null) return null;
-  return ok ? { ...body, consentOrientation: true } : { ...body, lookingFor: 'all' };
+  // İzin hesap başına bir kez, ilk açılışta alınır; burada yeniden sorulmaz
+  toast('Bu tercih için ilk girişte izin vermediğin için herkesi görüyorsun.');
+  return { ...body, lookingFor: 'all' };
 }
 
 // Eski hesaplar: rızasız saklanan tercih askıda; bir kez sorulur
 export async function orientationPending() {
+  return; // ilk açılıştaki izinler ekranı karar verir
   const v = state.me?.lookingForPending; if (!v) return;
   const key = `su_orient_asked:${state.me.id}`;
   try { if (localStorage.getItem(key)) return; } catch { /* yok */ }

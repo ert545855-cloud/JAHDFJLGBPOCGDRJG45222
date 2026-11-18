@@ -233,7 +233,7 @@ ${PROVIDERS}
     body: () => {
       const c = contact();
       return `
-<p>Aşağıdaki işlemeler SwipeUp’ı kullanmak için <b>zorunlu değildir</b>. Her biri için ayrı ayrı, kendi isteğinle izin verirsin; kutular önceden işaretli gelmez ve vermezsen uygulamanın geri kalanını aynen kullanırsın. Verdiğin izinleri istediğin an Ayarlar › İzinlerim’den aynı kolaylıkla geri alabilirsin; geri alma, o ana kadar yapılmış işlemleri etkilemez.</p>
+<p>Aşağıdaki işlemeler SwipeUp’ı kullanmak için <b>zorunlu değildir</b>. Her biri için ayrı ayrı, kendi isteğinle izin verirsin; kutular önceden işaretli gelmez ve vermezsen uygulamanın geri kalanını aynen kullanırsın. İzinler hesap başına bir kez, kayıtta ya da ilk girişte tek ekranda sorulur; sonradan yeni izin eklenmez. Verdiğin izinleri istediğin an Ayarlar › İzinlerim’den tek dokunuşla geri alabilirsin; geri alma, o ana kadar yapılmış işlemleri etkilemez.</p>
 <h3>1. Kampanya ve yenilik bildirimleri (uygulama içi ve anlık bildirim)</h3>
 <p>Kampanya, indirim, etkinlik ve yeni özelliklerle ilgili uygulama içi ve anlık bildirim gönderebilmemiz için adın, kullanıcı adın ve bildirim aboneliğin işlenir. İzin vermezsen yalnızca hesabın, siparişlerin ve güvenliğinle ilgili bilgilendirme bildirimleri gelir. Telefonunun bildirim izni tek başına kampanya izni sayılmaz.</p>
 <h3>2. Kampanya ve yenilik e-postaları (ticari elektronik ileti)</h3>

@@ -203,24 +203,13 @@ Akış paylaşımı kuralları (bu metin tek bir kişiye değil, akışta herkes
 
   // Kaçan fallar: anahtar yokken, uygulama yeniden başlarken ya da mod değişirken sıraya girmemiş bekleyen istekler.
   // Dakikada bir bakılır: rızası olanlar sıraya girer (hatalılar 3 kez yeniden denenir); "otomatik" modda hazır taslaklar gönderilir.
-  // Rızası olmayana bir kez nazikçe sorulur (sistem mesajı); izni açınca falı birkaç dakika içinde gelir.
   const retries = new Map();
   function sweep() {
     if (mode() === 'off' || !falci()) return;
     for (const m of store.filter('messages', (x) => x.fal && x.fal.status === 'pending')) {
       if (queue.includes(m.id)) continue;
       const u = store.get('users', m.from);
-      if (!u?.consents?.ai?.on) {
-        if (!m.fal.aiAsked && !u?.aiAskedAt && !u?.consents?.ai && now() - (m.at || 0) > 60000) {
-          const chat = store.get('chats', m.chatId);
-          if (chat && u) {
-            store.update('users', u.id, { aiAskedAt: now() }); // kişi başına bir kez: bir daha sorulmaz
-            ctx.systemMsg?.(chat, 'Falcı Teyze: Kuzum, falına hemen bakabilmem için yapay zekâ desteğine izin vermen gerekiyor. Ayarlar › İzinlerim’den “Yapay zekâ” iznini açarsan birkaç dakika içinde falın gelir. İstemezsen hiç sorun değil, falına ben kendim bakacağım; biraz sürebilir. 💜');
-            m.fal.aiAsked = now(); store.update('messages', m.id, {});
-          }
-        }
-        continue;
-      }
+      if (!u?.consents?.ai?.on) continue; // izin yoksa falına Falcı Teyze kendisi bakar (izin yeniden sorulmaz)
       const d = draftOf(m.id); const tries = retries.get(m.id) || 0;
       const stuck = d?.status === 'working' && now() - (d.at || 0) > 5 * 60000;
       const retry = d?.status === 'error' && tries < 3 && now() - (d.at || 0) > 60000;

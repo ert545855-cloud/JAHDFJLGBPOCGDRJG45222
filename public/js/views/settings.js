@@ -165,14 +165,17 @@ export default function settings(view) {
       f.onsubmit = async (e) => { e.preventDefault(); try { const r = await api('/me/password', { body: { current: f.c.value, password: f.n.value } }); adoptToken(r.token); state.me.noPass = false; close(); toast('Şifren değişti. Diğer cihazlardaki oturumların kapandı.'); } catch (er) { toast(er.message); } };
     },
   });
-  // İzinlerim: isteğe bağlı açık rızalar, istediğin an verilir ya da geri alınır (kayıt altına alınır)
+  // İzinlerim: izinler hesap başına bir kez (kayıtta / ilk açılışta) verilir; burada yalnız verilmiş izin geri alınır (KVKK gereği)
   view.querySelector('.cns').onclick = async () => {
     const r = await api('/me/consents').catch((er) => { toast(er.message); return null; }); if (!r) return;
-    sheet('İzinlerim', `<div class="cns-list">${r.items.map((c) => `<label class="it"><span class="grow">${esc(c.text)}<div class="sub">${c.on ? `Açık rıza verildi · ${new Date(c.at).toLocaleDateString('tr-TR')}` : 'Verilmedi'}</div></span><input type="checkbox" class="sw" data-k="${esc(c.kind)}" ${c.on ? 'checked' : ''}></label>`).join('')}</div>
-      <p class="muted" style="margin:10px 16px 16px;font-size:13px">Bu izinler isteğe bağlıdır; vermesen de uygulamayı kullanabilirsin. Konum iznini geri alırsan kayıtlı konumun silinir. Ayrıntılar <a class="link" href="#/legal/riza">açık rıza metni</a>nde.</p>`, {
+    const row = (c) => `<div class="it" data-k="${esc(c.kind)}"><span class="grow">${esc(c.text)}<div class="sub">${c.on ? `Açık rıza verildi · ${new Date(c.at).toLocaleDateString('tr-TR')}` : 'Verilmedi'}</div></span>${c.on ? '<button type="button" class="btn sm outline wd">Geri al</button>' : ''}</div>`;
+    sheet('İzinlerim', `<div class="cns-list">${r.items.map(row).join('')}</div>
+      <p class="muted" style="margin:10px 16px 16px;font-size:13px">İzinler hesap başına bir kez, ilk girişte belirlenir; sonradan yeni izin verilmez. Verdiğin bir izni istediğin an geri alabilirsin (geri alınca o izin bir daha verilemez). Konum iznini geri alırsan kayıtlı konumun silinir. Ayrıntılar <a class="link" href="#/legal/riza">açık rıza metni</a>nde.</p>`, {
       onMount(sh) {
-        sh.querySelectorAll('.sw').forEach((x) => { x.onchange = async () => {
-          try { const u = await api('/me/consents', { method: 'PUT', body: { [x.dataset.k]: x.checked } }); Object.assign(state.me, u); toast(x.checked ? 'İzin verildi.' : 'İzin geri alındı.'); x.closest('.it').querySelector('.sub').textContent = x.checked ? `Açık rıza verildi · ${new Date().toLocaleDateString('tr-TR')}` : 'Verilmedi'; } catch (er) { x.checked = !x.checked; toast(er.message); }
+        sh.querySelectorAll('.wd').forEach((b) => { b.onclick = async () => {
+          const it = b.closest('.it'); const k = it.dataset.k;
+          if (!confirm('Bu izni geri almak istiyor musun? Geri alınan izin sonradan yeniden verilemez.')) return;
+          try { const u = await api('/me/consents', { method: 'PUT', body: { [k]: false } }); Object.assign(state.me, u); it.querySelector('.sub').textContent = 'Geri alındı'; b.remove(); toast('İzin geri alındı.'); } catch (er) { toast(er.message); }
         }; });
       },
     });

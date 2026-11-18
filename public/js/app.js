@@ -369,14 +369,14 @@ function keyboardFit() {
   fit();
 }
 
-// Bildirim izni: bu cihazda henüz sorulmadıysa (yeni adres, yeni kurulum) bir kez sorulur; "Şimdi değil" denirse 7 gün sorulmaz
+// Bildirim izni (telefonun izni): bu cihazda bu hesap için bir kez sorulur; "Şimdi değil" denirse bir daha sorulmaz
 async function askPush() {
   try {
     if (!state.me || !pushSupported() || Notification.permission !== 'default') return;
     if (await pushEnabled()) return;
-    const last = +localStorage.getItem('su_push_ask') || 0; if (Date.now() - last < 7 * 86400000) return;
-    if (document.querySelector('.sheet, .terms-up')) { setTimeout(askPush, 15000); return; }
-    localStorage.setItem('su_push_ask', String(Date.now()));
+    const key = `su_push_ask:${state.me.id}`; if (localStorage.getItem(key)) return; // bir kez sorulur
+    if (document.querySelector('.sheet, .terms-up, .cons-up') || !state.me.consentsDone) { setTimeout(askPush, 15000); return; }
+    localStorage.setItem(key, String(Date.now()));
     const close = sheet('Bildirimleri aç', `<div style="padding:0 18px 20px;display:grid;gap:12px">
       <p style="margin:0">Mesaj, arama, eşleşme ve falın geldiğinde anında haberin olsun. Bir sonraki ekranda <b>İzin ver</b>’e dokun.</p>
       <button class="btn primary block yes">Bildirimleri aç</button><button class="btn block outline no">Şimdi değil</button></div>`, {
@@ -387,6 +387,37 @@ async function askPush() {
     });
     void close;
   } catch { /* sessiz */ }
+}
+
+// İsteğe bağlı izinler (açık rıza): hesap başına BİR KEZ, tek ekranda, her biri ayrı kutu; kutular boş gelir.
+// Kayıtta seçilmişse hiç çıkmaz. Sonradan yeni izin verilmez; verilen izin Ayarlar › İzinlerim'den geri alınabilir (KVKK).
+const CONS_ITEMS = [
+  ['marketing', 'Kampanya ve yenilik bildirimleri almak'],
+  ['marketingEmail', 'Kampanya ve yenilik e-postaları almak (İYS’ye kaydedilir)'],
+  ['location', 'Yakınımdaki kişileri görmek için yaklaşık konumumun işlenmesi'],
+  ['ai', 'Fal fotoğraf ve notlarımın yorum taslağı için yurt dışındaki yapay zeka hizmetine (Google Gemini) aktarılması'],
+  ['orientation', 'Kaydırmada hangi cinsiyeti görmek istediğime dair tercihimin işlenmesi (özel nitelikli veri)'],
+];
+function consentOnce() {
+  if (!state.me || state.me.consentsDone || state.ban || state.me.role === 'falci') return;
+  if (document.querySelector('.terms-up, .cons-up') || state.me.needsBirthdate) { setTimeout(consentOnce, 3000); return; }
+  let saved = false;
+  sheet('İzinlerin', `<form class="cons-up" style="padding:0 18px 20px;display:grid;gap:12px">
+    <p style="margin:0">Aşağıdakiler <b>isteğe bağlıdır</b>; işaretlemesen de SwipeUp’ı kullanırsın. Bu ekran <b>yalnız bir kez</b> gösterilir. Ayrıntılar <a class="link" href="#/legal/riza">açık rıza metni</a>nde, kişisel verilerin <a class="link" href="#/legal/kvkk">KVKK aydınlatma metni</a>nde.</p>
+    ${CONS_ITEMS.map(([k, t]) => `<label class="consent"><input type="checkbox" name="${k}" ${state.me.consents?.[k]?.on ? 'checked' : ''}><span>${esc(t)}</span></label>`).join('')}
+    <p class="muted" style="margin:0;font-size:12.5px">Verdiğin izinleri sonra Ayarlar › İzinlerim’den geri alabilirsin; yeni izin sonradan eklenmez.</p>
+    <button class="btn primary block">Kaydet ve devam et</button></form>`, {
+    onMount(sh, close) {
+      const f = sh.querySelector('form');
+      f.onsubmit = async (e) => {
+        e.preventDefault();
+        const consents = Object.fromEntries(CONS_ITEMS.map(([k]) => [k, f[k].checked]));
+        try { const u = await api('/me/consents/once', { body: { consents } }); Object.assign(state.me, u); saved = true; close(); toast('İzinlerin kaydedildi.'); }
+        catch (er) { if (/daha önce/.test(er.message)) { state.me.consentsDone = true; saved = true; close(); } else toast(er.message); }
+      };
+    },
+    onClose() { if (!saved && state.me && !state.me.consentsDone) setTimeout(consentOnce, 400); }, // seçim yapmadan kapanmaz
+  });
 }
 
 // Güncellenen Kullanım Koşulları: okuyup onaylamadan kapatılamaz; istemeyen hesabını silebilir
@@ -456,6 +487,7 @@ async function boot() {
   setTimeout(maybeShowInstall, state.token ? 4000 : 1500);
   // Kullanım Koşulları güncellendiyse yeniden onay (sürüm ve tarih kayda geçer)
   if (state.me && !state.ban && state.config?.legalVer?.kosullar && state.me.termsV !== state.config.legalVer.kosullar) setTimeout(termsPrompt, 1800);
+  if (state.me && !state.ban && !state.me.consentsDone) setTimeout(consentOnce, 2600);
   if (state.me?.lookingForPending && !state.ban) setTimeout(() => import('./consent.js').then((m) => m.orientationPending()), 3500);
   // Yeni üyeye SwipeUp+ denemesi: ilk açılışta bir kez tanıt
   if (state.me?.plusTrial && state.me.plusTrial.until > Date.now() && !state.me.plusTrial.bought) setTimeout(() => import('./trialsheet.js').then((m) => m.default(state.me.plusTrial)).catch(() => {}), 2500);

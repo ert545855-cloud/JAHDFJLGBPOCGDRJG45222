@@ -226,10 +226,7 @@ export function openFilters(onSave) {
       sh.querySelector('.gl').onclick = () => {
         if (!navigator.geolocation) return toast('Bu cihaz konum paylaşmayı desteklemiyor.');
         // Konum isteğe bağlıdır: açık rıza bir kez, ayrı olarak sorulur (Ayarlar → İzinlerim'den geri alınabilir)
-        if (!state.me?.consents?.location?.on && !consentLocation) {
-          if (!confirm('Yakınındaki kişileri gösterebilmemiz için yaklaşık konumunun (1 km hassasiyet) işlenmesine açık rıza veriyor musun? İstediğin zaman Ayarlar → İzinlerim’den geri alabilirsin.')) return;
-          consentLocation = true;
-        }
+        if (!state.me?.consents?.location?.on) return toast('İlk girişte konum izni vermediğin için yakınındakiler gösterilemiyor.');
         navigator.geolocation.getCurrentPosition((pos) => {
           location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
           sh.querySelector('.loc').firstChild.textContent = 'Konum alındı, kaydetmeyi unutma. ';

@@ -6,7 +6,7 @@ const { nanoid } = require('nanoid');
 const mail = require('./mail');
 
 // Belge sürümleri: metin değişince tarih güncellenir; Kullanım Koşulları değişince üyelerden yeniden onay istenir
-const VER = { kosullar: '2026-11-17', gizlilik: '2026-11-17', kvkk: '2026-11-17', riza: '2026-11-17', cerez: '2026-11-17', mesafeli: '2026-11-17', onbilgi: '2026-11-17', iade: '2026-11-17', kunye: '2026-11-17', lisanslar: '2026-11-17', saklama: '2026-11-17', guvenlik: '2026-11-17' };
+const VER = { kosullar: '2026-11-17', gizlilik: '2026-11-17', kvkk: '2026-11-17', riza: '2026-11-18', cerez: '2026-11-17', mesafeli: '2026-11-17', onbilgi: '2026-11-17', iade: '2026-11-17', kunye: '2026-11-17', lisanslar: '2026-11-17', saklama: '2026-11-17', guvenlik: '2026-11-17' };
 const THH = { year: 2026, limit: 186000 }; // tüketici hakem heyeti parasal sınırı (her yıl Aralık'ta güncellenir)
 const DEF = { deliveryHours: 24, payHours: 72, refund14: true };
 const DAY = 86400000;
