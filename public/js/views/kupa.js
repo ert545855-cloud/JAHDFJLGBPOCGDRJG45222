@@ -7,7 +7,8 @@ import { leaveTo } from '../nav.js';
 import { t as tr } from '../i18n.js';
 import { makeWorld, themeFor, seedOf } from '../k3world.js';
 import { makePhys } from '../k3phys.js';
-import { makeSfx } from '../k3sfx.js'; // tuvale çizilen etiketler (Sen, Ebe) sayfa çevirisinden geçmez: elle çevrilir
+import { makeSfx } from '../k3sfx.js';
+import { makeVeh } from '../k3veh.js'; // Araba Yarışı ve Gemi Savaşı // tuvale çizilen etiketler (Sen, Ebe) sayfa çevirisinden geçmez: elle çevrilir
 
 const G = 22; const JUMP = 8.5; const SPEED = 7; const PR = 0.45; // sunucuyla aynı fizik sabitleri
 export const COLORS = { gul: 0xf48fb1, limon: 0xffe066, fistik: 0xa5d66f, portakal: 0xffb061, nar: 0xe23e6d, nane: 0x5fe0c4, bogurtlen: 0x8a63d2, cikolata: 0x8a5636, altin: 0xf5c542, lavanta: 0xb9a7f5, deniz: 0x3fa9f5, gece: 0x39406e };
@@ -25,13 +26,14 @@ const TIPS = { cubuk: 'Çubuğun üstünden zıpla, platformdan düşme!', zemin
   lav: 'Basamaklardan zirveye tırman, lav yükseliyor!', bomba: 'Bomba sendeyse birine dokunup devret. Patladığında elinde olan elenir!',
   sakla: 'Ebe saymayı bitirince aramaya çıkar. Engellerin arkasına saklan, ışığına yakalanma!',
   hafiza: 'Parlayan karoları ezberle. Işıklar sönünce onlardan birinin üstünde ol; diğerleri düşer!', buz: 'Zemin buz: kolay durulmaz. “İt” ile rakibini pistin dışına kaydır!', halat: 'Yerinden kımıldama. Çubuk dolduğu anda “Çek”e bas: tempoya uyan takım halatı alır, zamansız çekiş kaydırır.',
+  araba: 'Gaz kendiliğinden basılı. Kumandayı sağa sola çekerek dön, aşağı çekerek fren yap. “Turbo” ile kısa süre hızlan!', gemi: 'Kumandayla dümen kır. “Ateş” iki bordadan gülle atar: rakibi yanına al. Fırtına halkasının içinde kal!',
   sandalye: 'Müzik çalarken dolaş. Müzik durunca halkalar belirir: boş bir halkanın ortasına koş. Her halkaya bir kişi sığar!', kartopu: '“At” ile en yakın rakibe kar topu fırlat. Vurulan kısa süre donar; en çok isabet eden takım kazanır. Orta çizgi geçilmez.' };
 // Oyun seçicideki açıklamalar (tek oyun olarak oynandığında kimin kazandığı)
 const INFO = { kupa: 'On oyundan karışık üç tur. Her turda elenenler olur, finali kazanan kupayı alır.', cubuk: 'Dönen çubuğun üstünden zıpla. Son kalan kazanır.', zemin: 'Bastığın karo çöker. Son kalan kazanır.',
   kosu: 'Engelli parkuru ilk bitiren kazanır.', kuyruk: 'Süre bitince kuyruğu olanlar kazanır.', sumo: 'Daralan platformda rakibini aşağı it. Son kalan kazanır.', doner: 'Hızlanan döner tablada tutun. Son kalan kazanır.', bayrak: 'İki takım: rakip bayrağı kendi üssüne getiren puan alır. Üç kez getiren kazanır.', renk: 'Söylenen renge koş, diğer karolar düşer. Son kalan kazanır.',
   lav: 'Lav yükselirken zirveye ilk çıkan kazanır.', futbol: 'İki takım, bir top. Topu sür, “Şut”a basılı tutup bırakarak vur. Çok gol atan takım kazanır.', bomba: 'Bomba patladığında elinde olan elenir. Son kalan kazanır.', sakla: 'Ebeden saklan. Süre bitene kadar bulunmayanlar kazanır.',
   hafiza: 'Deseni ezberle, ışıklar sönünce doğru karoda dur. Son kalan kazanır.', buz: 'Kaygan pistte rakibini dışarı it. Son kalan kazanır.', halat: 'İki takım halat çeker. Tempoya uyan takım kazanır.',
-  sandalye: 'Müzik durunca boş halkaya koş. Her turda halka azalır.', kartopu: 'Kışa özel takım oyunu: kar topuyla en çok isabet eden takım kazanır.' };
+  sandalye: 'Müzik durunca boş halkaya koş. Her turda halka azalır.', araba: 'Arabalarla iki tur yarış. İlk bitiren kazanır.', gemi: 'Korsan gemileriyle top atışı. Fırtına daralır, son batmayan kazanır.', kartopu: 'Kışa özel takım oyunu: kar topuyla en çok isabet eden takım kazanır.' };
 const TRACK = { w: 4.5, floors: [[5, -41], [-59, -124]], plats: [{ z: -44, amp: 2.2, w: 0.9, ph: 0 }, { z: -50, amp: 2.2, w: 1.1, ph: 2 }, { z: -56, amp: 2.2, w: 0.8, ph: 4 }],
   sweeps: [{ z: -16, w: 1.6 }, { z: -24, w: -1.9 }, { z: -32, w: 2.2 }, { z: -88, w: -2.6 }, { z: -98, w: 2.9 }], hammers: [{ z: -68, w: 1.7, ph: 0 }, { z: -76, w: 1.9, ph: 1.6 }], ice: [-62, -80], cps: [0, -60.5, -82] };
 const barW = (b, t) => (t < b.from ? 0 : Math.min(b.wmax, b.w0 + b.acc * (t - b.from)));
@@ -115,6 +117,8 @@ export default async function kupa(view, id) {
   const flat = (c, o = {}) => new T.MeshBasicMaterial({ color: c, ...o });
   const mesh = (g, m, x = 0, y = 0, z = 0) => { const o = new T.Mesh(g, m); o.position.set(x, y, z); return o; };
   const lay = (o) => { o.rotation.x = -Math.PI / 2; return o; }; // düzlemi yere yatır
+  const veh = makeVeh(T, { sfx, emit: (e, d) => state.socket?.emit(e, d), feel: (...a) => feel(...a), buzz: (p) => buzz(p), banner: (...a) => banner(...a), feed: (x) => feed(x) });
+  const vehSync = () => { const vm = v.status === 'playing' && veh.is(v.mode) ? v.mode : null; if (vm && !veh.ready(vm)) veh.preload(vm).then(() => { if (!closed) vehSync(); }).catch(() => toast('Araçlar yüklenemedi. Bağlantını kontrol et.')); veh.dress(vm, chars, v.players, v.me); if (v.pick && veh.is(v.pick)) veh.preload(v.pick).catch(() => {}); };
 
   // ---- Lokum karakteri: yuvarlak köşeli küp gövde, pudra şekeri tepe, minik el ve ayaklar ----
   const cubeGeo = (() => { const g = new T.SphereGeometry(0.5, 22, 16); const p = g.attributes.position; const n = 5;
@@ -206,13 +210,14 @@ export default async function kupa(view, id) {
     else if (m === 'halat') b = { cx: 0, cz: 0, rx: 8, rz: c.base + 4 * c.step + 8 };
     else if (m === 'sandalye') b = rr(c.r + 4);
     else if (m === 'lav') b = rr(c.base + 8);
+    else if (veh.is(m)) b = veh.bounds(m, c);
     else if (m) b = rr((c.r || c.r0 || 10) + 5);
     const th = (location.hostname === 'localhost' && localStorage.getItem('k3theme')) || (m ? themeFor(m, roomSeed + rd) : roomSeed % 2 ? 'sehir' : 'koy');
     world.set(th, roomSeed + rd * 7919, b, -20);
   }
   function buildArena() {
     const key = v.status === 'playing' ? `${v.round}:${v.mode}` : `idle:${v.status}`; if (key === arenaKey) return; arenaKey = key;
-    if (arena) { scene.remove(arena); arena.traverse((o) => { o.geometry?.dispose?.(); }); } arena = new T.Group(); scene.add(arena); dyn = {}; tiles = new Map(); balls = []; sdv.k = -2; rk = { lay: new Map(), key: '' }; rope.p = 0; rope.t = 0; rope.on = 0;
+    if (arena) { scene.remove(arena); arena.traverse((o) => { o.geometry?.dispose?.(); }); } veh.reset(); arena = new T.Group(); scene.add(arena); dyn = {}; tiles = new Map(); balls = []; sdv.k = -2; rk = { lay: new Map(), key: '' }; rope.p = 0; rope.t = 0; rope.on = 0;
     setWorld();
     const cream = lam(0xfff1dc); const nar = lam(0xe23e6d); const teal = lam(0x19c2b8); const plum = lam(0x6b3fa0);
     if (v.status !== 'playing') { arena.add(mesh(new T.CylinderGeometry(1.25, 1.45, 0.5, 40), cream, 0, -0.25, 0)); const ring = mesh(new T.TorusGeometry(1.3, 0.09, 10, 48), nar, 0, 0, 0); ring.rotation.x = Math.PI / 2; arena.add(ring); return; }
@@ -236,7 +241,7 @@ export default async function kupa(view, id) {
       dyn.hams = TRACK.hammers.map((h) => { [-1, 1].forEach((s) => arena.add(mesh(new T.CylinderGeometry(0.15, 0.15, 6, 8), plum, s * 5, 3, h.z))); arena.add(mesh(new T.BoxGeometry(10.4, 0.3, 0.3), plum, 0, 6, h.z)); const piv = new T.Group(); piv.position.set(0, 6, h.z); piv.add(mesh(new T.CylinderGeometry(0.06, 0.06, 5, 6), dark, 0, -2.5, 0)); const bob = mesh(ball, nar, 0, -5.2, 0); bob.scale.setScalar(0.9); piv.add(bob); arena.add(piv); return piv; });
       [-1, 1].forEach((s) => arena.add(mesh(new T.CylinderGeometry(0.2, 0.2, 5, 10), nar, s * 4.6, 2.5, -v.conf.len))); arena.add(mesh(new T.BoxGeometry(9.6, 0.9, 0.3), lam(0xffffff), 0, 5, -v.conf.len));
       for (let i = 0; i < 9; i++) { const c = mesh(new T.BoxGeometry(1, 0.03, 1), i % 2 ? dark : white, -4 + i, 0.03, -v.conf.len); arena.add(c); }
-    } else buildExtra(cream, nar, teal, plum);
+    } else if (veh.is(v.mode)) veh.build(v.mode, arena, v.conf); else buildExtra(cream, nar, teal, plum);
   }
   // Ek modların sahneleri
   function buildExtra(cream, nar, teal, plum) {
@@ -336,6 +341,7 @@ export default async function kupa(view, id) {
     chars.forEach((c, i) => { if (!v.spawn?.[i]) c.g.visible = false; });
     const s = v.spawn?.[v.me]; const out = !s || !v.players[v.me]?.alive; const at = !out && v.phase === 'play' && v.at ? v.at : null; // at: sayfa yenilendiyse kaldığım yer
     Object.assign(me, { x: at ? at[0] : s ? s[0] : 0, y: at ? at[1] : 0, z: at ? at[2] : s ? s[2] : 0, vx: 0, vy: 0, vz: 0, stun: 0, cp: 0, fin: false, gone: out, ry: v.mode === 'kosu' || (TM(v.mode) && !myTeam()) ? Math.PI : 0, dash: 0, dcd: 0, dfl: 0, top: false, dead: false, finAt: 0, jbuf: 0, air: 0, jumped: false, hideAt: out ? 1 : 0 });
+    if (v.status === 'playing' && veh.is(v.mode)) { veh.place(me, v.conf, at); veh.spawnProg(chars, v.spawn); }
     wrap.classList.remove('seen'); tops.clear(); hits.clear(); dashHit.clear(); ap = { cur: 0, back: false }; lf = [0, -1]; if (dyn.bs) Object.assign(dyn.bs, { x: 0, z: 0, vx: 0, vz: 0, sx: 0, sz: 0, svx: 0, svz: 0, own: 0, fr: 0 });
   }
 
@@ -437,6 +443,7 @@ export default async function kupa(view, id) {
     if (m === 'cubuk') { const r = Math.hypot(me.x, me.z) || 1; const k = (4.5 - r) * 0.5; inp.x = (me.x / r) * k; inp.z = (me.z / r) * k;
       c.bars.forEach((b) => { const w = barW(b, t); if (!w) return; let rel = (Math.atan2(me.z, me.x) - barAngle(b, t)) * b.dir; rel = ((rel % Math.PI) + Math.PI) % Math.PI; if ((rel * r - 0.8) / (w * r) < 0.13) inp.jump = true; }); }
     else if (m === 'zemin') { let best = null; let bd = 99; TL.forEach((tl, i) => { if (tiles.has(i)) return; const d = Math.hypot(me.x - tl.x, me.z - tl.z); if (d > 0.5 && d < bd) { bd = d; best = tl; } }); if (best) { inp.x = (best.x - me.x) / bd; inp.z = (best.z - me.z) / bd; } }
+    else if (veh.is(m)) veh.auto(me, inp, t);
     else if (m === 'kosu') { inp.z = -1; inp.x = -me.x * 0.3; if (Math.floor(t * 1.4) % 2 === 0) inp.jump = true; }
     else if (m === 'kuyruk' || m === 'bomba') {
       const hold = (i) => (m === 'kuyruk' ? !!v.st?.tails?.includes(i) : hasBomb(i)); const chase = m === 'kuyruk' ? !hold(v.me) : hold(v.me);
@@ -473,6 +480,7 @@ export default async function kupa(view, id) {
       const kx = (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0); const kz = (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0); if (kx || kz || keys.size) { inp.x = kx; inp.z = kz; }
       const f = look(me.x, me.z); wx = -f[1] * inp.x - f[0] * inp.z; wz = f[0] * inp.x - f[1] * inp.z; // ekrana göre yön → dünya yönü
     }
+    if (veh.is(m)) { const act = inp.jump || keys.has(' '); inp.jump = false; veh.step(me, inp, act, dt, t, nowMs, chars, v); return; } // araç modları kendi sürüşünü yapar
     if (m === 'halat' || (m === 'kartopu' && (me.frz || 0) > nowMs)) { wx = 0; wz = 0; } // halat çekerken yürünmez; kar topu yiyen kısa süre donar
     const g0 = ground(t); const k = me.stun > 0 ? 0.8 : g0?.ice ? 1.7 : me.ground ? 12 : 5; const l = Math.hypot(wx, wz); if (l > 1) { wx /= l; wz /= l; }
     const sp = SPEED * (v.rule?.sp || 1) * (m === 'bomba' && hasBomb(v.me) ? 1.1 : 1); // haftalık kural: çift hız // bombayı taşıyan biraz hızlanır
@@ -578,6 +586,7 @@ export default async function kupa(view, id) {
   function feed(text) { const f = $('.k3-feed'); const el = document.createElement('span'); el.textContent = text; f.append(el); setTimeout(() => el.remove(), 2600); while (f.children.length > 3) f.firstChild.remove(); }
   function leftText(t) { // sağ üstteki durum yazısı
     const m = v.mode; const st = v.st || {}; const n = alive(); t = Math.max(0, t);
+    if (veh.is(m)) return veh.left(t, v, me, iAmIn());
     if (m === 'kosu') return `${n} yarışçı · ilk bitiren kazanır`;
     if (m === 'halat') return `${clock(v.conf.len - t)} · ${myTeam() != null ? `Sen: ${TEAM[myTeam()][1]} · ` : ''}çubuk dolunca çek`;
     if (m === 'kuyruk') return `${clock(v.conf.len - t)} · ${st.tails?.includes(v.me) ? 'Kuyruk sende, kaç!' : iAmIn() ? 'Kuyruk kap!' : lastRound() ? 'Kuyruğu olan kazanır' : 'Kuyruğu olan tur atlar'}`;
@@ -593,7 +602,7 @@ export default async function kupa(view, id) {
   function hud() {
     const playing = v.status === 'playing'; $('.k3-round').textContent = playing ? (v.rounds > 1 ? `${v.round}. tur · ${v.title}` : v.title) : 'Parti Kupası';
     const left = $('.k3-left'); left.hidden = !playing; if (playing) setLeft(leftText(v.playAt ? (srv() - v.playAt) / 1000 : 0)); else leftStr = '';
-    const ctl = playing && v.phase !== 'final' && iAmIn(); $('.k3-joy').hidden = !ctl; $('.k3-zone').hidden = !ctl; const jb = $('.k3-jump'); jb.hidden = !ctl; const jl = SU(v.mode) ? 'İt' : v.mode === 'halat' ? 'Çek' : v.mode === 'kartopu' ? 'At' : v.mode === 'futbol' ? 'Şut' : 'Zıpla'; if (jb.dataset.l !== jl) { jb.dataset.l = jl; jb.textContent = jl; } if (!SU(v.mode)) jb.classList.remove('cd'); if (v.mode === 'halat') { $('.k3-joy').hidden = true; $('.k3-zone').hidden = true; }
+    const ctl = playing && v.phase !== 'final' && iAmIn(); $('.k3-joy').hidden = !ctl; $('.k3-zone').hidden = !ctl; const jb = $('.k3-jump'); jb.hidden = !ctl; const jl = veh.is(v.mode) ? veh.btn(v.mode) : SU(v.mode) ? 'İt' : v.mode === 'halat' ? 'Çek' : v.mode === 'kartopu' ? 'At' : v.mode === 'futbol' ? 'Şut' : 'Zıpla'; if (jb.dataset.l !== jl) { jb.dataset.l = jl; jb.textContent = jl; } if (!SU(v.mode) && !veh.is(v.mode)) jb.classList.remove('cd'); if (v.mode === 'halat') { $('.k3-joy').hidden = true; $('.k3-zone').hidden = true; }
     if (!playing || (!RK(v.mode) && v.mode !== 'halat' && v.mode !== 'sandalye')) { $('.k3-call').hidden = true; callKey = ''; }
     if (!playing || v.mode !== 'sakla') wrap.classList.remove('seen');
     const over = $('.k3-over');
@@ -626,7 +635,7 @@ export default async function kupa(view, id) {
     }); } });
   }
   function apply(nv) {
-    off = Math.min(off, Date.now() - nv.now); const was = `${v.status}:${v.round}:${v.phase}`; v = nv; buildChars(); buildArena(); vSync();
+    off = Math.min(off, Date.now() - nv.now); const was = `${v.status}:${v.round}:${v.phase}`; v = nv; buildChars(); buildArena(); vehSync(); vSync();
     if (v.status === 'playing' && v.phase === 'intro' && roundSeen !== v.round) { roundSeen = v.round; placeAll(); banner(v.rounds > 1 ? `${v.round}. tur · ${v.title}` : v.title, tip()); }
     if (v.status === 'playing' && v.phase === 'play' && roundSeen !== v.round) { roundSeen = v.round; placeAll(); } // oyuna sonradan bağlanan
     if (v.phase === 'result' && was !== `${v.status}:${v.round}:${v.phase}`) { const th = v.result?.through || []; const ok = th.includes(v.me); const fin = v.result?.last || th.length <= 1; // son turda tur atlanmaz, kazanılır
@@ -672,7 +681,7 @@ export default async function kupa(view, id) {
     sheet('Kostüm mağazası', html(), { onMount(sh) { wardrobe = sh; sh.addEventListener('click', async (e) => {
       const b = e.target.closest('[data-id]'); if (!b) return; const k = b.dataset.id; const it = [...w.colors, ...w.hats, ...(w.trails || []), ...(w.dances || [])].find((x) => x[0] === k); const need = it[2] > 0 && !w.owned.includes(k);
       if (need && !(await ask(`${it[1]} · ${it[2]} jeton`, 'Bu kostümü jetonla almak istiyor musun?', 'Satın al'))) return;
-      try { w = await api('/kupa/wardrobe', { body: { id: k, buy: need } }); const box = document.querySelector('.k3-w'); if (box) box.outerHTML = html(); if (need) toast('Kostüm alındı 🎉'); v.players[v.me].look = { color: w.color, hat: w.hat, trail: w.trail }; buildChars(); hud(); } catch (er) { toast(er.message); }
+      try { w = await api('/kupa/wardrobe', { body: { id: k, buy: need } }); const box = document.querySelector('.k3-w'); if (box) box.outerHTML = html(); if (need) toast('Kostüm alındı 🎉'); v.players[v.me].look = { color: w.color, hat: w.hat, trail: w.trail }; buildChars(); vehSync(); hud(); } catch (er) { toast(er.message); }
     }); }, onClose() { wardrobe = null; } });
   }
 
@@ -695,7 +704,7 @@ export default async function kupa(view, id) {
       else if (v.spawn?.[v.me] && !(me.gone && (me.y < -7 || (me.hideAt && nowMs > me.hideAt)))) { mc.g.position.set(me.x, me.y, me.z); mc.g.rotation.y = me.ry; mc.sh.visible = me.ground; animate(mc, dt, Math.hypot(me.vx, me.vz), !me.ground, me.stun > 0.3, me.dash > 0); mc.g.visible = me.y > -9; }
       else mc.g.visible = false;
     }
-    if (playing) chars.forEach((ch, i) => { if (i === v.me) return; const p = ch.g.position; const k = Math.min(1, dt * 13); const sp = Math.hypot(ch.t[0] - p.x, ch.t[2] - p.z) / Math.max(dt, 0.001) * k;
+    if (playing) chars.forEach((ch, i) => { if (i === v.me) return; if (veh.is(m)) { veh.others(ch, i, dt, nowMs, v.players); return; } const p = ch.g.position; const k = Math.min(1, dt * 13); const sp = Math.hypot(ch.t[0] - p.x, ch.t[2] - p.z) / Math.max(dt, 0.001) * k;
       p.x += (ch.t[0] - p.x) * k; p.y += (ch.t[1] - p.y) * k; p.z += (ch.t[2] - p.z) * k; let d = ch.t[3] - ch.g.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); ch.g.rotation.y += d * k;
       if (ch.pfl === 1 && ch.fl !== 1 && ch.fl !== 2) ch.ld = 0.7; ch.pfl = ch.fl; // başkaları da inince basılır
       animate(ch, dt, Math.min(SPEED, sp), ch.fl === 1, ch.fl === 2, ch.fl === 3); ch.sh.visible = ch.fl !== 1 && ch.fl !== 2 && p.y > -0.3; if (!v.players[i].alive && nowMs - ch.seen > 900) ch.g.visible = false; });
@@ -755,9 +764,11 @@ export default async function kupa(view, id) {
       if (v.phase === 'play' && !dyn.go && t >= c.wait) { dyn.go = true; if (iAmIn() && t < c.wait + 1.5) { banner('Ebe geliyor!', '', 1200); buzz(80); } }
     }
     if (fx.length) fx = fx.filter(({ m: o, t0, d = 450, a = 0.3, b = 3.2, op = 0.85 }) => { const e = (nowMs - t0) / d; if (e >= 1) { scene.remove(o); o.material.dispose(); return false; } o.scale.setScalar(a + e * b); o.material.opacity = op * (1 - e); return true; });
+    veh.frame(dt, t, nowMs, chars, v, me, playing);
     // Kamera: f bakış yönü
-    let tx = 0; let ty = 0; let tz = 0; let oy = 6.6; let oz = 8.2; let f = [0, -1];
+    let tx = 0; let ty = 0; let tz = 0; let oy = 6.6; let oz = 8.2; let f = [0, -1]; let ckr = 6;
     if (!playing) { oy = 1.5; oz = 5.4; ty = 0.9; tx = W > H ? 1.9 : 0; tz = W > H ? 0 : -0.2; }
+    else if (veh.is(m)) ({ tx, ty, tz, oy, oz, f, ck: ckr = 6 } = veh.cam(me, iAmIn(), chars, v, dt));
     else if (iAmIn() || (m === 'kosu' && v.spawn?.[v.me])) { tx = me.x; ty = Math.max(-2, me.y); tz = me.z; f = look(me.x, me.z);
       if (m === 'kosu') { oy = 5.2; oz = 8.6; tz -= 3; tx *= 0.6; } else if (m === 'lav') { oy = 4.6; oz = 9.5; } else if (m === 'sakla') { oy = 13.5; oz = 7.5; } else if (m === 'futbol') { oy = 8.6; oz = 9; tx = me.x * 0.75 + dyn.bs.x * 0.25; tz = me.z * 0.75 + dyn.bs.z * 0.25; } else if (m === 'bayrak') { oy = 8.2; oz = 9.2; } }
     else { const lead = [...chars.entries()].find(([i, ch]) => v.players[i]?.alive && ch.g.visible);
@@ -767,9 +778,9 @@ export default async function kupa(view, id) {
       else if (m === 'bayrak') { f = look(0, 0); tx = 0; tz = 0; oy = 17; oz = 14; }
       else if (m === 'sakla') { oy = 27; oz = 15; }
       else { oy = c?.r > 11 || c?.r0 > 10 || c?.rings > 6 ? 21 : 15; oz = oy; } }
-    const ck = Math.min(1, dt * 6); cam.position.x += (tx - f[0] * oz - cam.position.x) * ck; cam.position.y += (ty + oy - cam.position.y) * ck; cam.position.z += (tz - f[1] * oz - cam.position.z) * ck;
+    const ck = Math.min(1, dt * ckr); cam.position.x += (tx - f[0] * oz - cam.position.x) * ck; cam.position.y += (ty + oy - cam.position.y) * ck; cam.position.z += (tz - f[1] * oz - cam.position.z) * ck;
     cl.x += (tx - cl.x) * ck; cl.y += (ty + 0.8 - cl.y) * ck; cl.z += (tz - cl.z) * ck; cam.lookAt(cl.x, cl.y, cl.z);
-    if (playing && nowMs - hudAt > 250) { hudAt = nowMs; setLeft(leftText(t)); if (SU(m)) $('.k3-jump').classList.toggle('cd', t < me.dcd - 0.05); }
+    if (playing && nowMs - hudAt > 250) { hudAt = nowMs; setLeft(leftText(t)); if (SU(m)) $('.k3-jump').classList.toggle('cd', t < me.dcd - 0.05); else if (veh.is(m)) $('.k3-jump').classList.toggle('cd', veh.cooling(me, nowMs)); }
     if (v.status === 'waiting' && v.startAt) { const el = $('.k3-auto'); if (el) el.textContent = `${Math.max(0, Math.ceil((v.startAt - srv()) / 1000))} sn sonra başlıyor`; }
     // Fizik motoru: oyuncular ve hareketli engeller kinematik gövde olarak nesneleri iter
     if (phys && propsKey !== arenaKey) { propsKey = arenaKey; buildProps(); }
@@ -812,6 +823,8 @@ export default async function kupa(view, id) {
   // Sunucu olayları: eleme, kuyruk / bomba el değiştirmesi, gol, zirve
   const said = new Map(); // aynı eleme için iki satır yazma ("bulundu" + "elendi")
   function onEv(ev) {
+    if (ev.t === 'sink') said.set(ev.i, performance.now()); // "battı" yazıldı, ardından gelen "elendi" yazılmasın
+    if (veh.is(v.mode) && veh.ev(ev, v, me, chars, iAmIn())) return;
     const st = v.st; const p = v.players[ev.i]; const ch = chars.get(ev.i);
     if (ev.t === 'out' && p) { p.alive = false; p.out = true; if (ch) ch.seen = performance.now(); if (ev.i !== v.me) { if (performance.now() - (said.get(ev.i) || 0) > 700) { feed(`${nm(ev.i)} elendi`); sfx.play('pop', 0.6, 200); } } else if (!me.gone) { me.gone = true; banner('Elendin', after(), 2600); } hud(); }
     else if (ev.t === 'tail' && st) { const old = st.tails || []; st.tails = ev.tails; const got = ev.tails.find((i) => !old.includes(i)); const lost = old.find((i) => !ev.tails.includes(i));
@@ -843,6 +856,6 @@ export default async function kupa(view, id) {
     on('k3:tile', ([i, at]) => { tiles.set(i, at); }),
     on('k3:ev', onEv), on('k3:rtc', onRtc),
     on('reconnected', () => { join(); if (voice.on) state.socket?.emit('k3:voice', true); api(`/kupa/${id}`).then(apply).catch((e) => { if (/bulunamadı/i.test(e?.message || '')) { toast('Oyun sona erdi.'); leaveTo('#/oyunlar'); } }); })];
-  join(); buildChars(); buildArena(); if (v.status === 'playing') { roundSeen = v.round; placeAll(); } hud(); cam.position.set(0, 9, 12); raf = requestAnimationFrame(frame);
+  join(); buildChars(); buildArena(); vehSync(); if (v.status === 'playing') { roundSeen = v.round; placeAll(); } hud(); cam.position.set(0, 9, 12); raf = requestAnimationFrame(frame);
   return () => { closed = true; cancelAnimationFrame(raf); offs.forEach((f) => f()); clearTimeout(banT); window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); state.socket?.emit('k3:leave', { id }); wardrobe = null; vOff(true); world.dispose(); phys?.dispose(); sfx.close(); wrap.removeEventListener('pointerdown', wake); window.removeEventListener('keydown', wake); renderer.dispose(); offLand(); };
 }
