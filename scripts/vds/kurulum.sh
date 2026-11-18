@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SwipeUp VDS kurulumu (Ubuntu 22.04 / 24.04, root olarak).
-# Kullanım:  curl -fsSL https://raw.githubusercontent.com/ert545855-cloud/sweep-up2/main/scripts/vds/kurulum.sh | bash -s -- alanadin.com
+# Kullanım:  curl -fsSL https://raw.githubusercontent.com/ert545855-cloud/JAHDFJLGBPOCGDRJG45222/main/scripts/vds/kurulum.sh | bash -s -- alanadin.com
 # Kurduğu şeyler: Node.js 22, Caddy (HTTPS sertifikası kendiliğinden alınır ve yenilenir), SwipeUp servisi (çökerse ve
 # sunucu yeniden başlarsa kendiliğinden açılır), GitHub'dan 5 dakikada bir otomatik güncelleme, günlük veritabanı yedeği
 # (7 gün), güvenlik duvarı, otomatik güvenlik güncellemeleri ve küçük sunucular için takas alanı.
@@ -8,7 +8,7 @@
 set -euo pipefail
 
 DOMAIN="${1:-}"
-REPO="https://github.com/ert545855-cloud/sweep-up2.git"
+REPO="https://github.com/ert545855-cloud/JAHDFJLGBPOCGDRJG45222.git"
 APP=/opt/swipeup
 ENVF=/etc/swipeup.env
 DATA=/var/lib/swipeup

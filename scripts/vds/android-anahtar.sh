@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Android uygulamasının kalıcı imza anahtarı (bir kez, root olarak):
-#   curl -fsSL https://raw.githubusercontent.com/ert545855-cloud/sweep-up2/main/scripts/vds/android-anahtar.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/ert545855-cloud/JAHDFJLGBPOCGDRJG45222/main/scripts/vds/android-anahtar.sh | bash
 # Sunucuda anahtar yoksa yenisini üretir (PKCS12, takma ad "swipeup", 27 yıl geçerli) ve /etc/swipeup.env'e yazar:
 #   ANDROID_KEYSTORE_B64, ANDROID_KEYSTORE_PASS, ANDROID_SHA256 (assetlinks.json için)
 # GitHub derlemesi anahtarı sunucudan alır (/api/internal/android-key, yalnız bu deponun derlemesine verilir).

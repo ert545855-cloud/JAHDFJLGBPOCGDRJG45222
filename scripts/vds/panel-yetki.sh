@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SwipeUp yönetim paneli → Sunucu sekmesi için gereken izinler (bir kez, root olarak):
-#   curl -fsSL https://raw.githubusercontent.com/ert545855-cloud/sweep-up2/main/scripts/vds/panel-yetki.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/ert545855-cloud/JAHDFJLGBPOCGDRJG45222/main/scripts/vds/panel-yetki.sh | bash
 # Hostinger API anahtarını da eklemek için sonuna:  | bash -s -- ANAHTAR
 # Uygulama (swipeup kullanıcısı) yalnız aşağıdaki sabit komutları çalıştırabilir; başka hiçbir root yetkisi almaz.
 set -euo pipefail

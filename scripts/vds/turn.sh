@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SwipeUp görüntülü görüşme aktarıcısı (TURN, coturn) kurulumu. VDS'de root olarak bir kez çalıştır:
-#   curl -fsSL https://raw.githubusercontent.com/ert545855-cloud/sweep-up2/main/scripts/vds/turn.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/ert545855-cloud/JAHDFJLGBPOCGDRJG45222/main/scripts/vds/turn.sh | bash
 # Ne yapar: coturn'ü kurar; geçici şifreli (paylaşılan gizli anahtarla, 24 saatlik) girişi açar; Caddy'nin aldığı HTTPS
 # sertifikasını TURN'ün şifreli bağlantısına (5349) kopyalar ve her gün yeniler; yerel ağlara aktarmayı kapatır;
 # güvenlik duvarında gereken portları açar; TURN_HOST ve TURN_SECRET'ı /etc/swipeup.env'e yazıp uygulamayı yeniden başlatır.

@@ -27,7 +27,7 @@ Veri: `DATABASE_URL` (PostgreSQL) > `REDIS_URL` > yerel JSON dosyası (`DATA_DIR
 ## Sunucu (VDS)
 
 - Kurulum: `scripts/vds/kurulum.sh` (Node, Caddy/HTTPS, servis, 5 dakikada bir otomatik güncelleme, gece yedeği).
-- Görüntülü görüşme aktarıcısı: VDS’de root olarak bir kez `curl -fsSL https://raw.githubusercontent.com/ert545855-cloud/sweep-up2/main/scripts/vds/turn.sh | bash`. Kendi TURN sunucusunu kurar, `TURN_HOST` ve `TURN_SECRET`’ı ayar dosyasına yazar; uygulama önce onu kullanır.
+- Görüntülü görüşme aktarıcısı: VDS’de root olarak bir kez `curl -fsSL https://raw.githubusercontent.com/ert545855-cloud/JAHDFJLGBPOCGDRJG45222/main/scripts/vds/turn.sh | bash`. Kendi TURN sunucusunu kurar, `TURN_HOST` ve `TURN_SECRET`’ı ayar dosyasına yazar; uygulama önce onu kullanır.
 - Gizli ayarlar `/etc/swipeup.env` dosyasında ve yönetim panelinde (e-posta hesabı, mağaza anahtarları) durur; depoya yazılmaz.
 
 ## Uygulama içi satın alma

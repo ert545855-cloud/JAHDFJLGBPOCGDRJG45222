@@ -1343,7 +1343,7 @@ VIEWS.database = async (main) => {
 const bytes = (n) => { if (n == null) return '—'; const u = ['B', 'KB', 'MB', 'GB', 'TB']; let i = 0; let v = n; while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; } return `${v.toFixed(v < 10 && i ? 1 : 0)} ${u[i]}`; };
 const dur = (ms) => { const m = Math.floor(ms / 60000); const d = Math.floor(m / 1440); const h = Math.floor((m % 1440) / 60); return d ? `${d} gün ${h} sa` : h ? `${h} sa ${m % 60} dk` : `${m % 60} dk`; };
 const meter = (pct) => `<div class="dbbar"><i style="width:${Math.min(100, pct)}%;background:${pct > 90 ? 'var(--bad)' : pct > 70 ? 'var(--warn)' : 'var(--ok)'}"></i></div>`;
-const PANEL_FIX = 'curl -fsSL https://raw.githubusercontent.com/ert545855-cloud/sweep-up2/main/scripts/vds/panel-yetki.sh | bash';
+const PANEL_FIX = 'curl -fsSL https://raw.githubusercontent.com/ert545855-cloud/JAHDFJLGBPOCGDRJG45222/main/scripts/vds/panel-yetki.sh | bash';
 VIEWS.sunucu = async (main) => {
   main.innerHTML = `${head('Sunucu ve alan adı', 'Uygulamanın çalıştığı sunucu (Yöncü) ve swipeup.live alan adı (Hostinger). Buradaki her işlem işlem kaydına yazılır.')}<div class="spin"></div>`;
   let d;
@@ -1473,7 +1473,7 @@ VIEWS.sunucu = async (main) => {
       ${a.sha256.length ? `<div class="muted" style="font-size:12.5px">SHA-256: <span class="mono" style="word-break:break-all">${a.sha256.map(esc).join('<br>')}</span></div>` : ''}
       ${a.files.length ? `<p class="muted" style="font-size:12.5px;margin:10px 0 6px">Anahtar kaybolursa uygulama bir daha güncellenemez. İkisini de indirip sunucu dışında (ör. kendi bilgisayarın ve bir USB bellek) sakla:</p>
         <div class="row" style="gap:6px;flex-wrap:wrap">${a.files.map((f) => `<button class="btn sm" data-and="${esc(f)}">${icon(f.endsWith('.txt') ? 'key' : 'download')} ${f.endsWith('.txt') ? 'Şifre dosyası' : 'Anahtar dosyası'} · ${esc(f.slice(16, 29))}</button>`).join('')}</div>`
-      : `<p class="muted" style="font-size:12.5px;margin:8px 0 0">${a.has ? 'Anahtarın sunucuda kopya dosyası yok.' : 'Anahtar üretmek için sunucuda bir kez şunu çalıştır:'}</p>${a.has ? '' : '<code class="mono" style="display:block;padding:8px;background:var(--soft);border-radius:8px;overflow:auto">curl -fsSL https://raw.githubusercontent.com/ert545855-cloud/sweep-up2/main/scripts/vds/android-anahtar.sh | bash</code>'}`}`;
+      : `<p class="muted" style="font-size:12.5px;margin:8px 0 0">${a.has ? 'Anahtarın sunucuda kopya dosyası yok.' : 'Anahtar üretmek için sunucuda bir kez şunu çalıştır:'}</p>${a.has ? '' : '<code class="mono" style="display:block;padding:8px;background:var(--soft);border-radius:8px;overflow:auto">curl -fsSL https://raw.githubusercontent.com/ert545855-cloud/JAHDFJLGBPOCGDRJG45222/main/scripts/vds/android-anahtar.sh | bash</code>'}`}`;
     ap.querySelectorAll('[data-and]').forEach((b) => b.addEventListener('click', async () => {
       try {
         const r = await fetch(`${BASE}/api/sunucu/android/${encodeURIComponent(b.dataset.and)}`, { headers: PANEL_H, credentials: 'same-origin' });

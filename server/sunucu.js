@@ -125,6 +125,11 @@ module.exports = function sunucu(app, ctx) {
   const A = ctx.admin || {};
   if (!A.adminAuth) return;
   const gate = [A.adminAuth, A.owner];
+  // Depo yeniden adlandırıldı: sunucudaki kopyanın güncelleme adresi bir kez yeni ada çevrilir (eski ad yönlendirmeye kalmasın)
+  if (isVds()) {
+    const dir = path.join(__dirname, '..'); const NEW = 'https://github.com/ert545855-cloud/JAHDFJLGBPOCGDRJG45222.git';
+    run('/usr/bin/git', ['-C', dir, 'remote', 'get-url', 'origin']).then((r) => { if (r.ok && /sweep-up2/.test(r.out)) return run('/usr/bin/git', ['-C', dir, 'remote', 'set-url', 'origin', NEW]).then((x) => console.log(x.ok ? '[sunucu] güncelleme adresi yeni depo adına çevrildi' : `[sunucu] güncelleme adresi değiştirilemedi: ${x.err.slice(0, 160)}`)); return null; }).catch(() => {});
+  }
   const audit = (req, text, det) => A.audit?.(req.admin, text, null, det);
   const fail = (res, e) => res.status(e.status || 500).json({ error: e.message });
   const APP_DIR = path.join(__dirname, '..');
@@ -285,7 +290,7 @@ module.exports = function sunucu(app, ctx) {
   app.get('/api/admin/sunucu/android', ...gate, (req, res) => {
     let files = [];
     try { files = fs.readdirSync(AND_DIR).filter((f) => /^swipeup-android-\d{8}-\d{4}\.(keystore|txt)$/.test(f)).sort().reverse(); } catch { /* yok */ }
-    res.json({ has: !!(process.env.ANDROID_KEYSTORE_B64 && process.env.ANDROID_KEYSTORE_PASS), sha256: String(process.env.ANDROID_SHA256 || '').split(',').filter(Boolean), files, release: 'https://github.com/ert545855-cloud/sweep-up2/releases/tag/android-latest' });
+    res.json({ has: !!(process.env.ANDROID_KEYSTORE_B64 && process.env.ANDROID_KEYSTORE_PASS), sha256: String(process.env.ANDROID_SHA256 || '').split(',').filter(Boolean), files, release: 'https://github.com/ert545855-cloud/JAHDFJLGBPOCGDRJG45222/releases/tag/android-latest' });
   });
   app.get('/api/admin/sunucu/android/:name', ...gate, (req, res) => {
     const name = String(req.params.name || '');

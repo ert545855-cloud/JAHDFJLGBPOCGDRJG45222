@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Fotoğraf / video / sesleri Supabase veritabanından sunucu diskine taşır ve 5 dakikalık yedekleri açar (bir kez, root olarak):
-#   curl -fsSL https://raw.githubusercontent.com/ert545855-cloud/sweep-up2/main/scripts/vds/medya-diske.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/ert545855-cloud/JAHDFJLGBPOCGDRJG45222/main/scripts/vds/medya-diske.sh | bash
 # Önce veritabanının tam yedeği (medya dahil) alınır; taşıma uygulama açılırken yapılır ve her dosya diske yazılıp
 # doğrulanmadan veritabanından silinmez. Kayıtlar Supabase'de kalır.
 set -euo pipefail

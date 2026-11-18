@@ -35,9 +35,9 @@ module.exports = (app, ctx, opts = {}) => {
     if (!r.ok) throw new Error('jwks ' + r.status);
     return (await r.json()).keys || [];
   });
-  const repo = env.ANDROID_KEY_REPO || 'ert545855-cloud/sweep-up2';
+  // Depo yeniden adlandırıldı: yeni ad ve (yönlendirme sürdükçe) eski ad kabul edilir
+  const repos = String(env.ANDROID_KEY_REPO || 'ert545855-cloud/JAHDFJLGBPOCGDRJG45222,ert545855-cloud/sweep-up2').split(',').map((s) => s.trim()).filter(Boolean);
   const refs = String(env.ANDROID_KEY_REFS || 'refs/heads/main,refs/heads/android-apk').split(',').map((s) => s.trim()).filter(Boolean);
-  const wf = `${repo}/.github/workflows/android.yml@`;
   let keys = [], keysAt = 0;
 
   async function pubKey(kid) {
@@ -56,10 +56,10 @@ module.exports = (app, ctx, opts = {}) => {
     const tok = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
     try {
       const c = await verifyJwt(tok, pubKey);
-      if (c.repository !== repo) throw new Error('depo');
+      if (!repos.includes(c.repository)) throw new Error('depo');
       if (!refs.includes(c.ref)) throw new Error('dal');
       if (!['push', 'workflow_dispatch'].includes(c.event_name)) throw new Error('olay');
-      if (!String(c.job_workflow_ref || '').startsWith(wf)) throw new Error('iş akışı');
+      if (!String(c.job_workflow_ref || '').startsWith(`${c.repository}/.github/workflows/android.yml@`)) throw new Error('iş akışı');
       console.log(`[android-key] verildi: ${c.ref} ${String(c.sha || '').slice(0, 7)} çalıştırma ${c.run_id}`);
       res.set('Cache-Control', 'no-store').json({ keystore: ks, pass });
     } catch (e) {
