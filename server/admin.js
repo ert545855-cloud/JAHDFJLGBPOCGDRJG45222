@@ -82,9 +82,16 @@ module.exports = function mountAdmin(app, ctx) {
     return c.kind;
   };
 
+  // Panel oturumu yalnızca HttpOnly çerezde (su_adm) taşınır; sayfadaki kod anahtarı göremez. Başlıkla gelen anahtar
+  // yalnızca eski oturumu bir kez çereze çevirmek için kabul edilir (/me/session). Çerezle gelen yazma isteklerinde
+  // panelin özel başlığı (X-Panel) zorunludur: başka bir site bu başlığı gönderemez.
+  const panelCookie = (req) => { const m = (req.headers.cookie || '').match(/(?:^|;\s*)su_adm=([^;]+)/); return m ? decodeURIComponent(m[1]) : ''; };
   function adminAuth(req, res, next) {
     try {
-      const p = jwt.verify((req.headers.authorization || '').slice(7), SECRET(), { algorithms: ['HS256'] });
+      const viaHeader = req.originalUrl.split('?')[0] === '/api/admin/me/session';
+      const tok = viaHeader ? (req.headers.authorization || '').slice(7) : panelCookie(req);
+      if (!viaHeader && !['GET', 'HEAD'].includes(req.method) && req.headers['x-panel'] !== '1') throw new Error('x');
+      const p = jwt.verify(tok, SECRET(), { algorithms: ['HS256'] });
       const a = store.get('adm_admins', p.aid);
       if (!a || a.disabled || (p.pv || 0) !== (a.tokenVer || 0) || p.m !== 1) throw new Error('x'); // şifre değişince eski oturumlar kapanır; m: iki adımlı girişten geçti
       req.admin = a;

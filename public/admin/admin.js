@@ -3,7 +3,10 @@ import { icon } from '/js/icons.js';
 
 // Panel gizli bir adreste açılır (ör. /y-xxxx/); istekler aynı adresin altındaki /api'ye gider
 export const BASE = location.pathname.split('/').slice(0, 2).join('/');
-const S = { token: localStorage.getItem('su_admin'), me: null, counts: {} };
+// Oturum yalnızca sunucunun koyduğu HttpOnly çerezde; bu sayfa giriş yapılmadan hiç verilmez (anahtar kodda tutulmaz)
+const S = { token: true, me: null, counts: {} };
+try { localStorage.removeItem('su_admin'); } catch {}
+const PANEL_H = { 'X-Panel': '1' };
 const can = (p) => S.me?.role === 'owner' || (S.me?.perms || []).includes(p);
 const SEC_PERM = { growth: 'growth', users: 'users', support: 'support', reports: 'reports', appeals: 'appeals', flags: 'flags', verify: 'verify', orders: 'orders', payouts: 'payouts', market: 'market', ledger: 'erp', erp: 'erp', promos: 'promos', quests: 'quests', songs: 'songs', contests: 'contests', fal: 'fal', content: 'content', media: 'content', announce: 'announce', notes: 'notes', audit: 'audit', errors: 'audit', database: 'database', maintenance: 'maintenance', settings: 'settings', tags: 'tags', engage: 'engage', karaoke: 'engage', photomod: 'reports', hukuk: 'hukuk', aktivite: 'users', sunucu: 'owner' };
 const canSec = (k) => !SEC_PERM[k] || can(SEC_PERM[k]);
@@ -24,11 +27,12 @@ function toast(t) {
 async function api(path, opts = {}) {
   const r = await fetch(BASE + '/api' + path, {
     method: opts.method || (opts.body ? 'POST' : 'GET'),
-    headers: { ...(opts.body ? { 'Content-Type': 'application/json' } : {}), ...(S.token ? { Authorization: 'Bearer ' + S.token } : {}) },
+    headers: { ...(opts.body ? { 'Content-Type': 'application/json' } : {}), ...PANEL_H },
+    credentials: 'same-origin',
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
   const data = await r.json().catch(() => ({}));
-  if (r.status === 401 && S.token) { localStorage.removeItem('su_admin'); S.token = null; panelLogout(); throw new Error(data.error); }
+  if (r.status === 401 && S.token) { S.token = null; panelLogout(); throw new Error(data.error); }
   if (!r.ok) throw new Error(data.error || 'İşlem başarısız.');
   return data;
 }
@@ -103,7 +107,7 @@ export async function appleCredential() {
 }
 const brandHtml = '<div class="brand"><img class="mark" src="/icons/mark.png" alt="">swipeup <small>yönetim</small></div>';
 function finishLogin(r) {
-  S.token = r.token; S.me = r.admin; localStorage.setItem('su_admin', r.token);
+  S.token = true; S.me = r.admin;
   if (r.recovery) return showRecovery(r.recovery, () => render());
   if (r.recoveryLeft != null && r.recoveryLeft <= 2) toast(`Kurtarma kodlarından ${r.recoveryLeft} tane kaldı. Yöneticiler → Hesabım'dan yenile.`);
   render();
@@ -205,7 +209,7 @@ function forgot() {
 // ================= Kabuk =================
 // Çıkış / oturum düştü: panel çerezini sil ve giriş sayfasına dön (panel dosyaları çerezsiz verilmez)
 function panelLogout() {
-  fetch(BASE + '/api/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {}).finally(() => location.replace(BASE + '/'));
+  fetch(BASE + '/api/logout', { method: 'POST', credentials: 'same-origin', headers: PANEL_H }).catch(() => {}).finally(() => location.replace(BASE + '/'));
 }
 { const left = sessionStorage.getItem('adm_rc_left'); if (left) { sessionStorage.removeItem('adm_rc_left'); setTimeout(() => toast(`Kurtarma kodlarından ${left} tane kaldı. Yöneticiler → Hesabım'dan yenile.`), 800); } }
 async function render() {
@@ -218,7 +222,7 @@ async function render() {
       <div class="who"><b>${esc(S.me.name)}</b><span class="muted">@${esc(S.me.username)} · ${S.me.role === 'owner' ? 'Sahip' : 'Moderatör'}</span>
       <div class="row"><a class="btn sm" href="/" target="_blank" rel="noopener">Uygulamayı aç</a><button class="btn sm lo">Çıkış</button></div></div></aside>
     <div><nav class="topnav">${nav()}</nav><div class="mbn"></div><main class="main"></main></div></div>`;
-  root.querySelector('.lo').onclick = () => { localStorage.removeItem('su_admin'); S.token = null; S.me = null; panelLogout(); };
+  root.querySelector('.lo').onclick = () => { S.token = null; S.me = null; panelLogout(); };
   const main = root.querySelector('.main');
   main.innerHTML = '<div class="spin"></div>';
   if (!S.counts.users) refreshCounts(); else paintMaintBanner();
@@ -559,11 +563,11 @@ VIEWS.photomod = async (main) => {
 };
 VIEWS.karaoke = async (main) => {
   const { default: karaoke } = await import('./karaoke.js');
-  await karaoke(main, { api, esc, toast, head, d, icon, can, token: () => S.token });
+  await karaoke(main, { api, esc, toast, head, d, icon, can, token: () => null });
 };
 VIEWS.songs = async (main) => {
   const { default: songs } = await import('./songs.js');
-  await songs(main, { api, esc, toast, head, d, dt, icon, userCell, can, token: () => S.token });
+  await songs(main, { api, esc, toast, head, d, dt, icon, userCell, can, token: () => null });
 };
 
 VIEWS.errors = async (main) => {
@@ -892,7 +896,7 @@ VIEWS.admins = async (main) => {
   }; }
   main.querySelector('.pw').onsubmit = async (e) => {
     e.preventDefault(); const f = e.target;
-    try { const r = await api('/me/password', { body: { current: f.c.value, password: f.p.value } }); if (r?.token) { S.token = r.token; localStorage.setItem('su_admin', r.token); } toast('Şifren değişti. Diğer cihazlardaki panel oturumların kapandı.'); f.reset(); } catch (er) { toast(er.message); }
+    try { const r = await api('/me/password', { body: { current: f.c.value, password: f.p.value } }); toast('Şifren değişti. Diğer cihazlardaki panel oturumların kapandı.'); f.reset(); } catch (er) { toast(er.message); }
   };
   // Hesabım: Google / Apple bağla, kurtarma kodları
   await getCfg();
@@ -1295,7 +1299,7 @@ VIEWS.database = async (main) => {
   bks?.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-dl]'); if (!b) return;
     try {
-      const r = await fetch(`${BASE}/api/backups/${b.dataset.dl}`, { headers: { Authorization: 'Bearer ' + S.token } });
+      const r = await fetch(`${BASE}/api/backups/${b.dataset.dl}`, { headers: PANEL_H, credentials: 'same-origin' });
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'İndirilemedi.');
       const a = document.createElement('a'); a.href = URL.createObjectURL(await r.blob()); a.download = `swipeup-${b.dataset.dl}.json.gz`; a.click();
     } catch (er) { toast(er.message); }
@@ -1303,7 +1307,7 @@ VIEWS.database = async (main) => {
   main.querySelector('[data-bk]')?.addEventListener('click', async (e) => {
     e.preventDefault();
     try {
-      const r = await fetch(BASE + '/api/database/backup', { headers: { Authorization: 'Bearer ' + S.token } });
+      const r = await fetch(BASE + '/api/database/backup', { headers: PANEL_H, credentials: 'same-origin' });
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'İndirilemedi.');
       const a = document.createElement('a'); a.href = URL.createObjectURL(await r.blob()); a.download = `swipeup-yedek-${today()}.json`; a.click();
       toast('Yedek indirildi.');
@@ -1378,7 +1382,7 @@ VIEWS.sunucu = async (main) => {
   }));
   main.querySelectorAll('[data-bk]').forEach((b) => b.addEventListener('click', async () => {
     try {
-      const r = await fetch(`${BASE}/api/sunucu/yedek/${encodeURIComponent(b.dataset.bk)}`, { headers: { Authorization: 'Bearer ' + S.token } });
+      const r = await fetch(`${BASE}/api/sunucu/yedek/${encodeURIComponent(b.dataset.bk)}`, { headers: PANEL_H, credentials: 'same-origin' });
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'İndirilemedi.');
       const a = document.createElement('a'); a.href = URL.createObjectURL(await r.blob()); a.download = b.dataset.bk; a.click();
     } catch (e) { toast(e.message); }
@@ -1429,7 +1433,7 @@ VIEWS.sunucu = async (main) => {
       : `<p class="muted" style="font-size:12.5px;margin:8px 0 0">${a.has ? 'Anahtarın sunucuda kopya dosyası yok.' : 'Anahtar üretmek için sunucuda bir kez şunu çalıştır:'}</p>${a.has ? '' : '<code class="mono" style="display:block;padding:8px;background:var(--soft);border-radius:8px;overflow:auto">curl -fsSL https://raw.githubusercontent.com/ert545855-cloud/sweep-up2/main/scripts/vds/android-anahtar.sh | bash</code>'}`}`;
     ap.querySelectorAll('[data-and]').forEach((b) => b.addEventListener('click', async () => {
       try {
-        const r = await fetch(`${BASE}/api/sunucu/android/${encodeURIComponent(b.dataset.and)}`, { headers: { Authorization: 'Bearer ' + S.token } });
+        const r = await fetch(`${BASE}/api/sunucu/android/${encodeURIComponent(b.dataset.and)}`, { headers: PANEL_H, credentials: 'same-origin' });
         if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'İndirilemedi.');
         const x = document.createElement('a'); x.href = URL.createObjectURL(await r.blob()); x.download = b.dataset.and; x.click();
       } catch (e) { toast(e.message); }
@@ -2047,7 +2051,7 @@ const TD_KIND = { telif: 'Telif hakkı', kisilik: 'Kişilik hakkı', diger: 'Di�
 const left = (due) => { const n = Math.ceil((due - Date.now()) / 86400000); return n < 0 ? `<span class="chip bad">${-n} gün gecikti</span>` : `<span class="chip ${n <= 5 ? 'warn' : 'info'}">${n} gün kaldı</span>`; };
 async function download(path, name) {
   try {
-    const r = await fetch(BASE + '/api' + path, { headers: { Authorization: 'Bearer ' + S.token } });
+    const r = await fetch(BASE + '/api' + path, { headers: PANEL_H, credentials: 'same-origin' });
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'İndirilemedi.');
     const a = document.createElement('a'); a.href = URL.createObjectURL(await r.blob()); a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   } catch (e) { toast(e.message); }

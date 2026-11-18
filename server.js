@@ -510,7 +510,8 @@ app.use((req, res, next) => {
       // giriş yanıtında tam panel anahtarı varsa çerez olarak da koy
       const json = res.json.bind(res);
       res.json = (body) => {
-        if (body && typeof body.token === 'string' && res.statusCode < 400 && adminApi.verifyPanelToken(body.token)) res.cookie(ADM_COOKIE, body.token, panelCookieOpts(req));
+        // panel anahtarı sayfaya hiç verilmez: çereze konur, yanıttan çıkarılır
+        if (body && typeof body.token === 'string' && res.statusCode < 400 && adminApi.verifyPanelToken(body.token)) { res.cookie(ADM_COOKIE, body.token, panelCookieOpts(req)); body = { ...body, token: true }; }
         return json(body);
       };
       return next();

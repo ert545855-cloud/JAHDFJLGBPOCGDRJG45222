@@ -1,7 +1,8 @@
 // SwipeUp Yönetim — giriş sayfası. Panelin kendi dosyaları (admin.js, admin.css…) giriş yapılmadan verilmez;
 // bu dosya yalnızca girişi yapar. Tam girişte sunucu HttpOnly bir oturum çerezi koyar, sayfa yenilenince panel açılır.
 const BASE = location.pathname.split('/').slice(0, 2).join('/');
-const S = { token: localStorage.getItem('su_admin') };
+// Eski sürümden kalan anahtar varsa bir kez çereze çevrilir ve buradan silinir; yeni girişte anahtar sayfaya hiç gelmez
+const S = { token: (() => { try { return localStorage.getItem('su_admin'); } catch { return null; } })() };
 const root = document.getElementById('root');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const el = (h) => { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content.firstElementChild; };
@@ -13,7 +14,7 @@ function toast(t) {
 async function api(path, opts = {}) {
   const r = await fetch(BASE + '/api' + path, {
     method: opts.method || (opts.body ? 'POST' : 'GET'),
-    headers: { ...(opts.body ? { 'Content-Type': 'application/json' } : {}), ...(opts.token ? { Authorization: 'Bearer ' + opts.token } : {}) },
+    headers: { ...(opts.body ? { 'Content-Type': 'application/json' } : {}), 'X-Panel': '1', ...(opts.token ? { Authorization: 'Bearer ' + opts.token } : {}) },
     body: opts.body ? JSON.stringify(opts.body) : undefined,
     credentials: 'same-origin',
   });
@@ -49,7 +50,7 @@ async function appleCredential() {
 const brandHtml = '<div class="brand"><img class="mark" src="/icons/mark.png" alt="">swipeup <small>yönetim</small></div>';
 // Giriş tamam: sunucu panel çerezini koydu; sayfa yenilenince panelin kendisi açılır
 function finishLogin(r) {
-  S.token = r.token; localStorage.setItem('su_admin', r.token);
+  try { localStorage.removeItem('su_admin'); } catch {}
   if (r.recovery) return showRecovery(r.recovery, () => location.reload());
   if (r.recoveryLeft != null && r.recoveryLeft <= 2) sessionStorage.setItem('adm_rc_left', String(r.recoveryLeft));
   location.reload();
@@ -155,7 +156,7 @@ function forgot() {
     const last = +sessionStorage.getItem('adm_session_try') || 0;
     if (Date.now() - last > 15000) {
       sessionStorage.setItem('adm_session_try', String(Date.now()));
-      try { await api('/me/session', { body: {}, token: S.token }); location.reload(); return; }
+      try { await api('/me/session', { body: {}, token: S.token }); localStorage.removeItem('su_admin'); location.reload(); return; }
       catch (e) { if (e.status === 401) { localStorage.removeItem('su_admin'); S.token = null; } }
     } else {
       return login('Oturum açılamadı. Tarayıcın çerezleri engelliyor olabilir; çerezlere izin verip tekrar dene.');
