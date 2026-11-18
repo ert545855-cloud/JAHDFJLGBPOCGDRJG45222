@@ -5,12 +5,14 @@ import json,struct,sys,os,base64
 RK, TK, OUT = sys.argv[1], sys.argv[2], sys.argv[3]
 R=os.path.join(RK,'Models','GLTF format')+'/'
 T=os.path.join(TK,'Models','GLB format')+'/'
-racing='''roadStraight roadStart roadStartPositions roadCornerLarge roadCornerLarger roadCornerLargeBorder roadCornerLargeBorderInner
-roadCornerLargerBorder roadCornerLargerBorderInner grandStand grandStandCovered grandStandAwning pitsGarage pitsGarageClosed pitsOffice
-pitsOfficeRoof treeLarge treeSmall lightPostLarge billboard billboardLow overheadLights tent tentLong flagCheckers flagRed flagGreen
-bannerTowerRed bannerTowerGreen barrierRed barrierWhite rail fenceStraight pylon radarEquipment lightRedDouble grandStandRound'''.split()
+racing='''roadStraight roadStart roadStartPositions roadCornerSmall roadCornerSmallBorder roadCornerLarge roadCornerLargeBorder roadCornerLargeBorderInner
+roadCornerLarger roadCornerLargerBorder roadCornerLargerBorderInner roadRampLong roadStraightBridge roadStraightBridgeMid
+grandStand grandStandCovered grandStandRound grandStandCoveredRound pitsGarage pitsGarageClosed pitsOffice pitsOfficeRoof
+treeLarge treeSmall lightPostModern billboard billboardLow billboardDouble_exclusive overheadLights overheadRoundColored camera_exclusive
+tent tentLong tentRoof tentClosed flagCheckers bannerTowerRed bannerTowerGreen barrierRed barrierWhite rail lightRedDouble
+raceCarRed raceCarGreen raceCarOrange raceCarWhite'''.split()
 toy='''vehicle-racer vehicle-racer-low vehicle-speedster vehicle-vintage-racer vehicle-drag-racer vehicle-suv vehicle-truck vehicle-monster-truck
-item-coin-gold item-cone smoke'''.split()
+item-coin-gold item-box item-banana smoke tree tree-pine'''.split()
 def glb_parts(b):
     l=struct.unpack('<I',b[12:16])[0]; j=json.loads(b[20:20+l]); off=20+l
     bl,bt=struct.unpack('<II',b[off:off+8]); return j,b[off+8:off+8+bl]

@@ -2222,6 +2222,7 @@ require('./server/playkit')(app, featureCtx); // oyun altyapısı + server/play/
 require('./server/minigames')(app, featureCtx); // sohbet içi mini oyunlar: XOX, Dört Taş, TKM, Amiral Battı
 require('./server/kupa')(app, featureCtx); // Parti Kupası (3D)
 require('./server/farm')(app, featureCtx); // SwipeFarm: çiftlik oyunu
+require('./server/race')(app, featureCtx); // Swipe Race: profil, görevler, rekor + hayalet, sıralamalar, çok oyunculu odalar
 require('./server/cifte')(app, featureCtx);
 require('./server/stickers')(app, featureCtx); // sohbet çıkartma paketleri
 require('./server/plusx')(app, featureCtx); // süper beğeni paketleri, profil teması
@@ -2355,6 +2356,7 @@ io.on('connection', (socket) => {
   featureCtx.speedSocket(socket);
   featureCtx.gamesSocket?.(socket);
   featureCtx.kupaSocket?.(socket);
+  featureCtx.raceSocket?.(socket);
 
   socket.on('message:send', (data, ack) => {
     const c = store.get('chats', data?.chatId);
