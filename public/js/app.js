@@ -353,11 +353,12 @@ function keyboardFit() {
     if (window.innerWidth !== bw) { bw = window.innerWidth; base = window.innerHeight; } base = Math.max(base, window.innerHeight);
     const h = vv ? vv.height : window.innerHeight; const top = vv ? vv.offsetTop : 0; const el = document.activeElement; const typing = editable(el);
     const kb = Math.max(0, window.innerHeight - h - top); const over = typing && kb > 100; // klavye sayfanın üstüne bindi (iOS)
-    root.style.setProperty('--vvh', `${Math.round(h)}px`); root.style.setProperty('--kb', `${over ? Math.round(kb) : 0}px`);
+    root.style.setProperty('--vvh', `${Math.round(h)}px`); root.style.setProperty('--vvt', `${Math.max(0, Math.round(top))}px`); root.style.setProperty('--kb', `${over ? Math.round(kb) : 0}px`);
     root.classList.toggle('kb-open', over || (typing && base - window.innerHeight > 150));
     if (!over) { unlift(); if (typing && root.classList.contains('kb-open')) { const r = el.getBoundingClientRect(); if (r.bottom > h - 8) el.scrollIntoView({ block: 'center' }); } return; }
     let fx = el; while (fx && fx !== document.body && getComputedStyle(fx).position !== 'fixed') fx = fx.parentElement;
-    if (fx && fx !== document.body) {
+    // Sohbet ekranı klavye açıkken görünür alana sabitlenir (CSS: html.kb-open .chat); ayrıca kaldırılmaz
+    if (fx && fx !== document.body && !fx.classList.contains('chat')) {
       if (lifted && lifted.el !== fx) unlift();
       const cur = lifted ? lifted.by : 0; const by = Math.max(0, Math.round(el.getBoundingClientRect().bottom + 14 - (top + h) + cur));
       if (by !== cur) { fx.style.translate = by ? `0 ${-by}px` : ''; lifted = by ? { el: fx, by } : null; }
