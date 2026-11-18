@@ -6,24 +6,25 @@
 # güvenlik duvarında gereken portları açar; TURN_HOST ve TURN_SECRET'ı /etc/swipeup.env'e yazıp uygulamayı yeniden başlatır.
 # Tekrar çalıştırılabilir; mevcut gizli anahtar korunur.
 set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a NEEDRESTART_SUSPEND=1
+main() {
 ENVF=/etc/swipeup.env
 say() { printf '\n\033[1;35m▶ %s\033[0m\n' "$*"; }
 [ "$(id -u)" = 0 ] || { echo "Root olarak çalıştır (sudo -i)."; exit 1; }
 [ -f "$ENVF" ] || { echo "$ENVF yok: önce kurulum betiğini çalıştır."; exit 1; }
-val() { grep -E "^$1=" "$ENVF" | tail -1 | cut -d= -f2-; }
+val() { { grep -E "^$1=" "$ENVF" || true; } | tail -1 | cut -d= -f2-; }
 setv() { if grep -qE "^$1=" "$ENVF"; then sed -i "s#^$1=.*#$1=$2#" "$ENVF"; else echo "$1=$2" >> "$ENVF"; fi; }
 DOMAIN=$(val CANONICAL_URL); DOMAIN="${DOMAIN#https://}"; DOMAIN="${DOMAIN%%/*}"
 [ -n "$DOMAIN" ] || { echo "CANONICAL_URL ayarı boş."; exit 1; }
-export DEBIAN_FRONTEND=noninteractive
 
 say "coturn kuruluyor"
-apt-get update -y >/dev/null
-apt-get install -y coturn >/dev/null
+apt-get update -y >/dev/null </dev/null
+apt-get install -y coturn >/dev/null </dev/null
 sed -i 's/^#\?TURNSERVER_ENABLED=.*/TURNSERVER_ENABLED=1/' /etc/default/coturn 2>/dev/null || echo 'TURNSERVER_ENABLED=1' > /etc/default/coturn
 
 SECRET=$(val TURN_SECRET); [ -n "$SECRET" ] || SECRET=$(openssl rand -hex 32)
-PUBIP=$(curl -fsS4 --max-time 8 https://api.ipify.org 2>/dev/null || hostname -I | awk '{print $1}')
-LOCALIP=$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
+PUBIP=$(curl -fsS4 --max-time 8 https://api.ipify.org 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || true)
+LOCALIP=$({ ip -4 route get 1.1.1.1 2>/dev/null || true; } | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
 EXT="external-ip=$PUBIP"; [ -n "$LOCALIP" ] && [ "$LOCALIP" != "$PUBIP" ] && EXT="external-ip=$PUBIP/$LOCALIP"
 
 say "Sertifika (Caddy'nin aldığı)"
@@ -58,7 +59,7 @@ WantedBy=timers.target
 EOF
 
 say "Ayarlar"
-TLS=""; [ -f /etc/turn/cert.pem ] && TLS=$'cert=/etc/turn/cert.pem\npkey=/etc/turn/key.pem'
+TLS=$'cert=/etc/turn/cert.pem\npkey=/etc/turn/key.pem' # sertifika henüz yoksa coturn şifresiz portlarla açılır; günlük görev kopyalayınca şifreli bağlantı da açılır
 cat > /etc/turnserver.conf <<EOF
 # SwipeUp TURN (scripts/vds/turn.sh üretti)
 listening-port=3478
@@ -104,4 +105,6 @@ setv TURN_HOST "$DOMAIN"
 setv TURN_SECRET "$SECRET"
 systemctl restart swipeup
 sleep 2
-systemctl is-active --quiet coturn && echo "TURN çalışıyor: turn:$DOMAIN:3478 · turns:$DOMAIN:5349$([ -z "$TLS" ] && echo ' (sertifika bulunamadı; şifreli bağlantı bir sonraki günlük yenilemede açılır)')" || { echo "coturn başlamadı:"; journalctl -u coturn -n 20 --no-pager; exit 1; }
+systemctl is-active --quiet coturn && echo "TURN çalışıyor: turn:$DOMAIN:3478 · turns:$DOMAIN:5349$([ -f /etc/turn/cert.pem ] || echo ' (sertifika bulunamadı; şifreli bağlantı sertifika kopyalanınca açılır)')" || { echo "coturn başlamadı:"; journalctl -u coturn -n 20 --no-pager; exit 1; }
+}
+main "$@" </dev/null
