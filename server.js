@@ -490,8 +490,15 @@ let ADMIN_BASE = null;
 const adminBase = () => ADMIN_BASE;
 const adminStatic = express.static(path.join(__dirname, 'public', 'admin'), {
   index: 'index.html',
-  setHeaders(res) { res.setHeader('Cache-Control', 'no-cache'); res.setHeader('X-Robots-Tag', 'noindex, nofollow'); res.setHeader('Referrer-Policy', 'no-referrer'); },
+  setHeaders(res) { res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Robots-Tag', 'noindex, nofollow'); res.setHeader('Referrer-Policy', 'no-referrer'); }, // panel kodu tarayıcı diskinde kalmasın
 });
+// Panel dosyaları (admin.js, admin.css, erp.js…) yalnızca giriş yapmış yöneticiye verilir. Tarayıcı <script> isteğine
+// başlık ekleyemediği için tam girişte (şifre + iki adımlı) HttpOnly bir oturum çerezi konur; çerez yoksa gizli adreste
+// yalnızca giriş sayfası (login.html + login.js) açılır, diğer her dosya 404 verir.
+const ADM_COOKIE = 'su_adm';
+const ADM_PUBLIC = new Set(['/login.js', '/sw.js']); // sw.js yalnızca bildirim gösterir; çerez süresi dolsa da bildirimler sürsün
+const readCookie = (req, name) => { const m = (req.headers.cookie || '').match(new RegExp('(?:^|;\\s*)' + name + '=([^;]+)')); return m ? decodeURIComponent(m[1]) : null; };
+const panelCookieOpts = (req) => ({ httpOnly: true, secure: req.secure, sameSite: 'strict', path: adminBase() || '/', maxAge: 12 * 3600 * 1000 });
 app.use((req, res, next) => {
   const p = req.path; const base = adminBase();
   if (base && (p === base || p.startsWith(base + '/'))) {
@@ -499,10 +506,24 @@ app.use((req, res, next) => {
     if (p.startsWith(base + '/api/')) {
       req.url = '/api/admin/' + req.url.slice(base.length + 5); req.originalUrl = req.url; req.adminGate = true;
       res.setHeader('X-Robots-Tag', 'noindex'); res.setHeader('Cache-Control', 'no-store');
+      if (req.method === 'POST' && req.path === '/api/admin/logout') { res.clearCookie(ADM_COOKIE, { path: base }); return res.json({ ok: true }); }
+      // giriş yanıtında tam panel anahtarı varsa çerez olarak da koy
+      const json = res.json.bind(res);
+      res.json = (body) => {
+        if (body && typeof body.token === 'string' && res.statusCode < 400 && adminApi.verifyPanelToken(body.token)) res.cookie(ADM_COOKIE, body.token, panelCookieOpts(req));
+        return json(body);
+      };
       return next();
     }
     req.url = '/' + req.url.slice(base.length + 1);
-    return adminStatic(req, res, () => res.status(404).type('text/plain').send('Bulunamadı'));
+    const sub = req.url.split('?')[0];
+    const nope = () => res.status(404).type('text/plain').send('Bulunamadı');
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow'); res.setHeader('Referrer-Policy', 'no-referrer');
+    if (!adminApi.verifyPanelToken(readCookie(req, ADM_COOKIE))) {
+      if (sub === '/' || sub === '/index.html') { res.setHeader('Cache-Control', 'no-store'); return res.sendFile(path.join(__dirname, 'public', 'admin', 'login.html')); }
+      if (!ADM_PUBLIC.has(sub)) return nope();
+    } else res.setHeader('Cache-Control', 'no-store');
+    return adminStatic(req, res, nope);
   }
   if (p === '/admin' || p.startsWith('/admin/') || p === '/api/admin' || p.startsWith('/api/admin/')) return res.status(404).type('text/plain').send('Bulunamadı');
   next();

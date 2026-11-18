@@ -28,7 +28,7 @@ async function api(path, opts = {}) {
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
   const data = await r.json().catch(() => ({}));
-  if (r.status === 401 && S.token) { localStorage.removeItem('su_admin'); S.token = null; render(); throw new Error(data.error); }
+  if (r.status === 401 && S.token) { localStorage.removeItem('su_admin'); S.token = null; panelLogout(); throw new Error(data.error); }
   if (!r.ok) throw new Error(data.error || 'İşlem başarısız.');
   return data;
 }
@@ -203,6 +203,11 @@ function forgot() {
 }
 
 // ================= Kabuk =================
+// Çıkış / oturum düştü: panel çerezini sil ve giriş sayfasına dön (panel dosyaları çerezsiz verilmez)
+function panelLogout() {
+  fetch(BASE + '/api/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {}).finally(() => location.replace(BASE + '/'));
+}
+{ const left = sessionStorage.getItem('adm_rc_left'); if (left) { sessionStorage.removeItem('adm_rc_left'); setTimeout(() => toast(`Kurtarma kodlarından ${left} tane kaldı. Yöneticiler → Hesabım'dan yenile.`), 800); } }
 async function render() {
   if (!S.token) return login();
   if (!S.me) { try { S.me = await api('/me'); } catch { return; } }
@@ -213,7 +218,7 @@ async function render() {
       <div class="who"><b>${esc(S.me.name)}</b><span class="muted">@${esc(S.me.username)} · ${S.me.role === 'owner' ? 'Sahip' : 'Moderatör'}</span>
       <div class="row"><a class="btn sm" href="/" target="_blank" rel="noopener">Uygulamayı aç</a><button class="btn sm lo">Çıkış</button></div></div></aside>
     <div><nav class="topnav">${nav()}</nav><div class="mbn"></div><main class="main"></main></div></div>`;
-  root.querySelector('.lo').onclick = () => { localStorage.removeItem('su_admin'); S.token = null; S.me = null; render(); };
+  root.querySelector('.lo').onclick = () => { localStorage.removeItem('su_admin'); S.token = null; S.me = null; panelLogout(); };
   const main = root.querySelector('.main');
   main.innerHTML = '<div class="spin"></div>';
   if (!S.counts.users) refreshCounts(); else paintMaintBanner();

@@ -243,6 +243,8 @@ module.exports = function mountAdmin(app, ctx) {
     res.json({ ok: true });
   });
   app.get('/api/admin/me', adminAuth, (req, res) => res.json(adminOut(req.admin)));
+  // Mevcut panel oturumunu panel dosyaları için HttpOnly çereze çevirir (çerezi server.js'teki kapı koyar)
+  app.post('/api/admin/me/session', adminAuth, (req, res) => res.json({ ok: true, token: (req.headers.authorization || '').slice(7) }));
   app.post('/api/admin/me/password', adminAuth, async (req, res) => {
     const { current, password } = req.body || {};
     if (!(await bcrypt.compare(String(current || ''), req.admin.passHash))) return res.status(400).json({ error: 'Mevcut şifre hatalı.' });
@@ -1186,6 +1188,16 @@ module.exports = function mountAdmin(app, ctx) {
     res.type('application/json').send(JSON.stringify(data));
   });
 
-  const adminPub = { statusOf, ensureAdmin: ctx.ensureAdmin, adminAuth, owner, audit };
+  // Panel dosyalarına erişim: çerezdeki anahtar geçerli bir tam (iki adımlı) panel oturumu mu?
+  function verifyPanelToken(tok) {
+    if (!tok) return null;
+    try {
+      const p = jwt.verify(tok, SECRET(), { algorithms: ['HS256'] });
+      const a = store.get('adm_admins', p.aid);
+      if (!a || a.disabled || (p.pv || 0) !== (a.tokenVer || 0) || p.m !== 1) return null;
+      return a;
+    } catch { return null; }
+  }
+  const adminPub = { statusOf, ensureAdmin: ctx.ensureAdmin, adminAuth, owner, audit, verifyPanelToken };
   return adminPub;
 };
