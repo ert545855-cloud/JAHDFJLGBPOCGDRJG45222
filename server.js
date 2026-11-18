@@ -2692,6 +2692,7 @@ async function ensureOfficial() {
   });
   JWT_SECRET = JWT_SECRET || meta.jwt;
   if (!meta.trafikKey) store.update('meta', 'secrets', { trafikKey: crypto.randomBytes(32).toString('hex') });
+  if (meta.smtp) mail.setAccount(meta.smtp); // panelden kaydedilen e-posta hesabı (ayar dosyasının önüne geçer)
   // Yönetim paneli adresi: ADMIN_PATH (Render ortam değişkeni) ya da ilk açılışta üretilip saklanan rastgele adres
   {
     let ap = String(process.env.ADMIN_PATH || meta.adminPath || '').replace(/[^\w-]/g, '');

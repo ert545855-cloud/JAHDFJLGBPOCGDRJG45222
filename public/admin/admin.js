@@ -1409,11 +1409,30 @@ VIEWS.sunucu = async (main) => {
     const chip = (ok, yes, no) => `<span class="chip ${ok ? 'ok' : 'bad'}">${ok ? yes : no}</span>`;
     mp.innerHTML = `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px">
         ${c ? `<b>${esc(c.kind === 'gmail' ? `Gmail · ${c.user}` : `${c.from || c.user} · ${c.host}:${c.port}`)}</b>` : '<span class="chip bad">E-posta ayarlı değil</span>'}
-        ${c ? chip(m.verify?.ok, 'Sunucuya bağlanıyor', `Bağlanamıyor: ${esc(m.verify?.error || '')}`) : ''}</div>
+        ${c ? chip(m.verify?.ok, 'Sunucuya bağlanıyor', 'Bağlanamıyor') : ''}</div>
+      ${c && !m.verify?.ok && m.verify?.error ? `<div style="color:var(--bad);font-size:12.5px;margin:-2px 0 6px">${esc(m.verify.error)}</div>` : ''}
+      ${c ? `<div class="muted" style="font-size:12.5px;margin:-2px 0 8px">Giriş kullanıcısı: <b>${esc(c.user || '—')}</b> · ${c.source === 'panel' ? 'panelden kaydedildi' : 'sunucu ayar dosyasından (/etc/swipeup.env)'}</div>` : ''}
       ${d ? `<div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">${chip(d.spfOk, 'SPF tamam', 'SPF eksik')} ${chip(!d.missing.length, `DKIM tamam (${d.dkim.length})`, `DKIM eksik: ${d.missing.length}`)} ${chip(!!d.dmarc, 'DMARC var', 'DMARC yok')} ${chip(d.mx.length > 0, 'MX var', 'MX yok')}</div>
         ${d.missing.length || !d.spf ? `<button class="btn sm primary mfix">${icon('check')} Eksik kayıtları ekle</button> <span class="muted" style="font-size:12.5px">E-postaların spam'e düşmemesi ve Gmail'in kabul etmesi için gerekli.</span>` : ''}` : m.dnsError ? `<div class="muted" style="font-size:12.5px">DNS okunamadı: ${esc(m.dnsError)}</div>` : ''}
       <form class="mtest row" style="gap:8px;flex-wrap:wrap;margin-top:12px"><input class="field" name="to" type="email" placeholder="Deneme e-postası gidecek adres" style="flex:1;min-width:220px"><button class="btn">${icon('mail')} Test e-postası gönder</button></form>
-      <div class="mres muted" style="font-size:12.5px;margin-top:6px"></div>`;
+      <div class="mres muted" style="font-size:12.5px;margin-top:6px"></div>
+      <details class="macc" style="margin-top:12px"${c && m.verify?.ok ? '' : ' open'}><summary style="cursor:pointer;font-weight:650">E-posta hesabını düzelt</summary>
+        <p class="muted" style="font-size:12.5px;margin:8px 0">Hostinger panelinde <b>E-postalar → Hesaplar</b> bölümünden bu e-posta hesabının şifresini belirle (ya da sıfırla) ve buraya yaz. Kaydetmeden önce sunucuya gerçekten giriş denenir; şifre bir daha gösterilmez.</p>
+        <form class="mform" style="display:grid;gap:8px;max-width:460px" autocomplete="off">
+          <input class="field" name="user" type="email" placeholder="E-posta adresi (info@swipeup.live)" value="${esc(c?.user || 'info@swipeup.live')}" required>
+          <input class="field" name="pass" type="password" placeholder="E-posta hesabının şifresi" autocomplete="new-password" required>
+          <div class="row" style="gap:8px"><input class="field" name="host" value="${esc(c?.kind === 'smtp' && c.host ? c.host : 'smtp.hostinger.com')}" style="flex:2"><input class="field" name="port" type="number" value="${esc(c?.kind === 'smtp' && c.port ? c.port : 465)}" style="flex:1"></div>
+          <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn primary">${icon('check')} Dene ve kaydet</button>${c?.source === 'panel' ? '<button type="button" class="btn sm mdel">Panel kaydını kaldır</button>' : ''}</div>
+          <div class="mferr" style="font-size:12.5px"></div>
+        </form></details>`;
+    const mf = mp.querySelector('.mform');
+    mf.onsubmit = async (e) => {
+      e.preventDefault(); const out = mf.querySelector('.mferr'); const btn = mf.querySelector('.btn.primary');
+      out.innerHTML = '<span class="muted">Hostinger\'a giriş deneniyor…</span>'; btn.disabled = true;
+      try { await api('/sunucu/eposta/hesap', { body: { user: mf.user.value, pass: mf.pass.value, host: mf.host.value, port: +mf.port.value } }); mf.pass.value = ''; toast('E-posta hesabı doğrulandı ve kaydedildi.'); loadMail(); }
+      catch (er) { out.innerHTML = `<span style="color:var(--bad)">${esc(er.message)}</span>`; btn.disabled = false; }
+    };
+    mp.querySelector('.mdel')?.addEventListener('click', async () => { try { await api('/sunucu/eposta/hesap', { method: 'DELETE' }); toast('Panel kaydı kaldırıldı; sunucu ayar dosyasındaki hesap kullanılıyor.'); loadMail(); } catch (er) { toast(er.message); } });
     mp.querySelector('.mfix')?.addEventListener('click', async (e) => { e.target.disabled = true; try { const r = await api('/sunucu/eposta/dns', { body: {} }); toast(r.added.length ? `Eklendi: ${r.added.join(', ')}` : 'Eksik kayıt yok.'); loadMail(); } catch (er) { toast(er.message); e.target.disabled = false; } });
     mp.querySelector('.mtest').onsubmit = async (e) => {
       e.preventDefault(); const out = mp.querySelector('.mres'); out.textContent = 'Gönderiliyor…';

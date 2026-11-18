@@ -237,6 +237,32 @@ module.exports = function sunucu(app, ctx) {
     if (process.env.HOSTINGER_API_TOKEN) { try { out.dns = await mailDns(); } catch (e) { out.dnsError = e.message; } }
     res.json(out);
   });
+  // E-posta hesabı (yalnız sahip): önce sunucuya gerçekten giriş denenir, başarılıysa kaydedilir; şifre geri gönderilmez
+  app.post('/api/admin/sunucu/eposta/hesap', ...gate, async (req, res) => {
+    if (ctx.limited?.(`smtp:${req.admin.id}`, 10, 600000)) return res.status(429).json({ error: 'Çok fazla deneme. 10 dakika sonra tekrar dene.' });
+    const b = req.body || {};
+    const user = String(b.user || '').trim().toLowerCase();
+    const pass = String(b.pass || '').replace(/[\r\n]+/g, '').trim();
+    const host = String(b.host || 'smtp.hostinger.com').trim().toLowerCase();
+    const port = +b.port || 465;
+    const from = String(b.from || '').trim().slice(0, 120);
+    if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/.test(user)) return res.status(400).json({ error: 'Kullanıcı adı e-posta adresinin tamamı olmalı (ör. info@swipeup.live).' });
+    if (!pass || pass.length > 200) return res.status(400).json({ error: 'Şifreyi yaz.' });
+    if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(host)) return res.status(400).json({ error: 'Sunucu adı geçersiz.' });
+    if (![465, 587].includes(port)) return res.status(400).json({ error: 'Port 465 ya da 587 olmalı.' });
+    try { await mail.testAccount({ host, port, user, pass }); } catch (e) { return res.status(400).json({ error: e.message }); }
+    const smtp = { host, port, user, pass, from: from || `SwipeUp <${user}>`, at: Date.now(), by: req.admin.id };
+    store.update('meta', 'secrets', { smtp });
+    mail.setAccount(smtp);
+    audit(req, 'e-posta hesabını güncelledi', `${user} · ${host}:${port}`);
+    res.json({ ok: true, config: mail.info() });
+  });
+  app.delete('/api/admin/sunucu/eposta/hesap', ...gate, (req, res) => {
+    store.update('meta', 'secrets', { smtp: null });
+    mail.setAccount(null);
+    audit(req, 'panelden kaydedilen e-posta hesabını kaldırdı');
+    res.json({ ok: true, config: mail.info() });
+  });
   app.post('/api/admin/sunucu/eposta/test', ...gate, async (req, res) => {
     const to = String(req.body?.to || '').trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/.test(to)) return res.status(400).json({ error: 'Geçerli bir e-posta adresi yaz.' });
