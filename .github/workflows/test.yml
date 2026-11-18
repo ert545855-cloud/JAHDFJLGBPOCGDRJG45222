@@ -1,0 +1,30 @@
+name: Testler
+
+# Her gönderimde ve birleştirme isteğinde otomatik testler çalışır: kayıt ve giriş, eşleşme ve mesaj,
+# uyarılar, şikâyet, sipariş, uygulama içi satın alma (Google Play / App Store taklit sunucusuyla),
+# fotoğraf denetimi yedeği, hatırlatmalar, Parti Kupası araç modları, yönetim paneli kapısı.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Sözdizimi
+        run: for f in server.js server/*.js server/play/*.js; do node --check "$f"; done
+      - name: Testler
+        run: npm test

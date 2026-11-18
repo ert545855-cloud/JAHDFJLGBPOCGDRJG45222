@@ -77,7 +77,9 @@ const NGROUPS = [
   ['likes', 'star', 'Beğeniler', 'Beğeni, süper beğeni ve süper mesaj'], ['calls', 'phone', 'Aramalar', 'Gelen ve cevapsız aramalar'],
   ['social', 'users', 'Takip ve yorumlar', 'Takip, yorum, etiket, hikaye yanıtı'], ['games', 'trophy', 'Oyunlar', 'Oyun davetleri, çiftlik, seviye ve seriler'],
   ['events', 'calendar', 'Etkinlik ve öneriler', 'Etkinlikler, günlük seçki, burç'], ['market', 'bag', 'Store', 'Alış ve satış güncellemeleri'],
+  ['reminders', 'flame', 'Hatırlatmalar', 'Seni bekleyen beğeni ve eşleşmeler, günde en fazla bir kez'],
   ['promo', 'bell', 'Duyuru ve kampanyalar', 'SwipeUp’tan haberler'],
+  ['digest', 'mail', 'Haftalık özet e-postası', 'Pazartesi: ziyaretçi, beğeni ve eşleşmelerin (e-posta adresin varsa)'],
 ];
 export async function notifSettings() {
   const enabled = await pushEnabled().catch(() => false);

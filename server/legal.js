@@ -126,6 +126,7 @@ ${L.refund14 ? '<p><b>14 gün iade güvencesi:</b> Yasal bir zorunluluk olmamakl
   // ---------- İade talepleri ----------
   function refundable(o, u) { // dönen: { [neden]: true/false } ve açıklama
     const L = info(); const t = now();
+    if (o.channel) return { tanimlanmadi: false, hata: false, cayma14: false }; // Google Play / App Store satın almalarının iadesi mağaza üzerinden yapılır
     return {
       tanimlanmadi: o.status === 'paid' && t - (o.paidAt || o.at) > L.deliveryHours * 3600000,
       hata: ['paid', 'approved'].includes(o.status) && t - o.at < 90 * DAY,

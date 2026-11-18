@@ -28,7 +28,7 @@
     { "name": "Keşfet", "shortName": "Keşfet", "url": "/#/", "chosenIconUrl": "https://swipeup.live/icons/icon-192.png" },
     { "name": "Oyunlar", "shortName": "Oyunlar", "url": "/#/oyunlar", "chosenIconUrl": "https://swipeup.live/icons/icon-192.png" }
   ],
-  "features": {},
+  "features": { "playBilling": { "enabled": true } },
   "alphaDependencies": { "enabled": false },
   "generatorApp": "bubblewrap-cli"
 }

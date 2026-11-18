@@ -599,6 +599,8 @@ function showResults() {
     const d = G.bestRace - G.ghostTarget.ms / 1000;
     info.insertAdjacentHTML('beforeend', '<div class="chip ' + (d < 0 ? 'gold' : '') + '">' + (d < 0 ? '👻 Hayaleti ' + Math.abs(d).toFixed(2) + ' sn geçtin!' : '👻 Hayalet ' + d.toFixed(2) + ' sn önde') + '</div>');
   }
+  const me = st.find(x => x.me);
+  G.share = { title, place: myPlace, n, ghost: G.mode === 'ghost', cup: cupDone, time: me && me.finished ? fmt(me.t) : '', best: G.bestRace ? fmt(G.bestRace) : '', track: TRACKS[world.trackIdx].name, car: G.player.def.name, night: !!settings.night };
   showScreen('results');
   submitResult(myPlace, n, cupDone);
 }
@@ -912,6 +914,7 @@ function bindUI() {
   click('resumeBtn', resume);
   click('restartBtn', () => startRace({ mode: G.mode === 'mp' ? 'race' : G.mode, ghostUid: G.ghostTarget ? G.ghostTarget.uid : undefined }));
   click('menuBtn', toMenu);
+  click('shareBtn', () => shareResult());
   click('againBtn', () => { if (G.mode === 'mp') { leaveRoom(); createRoom(); } else startRace({ mode: G.mode, ghostUid: G.ghostTarget ? G.ghostTarget.uid : undefined }); });
   click('nextBtn', () => { if (G.cup) { G.cup.round++; G.cup.scored = false; startRace({ mode: 'cup', next: true }); } });
   click('challengeBtn', () => openFriendPick(TRACKS[world.trackIdx].id));
@@ -1039,3 +1042,36 @@ async function boot() {
 }
 boot().catch(e => { console.error(e); $('loadText').textContent = 'Yükleme hatası: ' + (e && e.message || e); });
 requestAnimationFrame(frame);
+
+
+// ---- Paylaşım kartı (1080×1920, Instagram hikayesi) ----
+async function shareResult() {
+  const R = G.share; if (!R) return;
+  const W = 1080; const H = 1920; const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  const bg = g.createLinearGradient(0, 0, W * 0.3, H); bg.addColorStop(0, '#ff4f6d'); bg.addColorStop(0.45, '#7a3cff'); bg.addColorStop(1, '#0b1238'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.globalAlpha = 0.12; g.fillStyle = '#fff'; for (let i = 0; i < 9; i++) { g.save(); g.translate(W * 0.5, H * 0.42); g.rotate(-0.5); g.fillRect(-W, -40 + i * 150 - 600, W * 2, 26); g.restore(); } g.globalAlpha = 1; // hız çizgileri
+  for (let r = 0; r < 4; r++) for (let k = 0; k < 18; k++) { g.fillStyle = (r + k) % 2 ? '#ffffff' : '#11162c'; g.fillRect(k * 60, 1560 + r * 30, 60, 30); } // damalı şerit
+  const F = 'system-ui, -apple-system, Segoe UI, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff';
+  g.font = `800 52px ${F}`; g.fillText('swipeup', W / 2, 150); g.font = `900 92px ${F}`; g.fillText('SWIPE RACE', W / 2, 270);
+  g.font = `900 300px ${F}`; g.fillText(R.ghost ? '👻' : R.place === 1 ? '🏆' : `${R.place}.`, W / 2, 620);
+  g.font = `800 72px ${F}`; g.fillText(R.title.replace(/^🏆\s*/, ''), W / 2, 860, W - 120);
+  g.font = `600 46px ${F}`; g.fillStyle = 'rgba(255,255,255,.88)'; g.fillText(`${R.track}${R.night ? ' · gece' : ''} · ${R.car}`, W / 2, 950, W - 120);
+  const box = (y, label, val) => { g.fillStyle = 'rgba(255,255,255,.14)'; g.beginPath(); g.roundRect(140, y, W - 280, 150, 40); g.fill(); g.fillStyle = 'rgba(255,255,255,.8)'; g.font = `600 38px ${F}`; g.fillText(label, W / 2, y + 45); g.fillStyle = '#fff'; g.font = `800 64px ${F}`; g.fillText(val, W / 2, y + 105); };
+  let y = 1040; if (R.time) { box(y, 'Yarış süresi', R.time); y += 180; } if (R.best) box(y, 'En iyi tur', R.best);
+  g.font = `800 50px ${F}`; g.fillStyle = '#fff'; g.fillText('Sen de yarış! 🏁', W / 2, 1720);
+  g.font = `700 44px ${F}`; g.fillText(location.host.replace(/^www\./, ''), W / 2, 1800);
+  const blob = await new Promise(r => c.toBlob(r, 'image/png')); if (!blob) return;
+  const file = new File([blob], 'swipe-race.png', { type: 'image/png' }); const url = location.origin + '/race/';
+  try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'Swipe Race', text: 'Sen de yarış: ' + url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'swipe-race.png'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); toast('Görsel indirildi. Instagram’da hikaye olarak paylaşabilirsin.');
+}
+
+// ---- Hata kaydı: telefonlardaki hatalar yönetim panelindeki "Hatalar" bölümüne düşer ----
+(() => {
+  let n = 0; const send = (kind, msg, src, line, stack) => {
+    if (++n > 8 || !msg) return;
+    try { const tok = localStorage.getItem('su_token'); fetch('/api/client-errors', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', ...(tok ? { Authorization: 'Bearer ' + tok } : {}) }, body: JSON.stringify({ errors: [{ kind, msg: String(msg).slice(0, 300), src: String(src || '').replace(location.origin, '').slice(0, 200), line: line || 0, stack: String(stack || '').slice(0, 1500), route: '/race/', ver: 'race' }] }) }).catch(() => {}); } catch (e) { /* kayıt yapılamazsa geç */ }
+  };
+  window.addEventListener('error', e => { if (e.message) send('js', e.message, e.filename, e.lineno, e.error && e.error.stack); });
+  window.addEventListener('unhandledrejection', e => { const r = e.reason; send('promise', (r && r.message) || String(r), '', 0, r && r.stack); });
+})();

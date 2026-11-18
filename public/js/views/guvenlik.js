@@ -61,7 +61,8 @@ export default async function guvenlik(view, kind, id) {
     <div class="gv"><div class="spinner"></div></div>`;
   const box = view.querySelector('.gv');
   const load = async () => {
-    const [sf, lg, ak] = await Promise.all([api('/safety/mine').catch(() => ({ items: [] })), api('/security/logins').catch(() => null), api('/me/aktivite').catch(() => ({ items: [] }))]);
+    const [sf, lg, ak, rp] = await Promise.all([api('/safety/mine').catch(() => ({ items: [] })), api('/security/logins').catch(() => null), api('/me/aktivite').catch(() => ({ items: [] })), api('/me/reports').catch(() => ({ items: [] }))]);
+    const RST = { inceleniyor: ['İnceleniyor', ''], islem: ['İşlem yapıldı', 'ok'], aykiri_degil: ['Kurallara aykırı bulunmadı', 'muted'] };
     const focusEv = kind === 'giris' && lg?.events.find((e) => e.id === id);
     box.innerHTML = `
       ${focusEv && !focusEv.notMe ? `<section class="gv-alert"><b>Bu giriş sen miydin?</b><p>${esc(focusEv.label)} · ${when(focusEv.at)} · IP ${esc(focusEv.ip)}</p>
@@ -104,6 +105,7 @@ export default async function guvenlik(view, kind, id) {
       </ul>
       <h3 class="gv-h">${icon('flag')} Şikayet ve engelleme</h3>
       <p class="gv-p">Profilde ya da sohbette sağ üstteki menüden <b>Engelle</b> ya da <b>Şikayet et</b>’e dokun. Engellediğin kişi seni göremez ve sana yazamaz; şikayetler yönetim ekibince incelenir ve kimin şikayet ettiği karşı tarafa söylenmez. Sorun yaşarsan <a class="link" href="#/destek">Destek</a>’e yaz.</p>
+      ${rp.items.length ? `<div class="gv-reps">${rp.items.map((r) => `<div class="gv-rep"><span class="grow"><b>@${esc(r.user?.username || 'silinmiş hesap')}</b><small>${esc(r.reason)} · ${new Date(r.at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}</small></span><span class="gv-rs ${RST[r.status][1]}">${RST[r.status][0]}</span></div>`).join('')}</div>` : ''}
       <h3 class="gv-h">${icon('phone')} Acil durumda</h3>
       <div class="gv-sos">
         <a class="gv-tel big" href="tel:112"><b>112</b><span>Acil Çağrı Merkezi · polis, jandarma, ambulans, itfaiye</span></a>

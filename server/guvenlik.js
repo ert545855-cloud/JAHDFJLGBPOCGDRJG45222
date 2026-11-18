@@ -107,6 +107,12 @@ module.exports = function guvenlik(app, ctx) {
   // Sohbetteki buluşma planından paylaşım zaten var (server/social.js, /guvende/:token). Burada aynı kayda (safety) sohbetten
   // bağımsız paylaşım, "Yardım lazım" ve iptal eklenir; kayıtlar buluşmadan 7 gün sonra periyodik imhayla silinir.
   const mine = (s) => ({ id: s.id, place: s.place, when: s.when, with: s.with, status: s.status, okAt: s.okAt || null, helpAt: s.helpAt || null, url: `/guvende/${s.id}`, fromChat: !!s.msgId });
+  // Şikayetlerim: gönderdiğim şikayetlerin durumu (karşı tarafa yapılan işlemin ayrıntısı gösterilmez)
+  app.get('/api/me/reports', auth, (req, res) => {
+    const st = (r) => (r.status === 'open' ? 'inceleniyor' : r.status === 'dismissed' ? 'aykiri_degil' : 'islem');
+    res.json({ items: store.filter('reports', (r) => r.from === req.user.id).sort((a, b) => b.at - a.at).slice(0, 30).map((r) => { const t = store.get('users', r.to);
+      return { id: r.id, at: r.at, reason: r.reason, status: st(r), doneAt: r.resolvedAt || null, user: t ? { username: t.username, avatar: t.avatar } : null }; }) });
+  });
   app.get('/api/safety/mine', auth, (req, res) => res.json({ items: store.filter('safety', (s) => s.userId === req.user.id && s.status !== 'cancelled' && s.when > now() - 2 * DAY).sort((a, b) => a.when - b.when).map(mine) }));
   app.post('/api/safety', auth, (req, res) => {
     if (ctx.limited('safety:' + req.user.id, 12, DAY)) return res.status(429).json({ error: 'Bugün çok fazla paylaşım oluşturdun.' });

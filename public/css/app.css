@@ -4372,6 +4372,11 @@ html.land-game #fx-layer { display: none; }
 .gv-h { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-size: 18px; margin: 22px 0 6px; }
 .gv-h svg { width: 20px; height: 20px; color: var(--uv); }
 .gv-p { margin: 0 0 10px; font-size: 14.5px; line-height: 1.55; color: var(--muted); }
+.gv-reps { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 10px; }
+.gv-rep { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--surface); }
+.gv-rep b { display: block; font-size: 14px; } .gv-rep small { color: var(--muted); font-size: 12.5px; }
+.gv-rs { font-size: 12.5px; font-weight: 650; padding: 4px 9px; border-radius: 99px; background: rgba(255,170,0,.14); color: #c77700; white-space: nowrap; }
+.gv-rs.ok { background: rgba(40,180,90,.14); color: #1e8f4c; } .gv-rs.muted { background: rgba(127,127,127,.14); color: var(--muted); }
 .gv-list { display: grid; gap: 8px; margin-bottom: 10px; }
 .gv-card { padding: 12px 14px; border-radius: var(--r-md); background: var(--surface); display: grid; gap: 4px; }
 .gv-card.on { box-shadow: inset 0 0 0 2px var(--uv); }

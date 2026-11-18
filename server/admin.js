@@ -425,7 +425,9 @@ module.exports = function mountAdmin(app, ctx) {
       did = action === 'suspend' ? 'askıya aldı' : 'yasakladı';
     }
     store.update('reports', r.id, { status: action === 'dismiss' ? 'dismissed' : 'resolved', resolution: did, note, resolvedBy: req.admin.username, resolvedAt: now() });
-    if (r.from && action !== 'dismiss') notify(r.from, { type: 'report', text: 'Gönderdiğin şikayet incelendi ve gerekli işlem yapıldı. Teşekkürler.', title: 'SwipeUp', url: '/#/notifications' });
+    if (r.from) notify(r.from, action !== 'dismiss' // şikayet eden her durumda sonucu öğrenir (karşı tarafa ne yapıldığı ayrıntılı söylenmez)
+      ? { type: 'report', text: 'Gönderdiğin şikayet incelendi ve gerekli işlem yapıldı. Teşekkürler, SwipeUp’ı birlikte güvenli tutuyoruz.', title: 'SwipeUp', url: '/#/guvenlik' }
+      : { type: 'report', text: 'Gönderdiğin şikayeti inceledik; kurallarımıza aykırı bir durum bulamadık. Rahatsız olmaya devam edersen kişiyi engelleyebilirsin.', title: 'SwipeUp', url: '/#/guvenlik' });
     audit(req.admin, `şikayet: ${did}`, r.to, note);
     res.json({ ok: true });
   });

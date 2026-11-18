@@ -13,7 +13,7 @@ const { execFile } = require('child_process');
 const BK_DIR = '/var/backups/swipeup';
 const SYSTEMCTL = '/usr/bin/systemctl';
 const HAPI = 'https://developers.hostinger.com';
-const UNITS = { 'swipeup.service': 'Uygulama', 'caddy.service': 'HTTPS (Caddy)', 'swipeup-guncelle.timer': 'Otomatik güncelleme', 'swipeup-yedek.timer': 'Gece yedeği' };
+const UNITS = { 'swipeup.service': 'Uygulama', 'caddy.service': 'HTTPS (Caddy)', 'swipeup-guncelle.timer': 'Otomatik güncelleme', 'swipeup-yedek.timer': 'Gece yedeği', 'coturn.service': 'Görüntülü görüşme aktarıcısı (TURN)' };
 const LOG_UNITS = { swipeup: 'swipeup', caddy: 'caddy', guncelle: 'swipeup-guncelle', yedek: 'swipeup-yedek' };
 const TYPES = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'CAA', 'NS', 'SRV', 'ALIAS'];
 

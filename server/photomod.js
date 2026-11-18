@@ -50,6 +50,26 @@ module.exports = function photomod(app, ctx) {
   const brief = (id) => { const u = store.get('users', id); return u ? { id: u.id, username: u.username, avatar: u.avatar } : null; };
   // Yükleme sırasında çağrılır
   ctx.photoFlag = (userId, res, mediaId) => store.put('photo_flags', { id: nanoid(12), userId, mediaId: mediaId || null, verdict: res.verdict, label: res.label, score: res.score, scores: res.scores, status: res.verdict === 'review' ? 'open' : 'blocked', at: now() });
+  // Yedek: otomatik denetim kapalıyken ya da servis hata verdiyse yeni PROFİL fotoğrafları boş geçmez.
+  // Yapay zeka açıksa ona sorulur (sorunsuzsa geçer); değilse ya da şüpheliyse yönetimde "Elle incele" kuyruğuna düşer.
+  const ai = (() => { try { return require('./ai')(ctx); } catch { return null; } })();
+  ctx.onProfilePhotos = async (userId, urls) => {
+    for (const url of urls) {
+      const m = /\/media\/([\w-]+)/.exec(String(url)); const id = m?.[1]; const meta = id && store.get('media_meta', id);
+      if (!meta || !String(meta.mime || '').startsWith('image/') || !['off', 'error', undefined].includes(meta.pm)) continue; // denetlendiyse (ok/review) geç
+      if (store.find('photo_flags', (f) => f.mediaId === id)) continue;
+      let verdict = 'queue'; let label = enabled() ? 'otomatik denetim yapılamadı' : 'otomatik denetim kapalı';
+      if (ai?.enabled?.()) {
+        try {
+          const r = await ai.vision('Bu fotoğraf bir arkadaşlık uygulamasında PROFİL fotoğrafı olarak kullanılacak. Çıplaklık, açık cinsel içerik, şiddet/kan, nefret sembolü ya da reşit olmayan biri var mı? Mayo/bikini ve normal selfie sorun değildir.\nSadece JSON döndür: {"ok": true|false, "reason": "kısa Türkçe sebep"}', [url], { timeout: 9000, temperature: 0, maxTokens: 120 });
+          if (r && r.ok === true && !r.blocked) { store.update('media_meta', id, { pm: 'ai-ok' }); continue; }
+          if (r) { verdict = 'review'; label = `yapay zeka: ${String(r.reason || 'uygunsuz olabilir').slice(0, 60)}`; }
+        } catch { /* yapay zeka yanıt vermezse elle incelenir */ }
+      }
+      store.put('photo_flags', { id: nanoid(12), userId, mediaId: id, verdict, label, score: null, scores: null, status: 'open', kind: 'profil', at: now() });
+      store.update('media_meta', id, { pm: 'queued' });
+    }
+  };
   app.get('/api/admin/photomod', A.adminAuth, (req, res) => {
     const all = store.all('photo_flags').sort((a, b) => b.at - a.at);
     const row = (f) => ({ ...f, user: brief(f.userId), url: f.mediaId && store.get('media_meta', f.mediaId) ? `/media/${f.mediaId}` : null, userBlocked: all.filter((x) => x.userId === f.userId && x.verdict === 'block').length });
@@ -62,6 +82,8 @@ module.exports = function photomod(app, ctx) {
     else if (act === 'remove') {
       if (f.mediaId) store.deleteMedia(f.mediaId).then(() => { ctx.dropMediaCache(f.mediaId); store.del('media_meta', f.mediaId); }).catch(() => {});
       store.put('photo_flags', { ...f, status: 'removed', by: req.admin.username, doneAt: now() });
+      const u = f.mediaId && store.get('users', f.userId); const url = `/media/${f.mediaId}`; // profilde kullanılıyorsa profilden de çıkar
+      if (u && ((u.photos || []).includes(url) || u.avatar === url)) store.update('users', u.id, { photos: (u.photos || []).filter((x) => x !== url), ...(u.avatar === url ? { avatar: require('./legal').localAvatar('notionists', u.username, 'ffe3dc') } : {}) });
       notify(f.userId, { type: 'order', text: 'Yüklediğin bir fotoğraf topluluk kurallarına uymadığı için kaldırıldı.', url: '/#/profile', tag: 'foto-denetim' });
     } else return res.status(400).json({ error: 'Geçersiz işlem.' });
     A.audit(req.admin, act === 'approve' ? 'fotoğrafı onayladı' : 'fotoğrafı kaldırdı', f.userId, f.label || '');

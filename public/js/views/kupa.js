@@ -8,7 +8,8 @@ import { t as tr } from '../i18n.js';
 import { makeWorld, themeFor, seedOf } from '../k3world.js';
 import { makePhys } from '../k3phys.js';
 import { makeSfx } from '../k3sfx.js';
-import { makeVeh } from '../k3veh.js'; // Araba Yarışı ve Gemi Savaşı // tuvale çizilen etiketler (Sen, Ebe) sayfa çevirisinden geçmez: elle çevrilir
+import { makeVeh } from '../k3veh.js'; // Araba Yarışı ve Gemi Savaşı
+import { shareCard } from '../engage.js'; // tuvale çizilen etiketler (Sen, Ebe) sayfa çevirisinden geçmez: elle çevrilir
 
 const G = 22; const JUMP = 8.5; const SPEED = 7; const PR = 0.45; // sunucuyla aynı fizik sabitleri
 export const COLORS = { gul: 0xf48fb1, limon: 0xffe066, fistik: 0xa5d66f, portakal: 0xffb061, nar: 0xe23e6d, nane: 0x5fe0c4, bogurtlen: 0x8a63d2, cikolata: 0x8a5636, altin: 0xf5c542, lavanta: 0xb9a7f5, deniz: 0x3fa9f5, gece: 0x39406e };
@@ -625,7 +626,7 @@ export default async function kupa(view, id) {
     : `<div class="k3-rank">${o.slice(0, 3).map((i, k) => `<span class="${i === v.me ? 'me' : ''}"><b>${k + 1}.</b>${esc(nm(i))}</span>`).join('')}</div>${mine && mine > 3 ? `<small class="k3-cnt">Sen ${mine}. oldun</small>` : ''}`}
         ${game}
         ${res.pts?.[v.me] ? `<small class="k3-cnt k3-pts">+${res.pts[v.me]} lig puanı</small>` : ''}
-        <div class="k3-btns">${v.host ? '<button class="btn primary k3-start">Yeniden oyna</button>' : ''}<button class="btn k3-ward">Kostümler</button><button class="btn k3-lig">Lig</button><button class="btn k3-quests">Görevler</button><button class="btn k3-club">Kulüp Kupası</button><button class="btn k3-x">Çık</button>${v.host ? '' : '<span class="muted">Odayı açan yeniden başlatabilir.</span>'}</div></div>`;
+        <div class="k3-btns">${v.host ? '<button class="btn primary k3-start">Yeniden oyna</button>' : ''}<button class="btn k3-share">${icon('share')} Paylaş</button><button class="btn k3-ward">Kostümler</button><button class="btn k3-lig">Lig</button><button class="btn k3-quests">Görevler</button><button class="btn k3-club">Kulüp Kupası</button><button class="btn k3-x">Çık</button>${v.host ? '' : '<span class="muted">Odayı açan yeniden başlatabilir.</span>'}</div></div>`;
     } else over.hidden = true;
   }
   function openModes() { // oda sahibi: kupa ya da tek oyun
@@ -811,6 +812,12 @@ export default async function kupa(view, id) {
   wrap.addEventListener('click', async (e) => {
     if (e.target.closest('.k3-x')) { if (v.status === 'playing' && !(await ask('Oyundan çık', 'Çıkarsan bu kupadan elenirsin. Emin misin?', 'Çık', { danger: true }))) return; await api(`/kupa/${id}/leave`, { body: {} }).catch(() => {}); leaveTo('#/oyunlar'); return; }
     if (e.target.closest('.k3-start')) { try { apply(await api(`/kupa/${id}/start`, { body: {} })); } catch (er) { toast(er.message); } return; }
+    if (e.target.closest('.k3-share')) { // Instagram hikayesi kartı
+      const res = v.result || {}; const wins = res.winners || [res.winner]; const won = wins.includes(v.me); const place = v.players[v.me]?.place || null; const n = v.players.length;
+      const what = res.single ? modeName(res.mode) : 'Üç turluk Parti Kupası';
+      return shareCard({ kind: 'oyun', icon: 'odul', title: won ? (res.single ? `${modeName(res.mode)} kazandım!` : 'Kupayı kazandım!') : place ? `${place}. oldum` : 'Parti Kupası', subtitle: `${what} · ${new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}`,
+        text: `${n} oyuncu yarıştı${won ? ' ve kupa benim 🏆' : place && place <= 3 ? `, podyumdayım` : ''}.${res.pts?.[v.me] ? ` +${res.pts[v.me]} lig puanı.` : ''} Bir sonraki kupada beni geçebilir misin?`, cta: 'Sen de kupaya katıl' }, { file: 'swipeup-kupa.png' });
+    }
     if (e.target.closest('.k3-quests')) return openQuests();
     if (e.target.closest('.k3-club')) return openClubCup();
     { const dz = e.target.closest('[data-duo]'); if (dz && v.status === 'waiting') { const mine = v.players[v.me]; const i = v.players.findIndex((p) => p.id === dz.dataset.duo); return api(`/kupa/${v.id}/duo`, { body: mine.duo === i ? { off: 1 } : { userId: dz.dataset.duo } }).then((r) => toast(mine.duo === i ? 'İkili bozuldu.' : r.paired ? 'İkili oldunuz: lig puanlarınız ortak.' : 'İkili isteği gönderildi.')).catch((er) => toast(er.message)); } }

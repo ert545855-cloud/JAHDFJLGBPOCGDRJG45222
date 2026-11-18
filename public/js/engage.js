@@ -32,6 +32,7 @@ export async function modCheck({ text, media }) {
   let r = null;
   try { r = await Promise.race([api('/mod/check', { body: { text, media } }), new Promise((res) => setTimeout(() => res(null), media ? 9000 : 3500))]); } catch { r = null; }
   if (!r?.warn) return true;
+  if (r.kind === 'scam') return ask('Emin misin?', `Bu mesajda ${String(r.reason || 'para isteği').toLocaleLowerCase('tr-TR')} var. SwipeUp’ta tanıştığın kimseyle para, IBAN, kripto ya da hediye kartı alışverişi yapma; dolandırıcılar en çok bu yolu kullanır.`, { ok: 'Yine de gönder', cancel: 'Vazgeç', danger: true });
   return ask('Emin misin?', r.kind === 'image'
     ? `Bu fotoğraf topluluk kurallarına uymayabilir (${r.reason}). Gönderirsen yönetim ekibi inceleyebilir.`
     : `Bu mesaj karşındakini kırabilir (${r.reason}). SwipeUp’ta herkesin kendini iyi hissetmesini istiyoruz.`, { ok: 'Yine de gönder', cancel: 'Düzenle', danger: true });
@@ -43,6 +44,7 @@ const THEMES = {
   fal: ['#ff7a59', '#ff3d8b', '#7c3aed', '#1c0b3a'],
   burc: ['#5b21b6', '#7c3aed', '#c026d3', '#170a33'],
   compat: ['#ff8a5c', '#ff3d8b', '#a24bff', '#260c3d'],
+  oyun: ['#ffb020', '#ff3d6e', '#3a6bff', '#0b1440'],
 };
 function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 function wrap(g, text, maxW) {
@@ -82,7 +84,7 @@ export async function drawCard({ kind = 'fal', icon = 'fal-burc', title, subtitl
   const g = c.getContext('2d');
   const [a, b, d, e] = THEMES[kind] || THEMES.fal;
   // Figma'da tasarlanan arka plan (public/img/eg/card-*.svg); yüklenemezse gradyan + yıldızlar
-  const art = await loadImg(`/img/eg/card-${kind === 'compat' ? 'uyum' : kind}.svg`);
+  const art = kind === 'oyun' ? null : await loadImg(`/img/eg/card-${kind === 'compat' ? 'uyum' : kind}.svg`); // oyun kartının çizimi yok: gradyan
   if (art) g.drawImage(art, 0, 0, W, H);
   else {
     const bg = g.createLinearGradient(0, 0, W * 0.4, H);
@@ -141,7 +143,7 @@ export async function drawCard({ kind = 'fal', icon = 'fal-burc', title, subtitl
   g.font = `800 44px ${FONT}`; const pw = Math.min(W - 160, g.measureText(link).width + 120);
   rr(g, (W - pw) / 2, 1715, pw, 104, 52); g.fillStyle = '#fff'; g.fill();
   g.fillStyle = d; g.fillText(link, W / 2, 1768);
-  g.font = `500 28px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.7)'; g.fillText('Eğlence amaçlıdır', W / 2, 1870);
+  g.font = `500 28px ${FONT}`; g.fillStyle = 'rgba(255,255,255,.7)'; if (kind !== 'oyun') g.fillText('Eğlence amaçlıdır', W / 2, 1870);
   return new Promise((res) => c.toBlob((blob) => res(blob), 'image/png'));
 }
 

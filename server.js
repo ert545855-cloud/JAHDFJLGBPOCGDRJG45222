@@ -220,6 +220,7 @@ const NOTIFY_GROUP = {
   like: 'likes', liked: 'likes', super_msg: 'likes', match: 'matches', message: 'messages', group: 'messages', call: 'calls', missed: 'calls',
   comment: 'social', follow: 'social', follow_request: 'social', follow_ok: 'social', repost: 'social', post: 'social', story_answer: 'social', mention: 'social',
   game: 'games', farm: 'games', level: 'games', streak: 'games', event: 'events', picks: 'events', burc: 'events', market: 'market', announce: 'promo', live: 'social',
+  nudge: 'reminders', digest_mail: 'digest', // akıllı hatırlatma ve haftalık özet e-postası (server/nudge.js)
 };
 function pushAllowed(u, type) {
   if (!u) return true;
@@ -571,9 +572,15 @@ const adminApi = require('./server/admin')(app, {
 
 app.get('/healthz', (req, res) => res.json({ ok: true })); // ayrıntı yönetim panelinde; herkese açık sayfada sayı verilmez
 
-// TURN: metered.ca Open Relay (statik kimlik, ücretsiz) — env ile değiştirilebilir
+// TURN: önce kendi sunucumuz (scripts/vds/turn.sh kurar: TURN_HOST + TURN_SECRET, 24 saatlik geçici kimlik),
+// yedek olarak metered.ca Open Relay (ücretsiz, ortak). TURN_URL verilirse yalnız o kullanılır.
+function turnCred(secret, userId) { const username = `${Math.floor(now() / 1000) + DAY / 1000}:${userId || 'guest'}`; return { username, credential: crypto.createHmac('sha1', secret).update(username).digest('base64') }; }
 function iceServers(userId) {
   const ice = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+  if (process.env.TURN_HOST && process.env.TURN_SECRET) {
+    const h = process.env.TURN_HOST; ice[0].urls.unshift(`stun:${h}:3478`);
+    ice.push({ urls: [`turn:${h}:3478?transport=udp`, `turn:${h}:3478?transport=tcp`, `turns:${h}:5349?transport=tcp`], ...turnCred(process.env.TURN_SECRET, userId) });
+  }
   if (process.env.TURN_URL) {
     ice.push({ urls: process.env.TURN_URL.split(','), username: process.env.TURN_USERNAME, credential: process.env.TURN_CREDENTIAL });
     return ice;
@@ -581,12 +588,8 @@ function iceServers(userId) {
   const host = process.env.TURN_STATIC_HOST || 'staticauth.openrelay.metered.ca';
   const secret = process.env.TURN_STATIC_SECRET || 'openrelayprojectsecret';
   if (process.env.TURN_DISABLE === '1') return ice;
-  const username = `${Math.floor(now() / 1000) + DAY / 1000}:${userId || 'guest'}`;
-  const credential = crypto.createHmac('sha1', secret).update(username).digest('base64');
-  ice.push({
-    urls: [`turn:${host}:80`, `turn:${host}:80?transport=tcp`, `turn:${host}:443`, `turns:${host}:443?transport=tcp`],
-    username, credential,
-  });
+  if (process.env.TURN_HOST && process.env.TURN_SECRET && process.env.TURN_FALLBACK === '0') return ice;
+  ice.push({ urls: [`turn:${host}:80`, `turn:${host}:80?transport=tcp`, `turn:${host}:443`, `turns:${host}:443?transport=tcp`], ...turnCred(secret, userId) });
   return ice;
 }
 
@@ -971,6 +974,7 @@ app.patch('/api/me', auth, (req, res) => {
     patch.prefs = { ageMin, ageMax, maxKm, verifiedOnly: !!b.prefs.verifiedOnly, tonightOnly: !!b.prefs.tonightOnly, passCity };
   }
   featureCtx.readProfileExtras?.(b, patch);
+  { const old = new Set([...(req.user.photos || []), req.user.avatar]); const fresh = [...(patch.photos || []), patch.avatar].filter((x) => x && !old.has(x) && isMedia(x)); if (fresh.length) setTimeout(() => featureCtx.onProfilePhotos?.(req.user.id, fresh), 0); } // denetlenemeyen yeni profil fotoğrafları incelemeye
   if (b.location === null) { patch.lat = null; patch.lng = null; }
   if (b.location && b.consentLocation === true && !hasConsent(req.user, 'location')) setConsents(req.user.id, { location: true }, req, 'konum izni');
   if (b.location && !hasConsent(store.get('users', req.user.id), 'location')) return res.status(412).json({ error: 'Konumunu kullanabilmemiz için önce açık rıza vermelisin.', needConsent: 'location' });
@@ -1044,7 +1048,7 @@ app.post('/api/upload', auth, upload.single('file'), wrap(async (req, res) => {
   if (pm.verdict === 'block') { featureCtx.photoFlag?.(req.user.id, pm); return res.status(422).json({ error: 'Bu fotoğraf topluluk kurallarına uymuyor (çıplaklık ya da cinsel içerik). Lütfen başka bir fotoğraf seç.' }); }
   const id = nanoid(16);
   const where = await store.saveMedia(id, mime, buffer);
-  store.put('media_meta', { id, userId: req.user.id, mime, size: buffer.length, where, at: now() });
+  store.put('media_meta', { id, userId: req.user.id, mime, size: buffer.length, where, at: now(), ...(mime.startsWith('image/') ? { pm: pm.verdict === 'skip' ? (pm.error ? 'error' : 'off') : pm.verdict } : {}) }); // pm: otomatik denetimin sonucu (off/error: denetlenemedi)
   if (pm.verdict === 'review') featureCtx.photoFlag?.(req.user.id, pm, id);
   res.json({ url: `/media/${id}`, type: mime.split('/')[0], mime });
 }));
@@ -1633,6 +1637,7 @@ app.post('/api/users/:id/report', auth, (req, res) => {
     details: String(req.body?.details || '').slice(0, 1000), ref: req.body?.ref || null, at: now(), status: 'open',
   });
   console.log(`[report] ${req.user.username} -> ${t.username}: ${req.body?.reason}`);
+  notify(req.user.id, { type: 'report', text: 'Şikayetin alındı. Yönetim ekibi inceleyip sonucu sana bildirecek; durumunu Güvenlik merkezinden takip edebilirsin.', title: 'SwipeUp', url: '/#/guvenlik' });
   res.json({ ok: true });
 });
 // Tek bir mesajı / yorumu bildir (içeriğin o anki kopyası saklanır)
@@ -2244,6 +2249,12 @@ require('./server/playkit')(app, featureCtx); // oyun altyapısı + server/play/
 require('./server/minigames')(app, featureCtx); // sohbet içi mini oyunlar: XOX, Dört Taş, TKM, Amiral Battı
 require('./server/kupa')(app, featureCtx); // Parti Kupası (3D)
 require('./server/farm')(app, featureCtx); // SwipeFarm: çiftlik oyunu
+require('./server/iap')(app, featureCtx);
+require('./server/nudge')(app, featureCtx); // akıllı hatırlatmalar ve haftalık özet e-postası
+if (process.env.NODE_ENV === 'test') { // yalnız otomatik testlerde (test/): koleksiyonu oku, hatırlatma turunu hemen çalıştır
+  app.get('/api/_test/col/:name', (req, res) => res.json(store.all(req.params.name)));
+  app.post('/api/_test/nudge', (req, res) => { featureCtx.nudge.tick(true); res.json({ ok: true }); });
+} // Google Play ve App Store uygulama içi satın alma
 require('./server/race')(app, featureCtx); // Swipe Race: profil, görevler, rekor + hayalet, sıralamalar, çok oyunculu odalar
 require('./server/cifte')(app, featureCtx);
 require('./server/stickers')(app, featureCtx); // sohbet çıkartma paketleri

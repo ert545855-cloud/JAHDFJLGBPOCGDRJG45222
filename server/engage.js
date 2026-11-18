@@ -641,6 +641,8 @@ module.exports = function engage(app, ctx) {
     if (text) {
       const w = moderation.warn(text);
       if (w) return res.json({ warn: true, kind: 'text', reason: w.reason });
+      const sc = ctx.scamScan?.(text); // para, IBAN, kripto, hediye kartı: göndermeden önce uyar
+      if (sc?.length) return res.json({ warn: true, kind: 'scam', reason: sc[0].why });
       if (c.textCheck && ai.enabled() && text.length >= 6 && !limited('modt:' + req.user.id, 40, 3600000)) {
         const k = text.toLocaleLowerCase('tr-TR');
         let r = textCache.get(k);
