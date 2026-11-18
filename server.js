@@ -624,7 +624,7 @@ const CONSENTS = {
   marketing: 'Kampanya, etkinlik ve yeniliklerle ilgili uygulama içi ve anlık bildirim almak',
   marketingEmail: 'Kampanya, etkinlik ve yeniliklerle ilgili e-posta almak (ticari elektronik ileti; İleti Yönetim Sistemi’ne kaydedilir)',
   location: 'Yakınımdaki kişileri gösterebilmek için yaklaşık konumumun işlenmesi',
-  ai: 'Fal isteklerimdeki fotoğraf ve notların yorum taslağı için yurt dışındaki yapay zeka hizmetine (Google Gemini) aktarılması',
+  ai: 'Fal isteklerimdeki fotoğraf ve notların yorum taslağı hazırlanması için yurt dışındaki hizmet sağlayıcıya aktarılması',
   orientation: 'Kaydırmada hangi cinsiyetten kişileri görmek istediğime dair tercihimin (cinsel hayata ilişkin özel nitelikli kişisel veri sayılabilir) yalnızca eşleşme önerileri için işlenmesi',
 };
 const CONSENT_VER = '2026-11-17';

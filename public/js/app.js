@@ -395,7 +395,7 @@ const CONS_ITEMS = [
   ['marketing', 'Kampanya ve yenilik bildirimleri almak'],
   ['marketingEmail', 'Kampanya ve yenilik e-postaları almak (İYS’ye kaydedilir)'],
   ['location', 'Yakınımdaki kişileri görmek için yaklaşık konumumun işlenmesi'],
-  ['ai', 'Fal fotoğraf ve notlarımın yorum taslağı için yurt dışındaki yapay zeka hizmetine (Google Gemini) aktarılması'],
+  ['ai', 'Fal fotoğraf ve notlarımın yorum taslağı hazırlanması için yurt dışındaki hizmet sağlayıcıya aktarılması'],
   ['orientation', 'Kaydırmada hangi cinsiyeti görmek istediğime dair tercihimin işlenmesi (özel nitelikli veri)'],
 ];
 function consentOnce() {

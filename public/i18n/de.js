@@ -856,7 +856,7 @@ const D = {
 "Satıcı bilgileri, ETBİS, telif ve kişilik hakkı bildirimi": "Verkäuferangaben, ETBİS, Meldungen zu Urheber- und Persönlichkeitsrechten",
 "Lisanslar ve atıflar": "Lizenzen und Quellenangaben",
 "İzinlerim (açık rıza)": "Meine Einwilligungen",
-"Kampanya bildirimi ve e-postası, konum, yapay zeka fal desteği": "Werbe-Benachrichtigungen und -E-Mails, Standort, KI-Unterstützung bei Deutungen",
+"Kampanya bildirimi ve e-postası, konum, fal yorum desteği": "Werbe-Benachrichtigungen und -E-Mails, Standort, Unterstützung bei Deutungen",
 "Kullanım Koşulları güncellendi": "Nutzungsbedingungen aktualisiert",
 "Onayla ve devam et": "Akzeptieren und fortfahren",
 "Cayma ve iade": "Widerruf und Erstattung",

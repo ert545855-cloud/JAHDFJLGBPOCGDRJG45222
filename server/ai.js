@@ -49,7 +49,7 @@ module.exports = function makeAi(ctx) {
       } catch (e) { lastErr = `${model}: ${e.message}`; }
     }
     stats.fail++; stats.lastError = lastErr; stats.lastAt = Date.now();
-    throw new Error(lastErr || 'Yapay zeka cevap vermedi.');
+    throw new Error(lastErr || 'Hizmet cevap vermedi.');
   }
 
   return {

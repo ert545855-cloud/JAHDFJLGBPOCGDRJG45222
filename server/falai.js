@@ -146,7 +146,7 @@ module.exports = function falai(app, ctx) {
       } catch (e) { lastErr = `${model}: ${e.message}`; }
     }
     stats.fail++; stats.lastError = lastErr; stats.lastAt = now();
-    throw new Error(lastErr || 'Yapay zeka cevap vermedi.');
+    throw new Error(lastErr || 'Taslak hazırlanamadı.');
   }
 
   // Sıra: istekler tek tek işlenir
@@ -236,7 +236,7 @@ Akış paylaşımı kuralları (bu metin tek bir kişiye değil, akışta herkes
   app.get('/api/fal/ai/:id', auth, onlyFalci, (req, res) => { const m = msgOfFalci(req, res); if (m) res.json(ctx.falDraft(m.id) || { status: 'none' }); });
   app.post('/api/fal/ai/:id/regen', auth, onlyFalci, (req, res) => {
     const m = msgOfFalci(req, res); if (!m) return;
-    if (!key()) return res.status(503).json({ error: 'Yapay zeka anahtarı tanımlı değil.' });
+    if (!key()) return res.status(503).json({ error: 'Taslak hizmeti şu an kapalı.' });
     if (m.fal.status !== 'pending') return res.status(400).json({ error: 'Bu fal zaten cevaplandı.' });
     queue.push(m.id); run().catch(() => { busy = false; });
     res.json({ status: 'working' });

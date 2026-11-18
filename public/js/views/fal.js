@@ -9,7 +9,7 @@ import { egi, falIcon, packIcon } from '../eg-icons.js';
 
 const head = (title, to = '#/fal') => `<header class="topbar"><a class="ib" href="${to}" aria-label="Geri">${icon('back')}</a><div class="center">${esc(title)}</div><span class="ib"></span></header>`;
 const note = '<p class="fal-note">Fallar eğlence amaçlıdır.</p>';
-const aiNote = () => (state.config?.falAi && state.config.falAi !== 'off' ? '<p class="fal-note">Yorumlar yapay zeka desteğiyle hazırlanır, eğlence amaçlıdır.</p>' : note);
+const aiNote = () => (state.config?.falAi && state.config.falAi !== 'off' ? '<p class="fal-note">Yorumlar eğlence amaçlıdır.</p>' : note);
 const statusChip = (s) => (s === 'answered' ? '<span class="chip fal-ok">Cevaplandı</span>' : '<span class="chip fal-wait-chip">Bekliyor</span>');
 
 let shop = null;
@@ -33,8 +33,7 @@ async function send(body, btn) {
   }
 }
 
-// Yapay zeka desteği açıksa: isteğe bağlı, önceden işaretlenmemiş açık rıza (yurt dışına aktarım)
-// Yapay zeka izni hesap başına bir kez, ilk açılıştaki izinler ekranında alınır; fal ekranında sorulmaz
+// Fal yorum desteği izni hesap başına bir kez, ilk açılıştaki izinler ekranında alınır; fal ekranında sorulmaz
 const aiConsentBox = () => '';
 const noteField = (ph) => `<label class="form" style="padding:0;gap:6px"><span class="b" style="font-size:13.5px">Falcı Teyze’ye notun</span>
   <textarea class="field nt" maxlength="1000" rows="3" placeholder="${esc(ph)}"></textarea></label>${aiConsentBox()}`;
@@ -141,21 +140,21 @@ async function queue(view) {
         ${x.images?.length ? `<div class="fq-imgs">${x.images.map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="" loading="lazy"></a>`).join('')}</div>` : ''}
         ${x.cards?.length ? `<div class="fq-cards">${x.cards.map((c) => `<span class="chip"><small>${esc(c.pos || '')}</small> ${c.em} ${esc(c.name)}${c.rev ? ' (ters)' : ''}</span>`).join('')}</div>` : ''}
         ${x.note ? `<p class="fq-note">${esc(x.note)}</p>` : ''}
-        ${x.status === 'pending' ? (x.holds?.length ? holdBox(x) : `${x.dueAt && x.dueAt > Date.now() ? `<div class="fq-due">⏳ Cevap en erken <b>${hhmm(x.dueAt)}</b>’de iletilir</div>` : ''}${aiBox(x)}`) : x.ai?.status === 'sent' ? `<div class="ai-done">${x.ai.auto ? '✨ Yapay zeka cevabı otomatik gönderildi' : x.ai.edited === false ? '✨ Taslak olduğu gibi gönderildi' : ''}</div>` : ''}
+        ${x.status === 'pending' ? (x.holds?.length ? holdBox(x) : `${x.dueAt && x.dueAt > Date.now() ? `<div class="fq-due">⏳ Cevap en erken <b>${hhmm(x.dueAt)}</b>’de iletilir</div>` : ''}${aiBox(x)}`) : x.ai?.status === 'sent' ? `<div class="ai-done">${x.ai.auto ? '✨ Cevap otomatik gönderildi' : x.ai.edited === false ? '✨ Taslak olduğu gibi gönderildi' : ''}</div>` : ''}
       </div>`).join('')
       : `<div class="empty"><div class="big">${icon('check')}</div><h2>${filter === 'pending' ? 'Bekleyen fal yok' : 'Henüz yok'}</h2>${filter === 'pending' ? 'Yeni istek gelince bildirim alırsın.' : ''}</div>`;
   };
   const hhmm = (t) => new Date(t).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-  const holdBox = (x) => x.holds.map((h) => `<div class="ai-box hold" data-hold="${esc(h.id)}"><div class="ai-h">⏳ Cevap hazır <small>${hhmm(h.dueAt)}’de iletilecek${h.source === 'auto' ? ' · yapay zeka' : ''}</small></div>${h.text ? `<p class="fq-note" style="margin:0">${esc(h.text.slice(0, 220))}${h.text.length > 220 ? '…' : ''}</p>` : ''}<div class="ai-btns"><button class="btn sm hb-x">Geri al</button><button class="btn primary sm hb-now">${icon('send')} Şimdi gönder</button></div></div>`).join('');
+  const holdBox = (x) => x.holds.map((h) => `<div class="ai-box hold" data-hold="${esc(h.id)}"><div class="ai-h">⏳ Cevap hazır <small>${hhmm(h.dueAt)}’de iletilecek${h.source === 'auto' ? ' · otomatik' : ''}</small></div>${h.text ? `<p class="fq-note" style="margin:0">${esc(h.text.slice(0, 220))}${h.text.length > 220 ? '…' : ''}</p>` : ''}<div class="ai-btns"><button class="btn sm hb-x">Geri al</button><button class="btn primary sm hb-now">${icon('send')} Şimdi gönder</button></div></div>`).join('');
   const aiOn = () => state.config?.falAi && state.config.falAi !== 'off';
   function aiBox(x) {
     const a = x.ai;
-    if (!a || a.status === 'none') return aiOn() ? '<div class="ai-box"><button class="btn sm ai-regen">✨ Yapay zeka taslağı hazırla</button></div>' : '';
+    if (!a || a.status === 'none') return aiOn() ? '<div class="ai-box"><button class="btn sm ai-regen">✨ Taslak hazırla</button></div>' : '';
     if (a.status === 'scheduled' || a.status === 'sent') return '';
     if (a.status === 'working') return '<div class="ai-box wait"><span class="spinner sm"></span> ✨ Taslak hazırlanıyor…</div>';
     if (a.status === 'error') return `<div class="ai-box err"><b>Taslak hazırlanamadı</b><small>${esc(a.error || '')}</small><button class="btn sm ai-regen">Tekrar dene</button></div>`;
     if (a.status === 'ready') {
-      return `<div class="ai-box"><div class="ai-h">✨ Yapay zeka taslağı <small>okuyup düzenleyebilirsin</small></div>
+      return `<div class="ai-box"><div class="ai-h">✨ Hazır taslak <small>okuyup düzenleyebilirsin</small></div>
         <textarea class="field ai-t" rows="8">${esc(a.text)}</textarea>
         <div class="ai-btns"><button class="btn sm ai-regen">Yeniden yaz</button><button class="btn primary sm ai-send">${icon('send')} Gönder</button></div></div>`;
     }

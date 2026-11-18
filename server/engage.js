@@ -66,7 +66,7 @@ const DEFAULT_CLUBS = [
   { id: 'seyahat', em: '✈️', name: 'Seyahat', desc: 'Rotalar, ipuçları, yol arkadaşları' },
   { id: 'spor', em: '🏃', name: 'Spor & Sağlık', desc: 'Koşu, salon, yoga ve motivasyon' },
   { id: 'yemek', em: '🍳', name: 'Yemek', desc: 'Tarifler, mekanlar, gurme sohbetler' },
-  { id: 'teknoloji', em: '💻', name: 'Teknoloji', desc: 'Telefonlar, uygulamalar, yapay zeka' },
+  { id: 'teknoloji', em: '💻', name: 'Teknoloji', desc: 'Telefonlar, uygulamalar, internet' },
 ];
 
 // ---------- Uyum testi ----------
@@ -673,7 +673,7 @@ module.exports = function engage(app, ctx) {
     const w = msg.media && warnedMedia.get(msg.media);
     if (w && w.uid === sender.id) {
       warnedMedia.delete(msg.media);
-      store.put('flags', { id: nanoid(12), kind: 'message', userId: sender.id, chatId: chat.id, ref: msg.id, text: `📷 Fotoğraf · Yapay zeka uyarısına rağmen gönderildi: ${w.reason}`, media: msg.media, level: 'medium', reason: 'Yapay zeka: uygunsuz fotoğraf', status: 'open', at: now() });
+      store.put('flags', { id: nanoid(12), kind: 'message', userId: sender.id, chatId: chat.id, ref: msg.id, text: `📷 Fotoğraf · Otomatik uyarıya rağmen gönderildi: ${w.reason}`, media: msg.media, level: 'medium', reason: 'Otomatik denetim: uygunsuz fotoğraf', status: 'open', at: now() });
     }
   });
 
@@ -691,7 +691,7 @@ module.exports = function engage(app, ctx) {
       const cur = store.get('verifications', v.id); if (!cur) return;
       store.update('verifications', v.id, { ai: res });
       if (c.verifyAuto && cur.status === 'pending' && res.pose && res.live && res.same && res.confidence >= 0.85) {
-        store.update('verifications', v.id, { status: 'approved', note: '', by: 'yapay zeka', closedAt: now() });
+        store.update('verifications', v.id, { status: 'approved', note: '', by: 'otomatik', closedAt: now() });
         store.update('users', v.userId, { verified: true, verifiedAt: now() });
         notify(v.userId, { type: 'verify', text: '✅ Profilin doğrulandı! Artık adının yanında mavi tik var.', title: 'SwipeUp', url: '/#/verify' });
       }
@@ -861,7 +861,7 @@ module.exports = function engage(app, ctx) {
         nowPlaying: users.filter((u) => npLive(u)).length,
         packsSold30: store.filter('coin_tx', (x) => x.reason === 'fal_pack' && x.at > now() - 30 * DAY).length,
         gifts30: store.filter('coin_tx', (x) => x.reason === 'gift' && x.chat && x.at > now() - 30 * DAY).length,
-        aiWarnFlags: store.filter('flags', (f) => /Yapay zeka/.test(f.reason || '') && f.at > now() - 7 * DAY).length,
+        aiWarnFlags: store.filter('flags', (f) => /Yapay zeka|Otomatik (uyarı|denetim)/.test(f.reason || '') && f.at > now() - 7 * DAY).length,
       },
     });
   });

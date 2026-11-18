@@ -28,7 +28,7 @@ const PROV = [
   ['Supabase (AWS)', 'Veritabanı ve dosya saklama', 'Hesap, profil, paylaşım, mesaj ve dosyalar', 'Almanya (Frankfurt)'],
   ['Cloudflare', 'Güvenli bağlantı ve saldırı koruması', 'IP adresi, istek bilgileri', 'Küresel'],
   ['Sightengine', 'Fotoğraf denetimi (çıplaklık, şiddet); yüz tanıma yapılmaz', 'Yüklenen fotoğraflar', 'Fransa (AB)'],
-  ['Google (Gemini API)', 'Fal yorum taslağı (yalnızca açık rızayla)', 'Fal notu, fincan fotoğrafları, burç / kart bilgisi', 'ABD ve diğer'],
+  ['Yorum taslağı hizmet sağlayıcısı', 'Fal yorum taslağı (yalnızca açık rızayla)', 'Fal notu, fincan fotoğrafları, burç / kart bilgisi', 'ABD ve diğer'],
   ['Google, Apple', 'Google / Apple ile giriş (seçersen)', 'Kimlik numarası, e-posta, ad', 'ABD'],
   ['Google, Apple, Mozilla', 'Anlık bildirim iletimi (şifreli)', 'Bildirim içeriği, cihaz bildirim adresi', 'ABD ve diğer'],
   ['Metered (Open Relay)', 'Sesli / görüntülü arama aktarma', 'Şifreli arama trafiği, IP adresi', 'Küresel'],
@@ -90,7 +90,7 @@ ${sellerTable()}
 <tr><td>Doğrulama selfiesi</td><td>Mavi tik: fotoğrafın sana ait olduğunun yönetim ekibince gözle kontrol edilmesi (yüz tanıma ya da biyometrik şablon çıkarılmaz)</td><td>Sözleşmenin ifası (m.5/2-c)</td></tr>
 <tr><td>Sipariş ve ödeme: sipariş kodu, tutar, havale/EFT gönderen adı, iade için verdiğin IBAN, jeton hareketleri</td><td>Satın alınan ürünün tanımlanması, iade, muhasebe ve vergi kayıtları</td><td>Sözleşmenin ifası (m.5/2-c), hukuki yükümlülük (m.5/2-ç)</td></tr>
 <tr><td>İşlem güvenliği: IP adresi, oturum ve giriş kayıtları, rastgele cihaz kimliği</td><td>Hesap güvenliği, sahte hesap ve dolandırıcılığın önlenmesi, 5651 s. Kanun kayıt yükümlülükleri</td><td>Hukuki yükümlülük (m.5/2-ç), meşru menfaat (m.5/2-f)</td></tr>
-<tr><td>Fal isteğindeki fotoğraf ve notlar</td><td>Yapay zekayla yorum taslağı hazırlanması</td><td>Açık rıza (m.5/1)</td></tr>
+<tr><td>Fal isteğindeki fotoğraf ve notlar</td><td>Yorum taslağı hazırlanması</td><td>Açık rıza (m.5/1)</td></tr>
 <tr><td>E-posta ve bildirim aboneliği</td><td>Kampanya ve yenilik iletileri</td><td>Açık rıza (m.5/1) ve ticari ileti onayı (6563 s. Kanun)</td></tr>
 <tr><td>Uygulama içi hareketler: işlem türü, zamanı, karşı taraf, IP ve cihaz kimliği (mesaj ve gönderi metinleri hariç)</td><td>Hesap güvenliği, destek ve şikayetlerin incelenmesi, sahte hesap ve dolandırıcılığın önlenmesi</td><td>Meşru menfaat (m.5/2-f), hakkın tesisi ve korunması (m.5/2-e); 1 yıl saklanır</td></tr>
 <tr><td>Buluşma paylaşımı: yer, saat, kiminle buluştuğun, durumun</td><td>Senin isteğinle güvendiğin kişiye gösterilmesi (Güvenlik merkezi)</td><td>Sözleşmenin ifası (m.5/2-c); buluşmadan 7 gün sonra silinir</td></tr>
@@ -101,7 +101,7 @@ ${sellerTable()}
 <h3>Toplama yöntemi</h3>
 <p>Veriler, uygulamayı kullanırken senin girdiğin bilgiler, cihazından izin verdiğin ölçüde alınan bilgiler (konum, kamera, mikrofon) ve kullanım sırasında otomatik oluşan kayıtlar yoluyla elektronik ortamda toplanır.</p>
 <h3>Aktarım</h3>
-<p>Verilerin, hizmeti sunmak için yararlandığımız barındırma, veritabanı, güvenlik, fotoğraf denetimi, bildirim, arama aktarma, giriş ve yapay zeka sağlayıcılarına yalnızca ilgili hizmetin gerektirdiği kadar aktarılır. Bu sağlayıcıların sunucuları yurt dışında (Almanya, Fransa, ABD ve diğer ülkeler) olduğundan aktarım KVKK m.9 kapsamında <b>yurt dışına aktarımdır</b> ve Kişisel Verileri Koruma Kurulu’nun ilan ettiği standart sözleşmeler gibi uygun güvencelere dayanılarak yapılır. Sağlayıcıların listesi <a class="link" href="#/legal/gizlilik">Gizlilik Politikası</a>’ndadır. Kanunen yetkili kamu kurum ve kuruluşlarına, yalnızca talep hâlinde ve mevzuatın izin verdiği ölçüde bilgi verilir. Verilerini satmayız, reklam amacıyla üçüncü kişilere vermeyiz.</p>
+<p>Verilerin, hizmeti sunmak için yararlandığımız barındırma, veritabanı, güvenlik, fotoğraf denetimi, bildirim, arama aktarma, giriş ve yorum taslağı sağlayıcılarına yalnızca ilgili hizmetin gerektirdiği kadar aktarılır. Bu sağlayıcıların sunucuları yurt dışında (Almanya, Fransa, ABD ve diğer ülkeler) olduğundan aktarım KVKK m.9 kapsamında <b>yurt dışına aktarımdır</b> ve Kişisel Verileri Koruma Kurulu’nun ilan ettiği standart sözleşmeler gibi uygun güvencelere dayanılarak yapılır. Sağlayıcıların listesi <a class="link" href="#/legal/gizlilik">Gizlilik Politikası</a>’ndadır. Kanunen yetkili kamu kurum ve kuruluşlarına, yalnızca talep hâlinde ve mevzuatın izin verdiği ölçüde bilgi verilir. Verilerini satmayız, reklam amacıyla üçüncü kişilere vermeyiz.</p>
 <h3>Otomatik işlemler</h3>
 <p>Yüklenen fotoğraflar çıplaklık ve şiddet açısından otomatik taranır; mesajlardaki ağır hakaret ve tehditler otomatik işaretlenir. Otomatik işaretler yönetim ekibince incelenir; aleyhine bir karar verilirse uygulamadaki itiraz formuyla itiraz edebilirsin.</p>
 <h3>Hakların (KVKK m.11)</h3>
@@ -240,8 +240,8 @@ ${PROVIDERS}
 <p>Kampanya ve yeniliklerle ilgili e-posta gönderebilmemiz için e-posta adresin işlenir. Bu onay 6563 sayılı Kanun uyarınca İleti Yönetim Sistemi’ne (İYS) kaydedilir; her e-postada ücretsiz ret bağlantısı bulunur ve reddin İYS’ye de iletilir.</p>
 <h3>3. Konum</h3>
 <p>Yakınındaki kişileri ve uzaklığı gösterebilmek için cihazından alınan konumun yaklaşık 1 km hassasiyetle yuvarlanarak saklanır. Tam konumun ve konum geçmişin saklanmaz; diğer kullanıcılara yalnızca kilometre cinsinden uzaklık gösterilir. İzni geri alınca kayıtlı konumun silinir.</p>
-<h3>4. Fal fotoğraflarının yapay zekayla yorumlanması</h3>
-<p>Fal isteğinde gönderdiğin fincan fotoğrafları, notun ve burç / kart bilgin, yorum taslağı hazırlanması için Google’ın yapay zeka hizmetine (Gemini API, sunucuları ABD ve diğer ülkelerde) iletilir. Adın, kullanıcı adın ve iletişim bilgilerin gönderilmez. Aktarım KVKK m.9’daki güvencelere dayanır; yine de bu ülkelerde Türkiye’deki ile aynı düzeyde koruma bulunmayabileceğini ve Google’ın verileri kendi koşullarına göre işleyebileceği gibi riskleri bilerek izin verirsin. İzin vermezsen falına Falcı Teyze kendisi bakar.</p>
+<h3>4. Fal fotoğraf ve notlarının yorum taslağı için aktarılması</h3>
+<p>Fal isteğinde gönderdiğin fincan fotoğrafları, notun ve burç / kart bilgin, yorum taslağı hazırlanması için yurt dışındaki hizmet sağlayıcımıza (sunucuları ABD ve diğer ülkelerde) iletilir. Adın, kullanıcı adın ve iletişim bilgilerin gönderilmez. Aktarım KVKK m.9’daki güvencelere dayanır; yine de bu ülkelerde Türkiye’deki ile aynı düzeyde koruma bulunmayabileceğini ve hizmet sağlayıcının verileri kendi koşullarına göre işleyebileceği gibi riskleri bilerek izin verirsin. İzin vermezsen falına Falcı Teyze kendisi bakar.</p>
 <h3>5. Kaydırma tercihi (özel nitelikli veri)</h3>
 <p>Kaydırmada yalnızca kadınları ya da yalnızca erkekleri görmek istersen bu tercihin işlenir. Tercih cinsel hayata ilişkin özel nitelikli kişisel veri sayılabildiği için KVKK m.6 uyarınca ayrıca açık rızana dayanır. Tercihin profilinde ya da başka hiçbir yerde gösterilmez, yalnızca sana ve seninle eşleşebilecek kişilere öneri hazırlanırken kullanılır, reklam ya da analiz için işlenmez. İzin vermezsen herkesi görürsün; izni geri alınca tercihin silinir.</p>
 <h3>Kayıt ve başvuru</h3>

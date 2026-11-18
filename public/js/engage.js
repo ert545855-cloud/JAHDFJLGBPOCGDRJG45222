@@ -26,7 +26,7 @@ export function ask(title, text, { ok = 'Evet', cancel = 'Vazgeç', danger = fal
   });
 }
 
-// Göndermeden önce yapay zeka / kelime denetimi. true: gönder, false: vazgeç
+// Göndermeden önce otomatik / kelime denetimi. true: gönder, false: vazgeç
 export async function modCheck({ text, media }) {
   if (!text && !media) return true;
   let r = null;

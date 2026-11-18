@@ -64,7 +64,7 @@ export default function settings(view) {
       <button class="it em">${icon('mail')}<span class="grow">E-posta<div class="sub">${esc(me.email || 'Eklenmedi — şifre sıfırlama için ekle')}</div></span></button>
       <button class="it pw">${icon('lock')}<span class="grow">${me.noPass ? 'Şifre belirle<div class="sub">Google / Apple yanında şifreyle de girebilmek için</div>' : 'Şifreyi değiştir'}</span></button>
       ${oauthCfg().google || oauthCfg().apple ? `<button class="it lgm">${icon('key')}<span class="grow">Giriş yöntemleri<div class="sub">${[!me.noPass && 'Şifre', me.logins?.google && 'Google', me.logins?.apple && 'Apple'].filter(Boolean).join(' · ') || '—'}</div></span></button>` : ''}
-      <button class="it cns">${icon('check')}<span class="grow">İzinlerim (açık rıza)<div class="sub">Kampanya bildirimi ve e-postası, konum, yapay zeka fal desteği</div></span></button>
+      <button class="it cns">${icon('check')}<span class="grow">İzinlerim (açık rıza)<div class="sub">Kampanya bildirimi ve e-postası, konum, fal yorum desteği</div></span></button>
       <button class="it rc">${icon('key')}<span class="grow">Yeni kurtarma kodu oluştur<div class="sub">Eski kod geçersiz olur</div></span></button>
       <button class="it lox">${icon('logout')}<span class="grow">Diğer cihazlardan çık<div class="sub">Bu telefon dışındaki bütün oturumların kapanır</div></span></button>
     </div>
