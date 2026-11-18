@@ -171,7 +171,13 @@ export function makeVeh(T, K) { // K: { scene, emit, sfx, feel, buzz, banner, fe
     else { me.ship = { x: me.x, z: me.z, ry: at ? me.ry : Math.atan2(-me.x, -me.z) + 0.8, v: 1.5 }; me.ry = me.ship.ry; me.hp = SHIP.hp; st.camF = [0, -1]; }
     me.ground = true; me.y = 0;
   }
-  function spawnProg(chars, spawn) { if (st.mode !== 'araba') return; const t = st.trk; Object.entries(spawn || {}).forEach(([i, p]) => { const pr = project(t, p[0], p[2]); st.prog.set(+i, { p: pr.s > t.L / 2 ? pr.s - t.L : pr.s, ci: pr.i }); }); }
+  // Tur başında herkes doğru yöne baksın: sunucu tur başlayana dek konum göndermez, yön de dizilişten hesaplanır
+  function spawnProg(chars, spawn) {
+    const t = st.trk; Object.entries(spawn || {}).forEach(([i, p]) => { let ry;
+      if (st.mode === 'araba') { const pr = project(t, p[0], p[2]); st.prog.set(+i, { p: pr.s > t.L / 2 ? pr.s - t.L : pr.s, ci: pr.i }); ry = Math.atan2(t.tx[pr.i], t.tz[pr.i]); }
+      else ry = Math.atan2(-p[0], -p[2]) + 0.8;
+      const ch = chars.get(+i); if (ch) { ch.t[3] = ry; ch.g.rotation.y = ry; } });
+  }
 
   // ---- Sürüş ----
   function autoCar(c, sk = 1) { const t = st.trk; const pr = project(t, c.x, c.z, c.ci); const a = atS(t, pr.s + 7 + Math.max(0, c.v) * 0.35); const w = wrapA(Math.atan2(a.x - c.x, a.z - c.z) - c.ry); return { x: clamp(-w * 2.2, -1, 1), gas: c.v > t.sp[(pr.i + 6) % t.N] * sk + 1 ? -1 : 1 }; }
