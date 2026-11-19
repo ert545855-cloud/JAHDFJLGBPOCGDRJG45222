@@ -38,6 +38,9 @@ npm run open         # Xcode'da açar (ios/App/App.xcodeproj)
 
 - Arayüz metinleri Türkçe. Kullanıcıya görünen hiçbir yerde yapay zekâ ya da sağlayıcı/marka adı geçmez.
 - Gizli anahtar, şifre, token koda yazılmaz.
+- `ios/App/App/PrivacyInfo.xcprivacy` Apple'ın gizlilik bildirimidir (App Store zorunlu tutar). Yeni veri türü toplanırsa ya da
+  yeni izin eklenirse bu dosyayı da güncelle. Uygulama izleme (tracking) yapmaz; ATS açık, yalnız HTTPS.
+- Pencere storyboard'suz, `SceneDelegate` içinde kurulur; iPad'de bölünmüş ekran kapalıdır (`UIRequiresFullScreen`).
 - Web görünümünde yalnızca `swipeup.live` açılır (`WKAppBoundDomains`); yeni bir alan adı gerekiyorsa hem `Info.plist`'e hem
   `capacitor.config.json` → `server.allowNavigation`'a ekle.
 - Yeni izin (kamera, konum vb.) istenirse `Info.plist`'e Türkçe açıklamasını yaz; Apple açıklamasız izni reddeder.

@@ -7,7 +7,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = scene as? UIWindowScene else { return }
 
+        // Pencere sahnenin tamamını kaplar (Info.plist'te storyboard yok; tek pencere burada kurulur)
         window = UIWindow(windowScene: windowScene)
+        window?.backgroundColor = .black
         window?.rootViewController = CAPBridgeViewController()
         window?.makeKeyAndVisible()
 
