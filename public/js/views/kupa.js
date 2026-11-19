@@ -65,9 +65,13 @@ export default async function kupa(view, id) {
     <div class="k3-over" hidden></div></div>`;
   const $ = (s) => view.querySelector(s); const wrap = $('.k3'); const canvas = $('canvas');
   let T; let renderer;
-  try { T = await import('/vendor/three/three.module.min.js'); renderer = new T.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' }); }
+  // Akıcılık önce: yüksek yoğunluklu ekranda kenar yumuşatma pahalı ve gereksiz; zayıf cihazda daha düşük çözünürlükle başla, son iyi değeri hatırla
+  const DPR = Math.min(window.devicePixelRatio || 1, 1.75); const LOW = (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 3;
+  let savedPr = NaN; try { savedPr = parseFloat(localStorage.getItem('k3pr')); } catch { /* yok */ }
+  try { T = await import('/vendor/three/three.module.min.js'); renderer = new T.WebGLRenderer({ canvas, antialias: DPR < 1.5 && !LOW, alpha: true, powerPreference: 'high-performance' }); }
   catch { $('.k3-over').hidden = false; $('.k3-over').innerHTML = '<div class="k3-card"><h2>3D oyun açılamadı</h2><p>Bu cihaz ya da tarayıcı 3D grafikleri desteklemiyor. Tarayıcını güncelleyip tekrar dene.</p><button class="btn primary k3-x">Geri dön</button></div>'; wrap.onclick = (e) => { if (e.target.closest('.k3-x')) { api(`/kupa/${id}/leave`, { body: {} }).catch(() => {}); offLand(); leaveTo('#/oyunlar'); } }; return () => offLand(); }
-  let pr = Math.min(window.devicePixelRatio || 1, 1.75); renderer.setPixelRatio(pr); const openedAt = performance.now(); let fAcc = 0; let fN = 0; let slow = 0;
+  let pr = Number.isFinite(savedPr) ? Math.min(DPR, Math.max(0.6, savedPr)) : LOW ? Math.min(DPR, 1.25) : DPR; renderer.setPixelRatio(pr); const openedAt = performance.now(); let fAcc = 0; let fN = 0; let slow = 0; let fast = 0; let drops = 0;
+  const setPr = (n) => { pr = Math.round(n * 100) / 100; renderer.setPixelRatio(pr); try { localStorage.setItem('k3pr', String(pr)); } catch { /* yok */ } };
   const scene = new T.Scene(); const cam = new T.PerspectiveCamera(55, 1, 0.1, 220);
   const hemi = new T.HemisphereLight(0xffffff, 0x8a6bb8, 1.15); scene.add(hemi); const sun = new T.DirectionalLight(0xfff1dd, 1.5); sun.position.set(6, 12, 7); scene.add(sun);
   scene.fog = new T.Fog(0x8a4aa8, 40, 165);
@@ -183,7 +187,7 @@ export default async function kupa(view, id) {
   let rk = { lay: new Map(), key: '' }; const rope = { p: 0, t: 0, last: 0, on: 0 }; let balls = []; const sdv = { k: -2, note: 0 }; let lf = [0, -1]; const cl = { x: 0, y: 0.8, z: 0 }; const tops = new Set(); const hits = new Map(); const dashHit = new Set(); let fx = []; let ap = { cur: 0, back: false }; let hudAt = 0; let callKey = ''; let joinAt = 0;
   const tmpC = new T.Color(); const tmpV = new T.Vector3();
   const auto = (() => { try { return location.hostname === 'localhost' && localStorage.getItem('k3auto') === '1'; } catch { return false; } })(); // yalnızca yerel deneme
-  try { if (location.hostname === 'localhost') window.__k3 = () => ({ me, v, dyn, cam, chars, phys, sfx, voice }); } catch { /* yalnızca yerel deneme */ }
+  try { if (location.hostname === 'localhost') window.__k3 = () => ({ me, v, dyn, cam, chars, phys, sfx, voice, renderer, pr }); } catch { /* yalnızca yerel deneme */ }
   const alive = () => v.players.filter((p) => p.alive).length;
   const iAmIn = () => v.status === 'playing' && v.players[v.me]?.alive && !me.gone;
   const nm = (i) => (i === v.me ? 'Sen' : (v.players[i]?.name || '').replace(' (bot)', ''));
@@ -544,7 +548,7 @@ export default async function kupa(view, id) {
     banner(title, after(), 2600); feel(0.32, [70, 40, 70], 'out');
   }
   function boom(x, y, z) { const m = mesh(ball, flat(0xffb347, { transparent: true, opacity: 0.85, depthWrite: false }), x, y + 0.8, z); m.scale.setScalar(0.3); scene.add(m); fx.push({ m, t0: performance.now() }); }
-  const puffGeo = new T.RingGeometry(0.42, 0.6, 20);
+  const puffGeo = new T.RingGeometry(0.42, 0.6, 20); const WARN_C = new T.Color(0xff8a5c);
   function puff(x, y, z, size = 1, color = 0xffffff) { const m = lay(mesh(puffGeo, flat(color, { transparent: true, opacity: 0.6, depthWrite: false }), x, y + 0.05, z)); m.scale.setScalar(0.5 * size); scene.add(m); fx.push({ m, t0: performance.now(), d: 380, a: 0.5 * size, b: 1.5 * size, op: 0.55 }); }
   // İniş: düşüş hızına göre toz, ses, hafif sarsıntı, karakter basılır
   function landed(vy) { const k = Math.min(1, -vy / 16); sfx.play('land', 0.35 + k * 0.8, 90); puff(me.x, me.y, me.z, 0.8 + k * 0.7); const mc = chars.get(v.me); if (mc) mc.ld = 0.45 + k * 0.55; if (vy < -9.5) feel(0.04 + k * 0.1, 8); }
@@ -691,7 +695,10 @@ export default async function kupa(view, id) {
     if (closed) return; raf = requestAnimationFrame(frame);
     const raw = (nowMs - last) / 1000; const dt = Math.min(0.05, raw); last = nowMs;
     if (raw < 0.25 && nowMs - openedAt > 4000) { fAcc += raw; fN++; if (fAcc > 2) { const fps = fN / fAcc; fAcc = 0; fN = 0; // yavaş cihazda keskinlikten kıs, akıcılığı koru
-      if (fps < 40 && pr > 1) { if (++slow >= 2) { slow = 0; pr = Math.max(1, pr - 0.25); renderer.setPixelRatio(pr); } } else slow = 0; } } const t = v.playAt ? (srv() - v.playAt) / 1000 : 0; const playing = v.status === 'playing'; const m = playing ? v.mode : null; const c = v.conf; const tt = Math.max(0, t);
+      // 1'in altına yalnızca gerçekten zorlanınca in (30 fps'e kilitli cihazları bulanıklaştırma); hızlıysa yavaşça geri çık
+      const need = pr > 1 ? fps < 40 : fps < 27;
+      if (need && pr > 0.6) { fast = 0; if (++slow >= 2) { slow = 0; drops++; setPr(Math.max(0.6, pr - (pr > 1 ? 0.25 : 0.15))); } }
+      else if (fps > 57 && pr < DPR && drops < 3) { slow = 0; if (++fast >= 4) { fast = 0; setPr(Math.min(DPR, pr + 0.25)); } } else { slow = 0; fast = 0; } } } const t = v.playAt ? (srv() - v.playAt) / 1000 : 0; const playing = v.status === 'playing'; const m = playing ? v.mode : null; const c = v.conf; const tt = Math.max(0, t);
     const W = wrap.clientWidth; const H = wrap.clientHeight; if (canvas.width !== Math.floor(W * renderer.getPixelRatio()) || canvas.height !== Math.floor(H * renderer.getPixelRatio())) { renderer.setSize(W, H, false); cam.aspect = W / H; cam.updateProjectionMatrix(); }
     const si = !playing && v.status === 'ended' && chars.has(v.result?.winner) && !v.result.winners?.includes(v.me) ? v.result.winner : v.me; // kaidede gösterilecek karakter
     if (nowMs - joinAt > 4000) { joinAt = nowMs; join(); } // soket odasına katılım kaçtıysa telafi et
@@ -716,7 +723,7 @@ export default async function kupa(view, id) {
     if (playing && dyn.bars) dyn.bars.forEach((o, i) => { const b = c.bars[i]; o.visible = t >= b.from - 3; o.rotation.y = -barAngle(b, tt); o.position.y = t < b.from ? 0.45 + Math.max(0, b.from - t) * 0.5 : 0.45; });
     if (playing && dyn.sweeps) { dyn.sweeps.forEach((o, i) => { o.rotation.y = -TRACK.sweeps[i].w * tt; }); dyn.plats.forEach((o, i) => { const p = TRACK.plats[i]; o.position.x = p.amp * Math.sin(p.w * tt + p.ph); }); dyn.hams.forEach((o, i) => { const h = TRACK.hammers[i]; o.rotation.z = Math.sin(h.w * tt + h.ph); }); }
     if (playing && dyn.im && tiles.size) { const n = srv(); let ch = false; tiles.forEach((at, i) => { const tl = TL[i]; if (!tl || tl.gone) return; const left = at - n; const d = dyn.d; let y = -0.25; let s = 1;
-      if (left > 0) { y += Math.sin(nowMs / 28 + i) * 0.035; dyn.im.setColorAt(i, new T.Color(0xff8a5c)); } else { const e = -left / 1000; y -= e * e * 14; if (e > 1.1) { s = 0.0001; tl.gone = true; } }
+      if (left > 0) { y += Math.sin(nowMs / 28 + i) * 0.035; dyn.im.setColorAt(i, WARN_C); } else { const e = -left / 1000; y -= e * e * 14; if (e > 1.1) { s = 0.0001; tl.gone = true; } }
       d.position.set(tl.x, y, tl.z); d.scale.setScalar(s); d.updateMatrix(); dyn.im.setMatrixAt(i, d.matrix); ch = true; }); if (ch) { dyn.im.instanceMatrix.needsUpdate = true; if (dyn.im.instanceColor) dyn.im.instanceColor.needsUpdate = true; } }
     if (playing && dyn.bombs) dyn.bombs.forEach((o, k) => { const b = v.st?.bombs?.[k]; const ch = b && chars.get(b[0]); o.g.visible = !!ch && ch.g.visible; if (!o.g.visible) return; const left = (b[1] - srv()) / 1000; const on = Math.sin(nowMs / (left < 3 ? 40 : left < 7 ? 85 : 170)) > 0; // patlamaya yakın daha hızlı yanıp söner
       o.g.position.set(ch.g.position.x, ch.g.position.y + 2.4 + Math.sin(nowMs / 160) * 0.05, ch.g.position.z); o.g.scale.setScalar(on ? 1.16 : 1); o.mat.color.setHex(on && left < 7 ? 0xd32f2f : 0x2a1d3a); o.sp.scale.setScalar(on ? 0.13 : 0.08); });

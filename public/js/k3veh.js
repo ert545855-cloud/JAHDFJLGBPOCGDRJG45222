@@ -52,6 +52,7 @@ export function makeVeh(T, K) { // K: { scene, emit, sfx, feel, buzz, banner, fe
   }
   function setUV(g, W, H, [x, y, w, h]) { const u0 = x / W; const u1 = (x + w) / W; const v0 = 1 - (y + h) / H; const v1 = 1 - y / H; const uv = g.attributes.uv; uv.setXY(0, u0, v1); uv.setXY(1, u1, v1); uv.setXY(2, u0, v0); uv.setXY(3, u1, v0); uv.needsUpdate = true; }
   const R = (name) => st.rects[name];
+  const WD = new T.Object3D(); WD.rotation.x = -Math.PI / 2;
 
   // ---- Sahne ----
   function bounds(m, c) {
@@ -206,12 +207,23 @@ export function makeVeh(T, K) { // K: { scene, emit, sfx, feel, buzz, banner, fe
     const Rr = stormR(t); if (Math.hypot(s.x, s.z) > Rr - 4 || !best) { const l = Math.hypot(s.x, s.z) || 1; return [-s.x / l, -s.z / l]; }
     const brg = Math.atan2(best.x - s.x, best.z - s.z); const a = bd > 10 ? brg : brg + Math.PI / 2; const side = Math.abs(Math.cos(brg - s.ry - Math.PI / 2)); if (side > 0.92 && bd < 13) st.autoFire = true; return [Math.sin(a), Math.cos(a)];
   }
+  // Gülle/duman/patlama: her kare yeni nesne üretmemek için havuz (geometri parça başına bir kez, malzeme ağ başına bir kez)
+  const gC = new Map(); const pool = []; let ballMat = null;
+  const rgeo = (name) => { let g = gC.get(name); if (!g) { g = new T.PlaneGeometry(1, 1); setUV(g, 1024, 512, R(name)); gC.set(name, g); } return g; };
+  function grab(name, size, shared) {
+    const m = pool.pop() || new T.Mesh(rgeo(name), basic({ map: st.shipTex, transparent: true, alphaTest: 0.35, depthWrite: false }));
+    if (!m.userData.own) { m.userData.own = m.material; m.rotation.x = -Math.PI / 2; }
+    m.geometry = rgeo(name); m.material = shared || m.userData.own; m.material.map = st.shipTex; if (!shared) m.material.opacity = 1;
+    m.userData.sz = size; m.scale.setScalar(size); st.arena.add(m); return m;
+  }
+  function drop(m) { m.parent?.remove(m); if (pool.length < 64) pool.push(m); }
   function shoot(i, x, z, ry, ids) { // iki bordadan gülle (görsel)
-    [1, -1].forEach((sg, k) => { const dx = Math.cos(ry) * sg; const dz = -Math.sin(ry) * sg; const m = sprite(st.shipTex, 1024, 512, R('cannonBall'), 0.5, 0.5); m.position.set(x + dx * 1.1, 0.3, z + dz * 1.1); m.renderOrder = RO.ball; st.arena.add(m);
+    if (!ballMat) ballMat = basic({ map: st.shipTex, transparent: true, alphaTest: 0.35, depthWrite: false });
+    [1, -1].forEach((sg, k) => { const dx = Math.cos(ry) * sg; const dz = -Math.sin(ry) * sg; const m = grab('cannonBall', 0.5, ballMat); m.position.set(x + dx * 1.1, 0.3, z + dz * 1.1); m.renderOrder = RO.ball;
       st.balls.push({ id: ids ? ids[k] : `L${k}`, by: i, x: x + dx * 1.1, z: z + dz * 1.1, dx, dz, d: 0, m }); const sm = smoke(x + dx * 1.3, z + dz * 1.3); if (sm) st.fx.push(sm); });
   }
-  function smoke(x, z) { if (!st.shipTex || st.fx.length > 40) return null; const m = sprite(st.shipTex, 1024, 512, R('explosion3'), 1.1, 1.1); m.position.set(x, 0.35, z); m.renderOrder = RO.fx; st.arena.add(m); return { m, t0: performance.now(), d: 380, s0: 0.6, s1: 1.4 }; }
-  function blast(x, z, big) { if (!st.shipTex) return; const m = sprite(st.shipTex, 1024, 512, R(big ? 'explosion1' : 'explosion2'), big ? 3.2 : 2.1, big ? 3.2 : 2.1); m.position.set(x, 0.4, z); m.renderOrder = RO.fx; st.arena.add(m); st.fx.push({ m, t0: performance.now(), d: big ? 900 : 520, s0: 0.5, s1: 1.3 }); }
+  function smoke(x, z) { if (!st.shipTex || st.fx.length > 40) return null; const m = grab('explosion3', 1.1); m.position.set(x, 0.35, z); m.renderOrder = RO.fx; return { m, t0: performance.now(), d: 380, s0: 0.6, s1: 1.4 }; }
+  function blast(x, z, big) { if (!st.shipTex) return; const m = grab(big ? 'explosion1' : 'explosion2', big ? 3.2 : 2.1); m.position.set(x, 0.4, z); m.renderOrder = RO.fx; st.fx.push({ m, t0: performance.now(), d: big ? 900 : 520, s0: 0.5, s1: 1.3 }); }
 
   // ---- Diğer araçlar: son konum + hız ile tahmin, yumuşak geçiş ----
   function others(ch, i, dt, nowMs, players) {
@@ -235,14 +247,14 @@ export function makeVeh(T, K) { // K: { scene, emit, sfx, feel, buzz, banner, fe
     if (st.mode === 'gemi') {
       const tt = Math.max(0, t); st.seaTex.offset.set((nowMs / 60000) % 1, (nowMs / 90000) % 1);
       if (st.storm) { const Rr = stormR(tt); st.storm.scale.set(Rr, 1, Rr); }
-      chars.forEach((ch, i) => { if (!ch.veh?.spr) return; const hp = i === v.me ? me.hp ?? 3 : v.st?.hp?.[i] ?? 3; shipLook(ch.veh, v.players[i]?.alive ? hp : 0); if (ch.veh.fire.visible) setUV(ch.veh.fire.geometry, 1024, 512, R(Math.floor(nowMs / 140) % 2 ? 'fire1' : 'fire2'));
+      chars.forEach((ch, i) => { if (!ch.veh?.spr) return; const hp = i === v.me ? me.hp ?? 3 : v.st?.hp?.[i] ?? 3; shipLook(ch.veh, v.players[i]?.alive ? hp : 0); if (ch.veh.fire.visible) { const fk = Math.floor(nowMs / 140) % 2; if (ch.veh.fk !== fk) { ch.veh.fk = fk; setUV(ch.veh.fire.geometry, 1024, 512, R(fk ? 'fire1' : 'fire2')); } }
         // dümen suyu
         if (ch.g.visible && v.players[i]?.alive && nowMs - (ch.wkAt || 0) > 140) { ch.wkAt = nowMs; const ry = ch.g.rotation.y; st.wk[st.wn] = { x: ch.g.position.x - Math.sin(ry) * 1.6, z: ch.g.position.z - Math.cos(ry) * 1.6, t0: nowMs }; st.wn = (st.wn + 1) % st.wk.length; } });
-      const d = new T.Object3D(); d.rotation.x = -Math.PI / 2; st.wk.forEach((w, k) => { if (!w) return; const e = (nowMs - w.t0) / 1300; d.position.set(w.x, 0.03, w.z); d.scale.setScalar(e >= 1 ? 0 : 0.35 + e * 1.1); if (e >= 1) st.wk[k] = null; d.updateMatrix(); st.wakes.setMatrixAt(k, d.matrix); }); st.wakes.instanceMatrix.needsUpdate = true;
+      const d = WD; let dirty = false; st.wk.forEach((w, k) => { if (!w) return; dirty = true; const e = (nowMs - w.t0) / 1300; d.position.set(w.x, 0.03, w.z); d.scale.setScalar(e >= 1 ? 0 : 0.35 + e * 1.1); if (e >= 1) st.wk[k] = null; d.updateMatrix(); st.wakes.setMatrixAt(k, d.matrix); }); if (dirty) st.wakes.instanceMatrix.needsUpdate = true;
       const step = SHIP.ball * dt; st.balls = st.balls.filter((b) => { const ax = b.x; const az = b.z; b.x += b.dx * step; b.z += b.dz * step; b.d += step; b.m.position.set(b.x, 0.3 + Math.sin((b.d / SHIP.range) * Math.PI) * 0.6, b.z);
-        const hitIsle = st.sea.isl.some(([x, z, r]) => segHit(ax, az, b.x, b.z, x, z, r * 0.85)); if (b.dead || hitIsle || b.d > SHIP.range) { st.arena.remove(b.m); b.m.geometry.dispose(); if (hitIsle || b.d > SHIP.range) { const s = smoke(b.x, b.z); if (s) st.fx.push(s); } return false; } return true; });
+        const hitIsle = st.sea.isl.some(([x, z, r]) => segHit(ax, az, b.x, b.z, x, z, r * 0.85)); if (b.dead || hitIsle || b.d > SHIP.range) { drop(b.m); if (hitIsle || b.d > SHIP.range) { const s = smoke(b.x, b.z); if (s) st.fx.push(s); } return false; } return true; });
     }
-    st.fx = st.fx.filter((f) => { const e = (nowMs - f.t0) / f.d; if (e >= 1) { st.arena.remove(f.m); f.m.geometry.dispose(); return false; } f.m.scale.setScalar(f.s0 + (f.s1 - f.s0) * e); f.m.material.opacity = 1 - e * e; return true; });
+    st.fx = st.fx.filter((f) => { const e = (nowMs - f.t0) / f.d; if (e >= 1) { drop(f.m); return false; } f.m.scale.setScalar((f.s0 + (f.s1 - f.s0) * e) * f.m.userData.sz); f.m.material.opacity = 1 - e * e; return true; });
   }
 
   // ---- Kamera ----

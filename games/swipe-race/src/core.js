@@ -9,8 +9,11 @@ export const store = {
   get(k, d) { try { const v = localStorage.getItem('swiperace_' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem('swiperace_' + k, JSON.stringify(v)); } catch (e) { /* yok */ } },
 };
+// Zayıf cihaz: az çekirdek ya da az bellek → ilk açılışta düşük kalite (akıcılık önce)
+export const lowEnd = (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 3;
 export const settings = {
-  quality: store.get('quality', isTouch ? 'mid' : 'high'),
+  quality: store.get('quality', lowEnd ? 'low' : isTouch ? 'mid' : 'high'),
+  qualityUser: store.get('qualityUser', false),
   autoGas: store.get('autoGas', isTouch),
   mute: store.get('mute', false),
   car: store.get('car', 0),

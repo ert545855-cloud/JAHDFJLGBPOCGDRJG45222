@@ -570,7 +570,7 @@ function renderResultRows() {
   return st;
 }
 function showResults() {
-  G.state = 'results';
+  G.state = 'results'; if (tierWant) applyTier();
   const st = renderResultRows();
   const myPlace = st.findIndex(x => x.me) + 1;
   const n = st.length;
@@ -895,7 +895,7 @@ function bindUI() {
   document.querySelectorAll('#mode button').forEach(b => b.addEventListener('click', () => { mode = b.dataset.m; store.set('mode', mode); refreshMenu(); }));
   document.querySelectorAll('#diff button').forEach((b, i) => b.addEventListener('click', () => { settings.diff = i; store.set('diff', i); refreshMenu(); }));
   document.querySelectorAll('#scope button').forEach(b => b.addEventListener('click', () => { boardScope = b.dataset.s; loadBoard(); }));
-  document.querySelectorAll('#qual button').forEach(b => b.addEventListener('click', () => { if (settings.quality === b.dataset.q) return; settings.quality = b.dataset.q; store.set('quality', settings.quality); applyQuality(false); refreshMenu(); }));
+  document.querySelectorAll('#qual button').forEach(b => b.addEventListener('click', () => { if (settings.quality === b.dataset.q) return; settings.quality = b.dataset.q; store.set('quality', settings.quality); settings.qualityUser = true; store.set('qualityUser', true); tierWant = null; applyQuality(false); refreshMenu(); }));
   $('optNight').addEventListener('change', async e => { settings.night = e.target.checked; store.set('night', settings.night); await loadWorld(settings.track, settings.night); });
   const gasT = e => { settings.autoGas = e.target.checked; store.set('autoGas', settings.autoGas); $('bGas').classList.toggle('hide', settings.autoGas); $('pedals').classList.toggle('auto', !!settings.autoGas); refreshMenu(); };
   const sndT = e => { settings.mute = !e.target.checked; store.set('mute', settings.mute); sfx.setMute(settings.mute); refreshMenu(); };
@@ -945,8 +945,17 @@ function perfTick(dtMs) {
   perfT = 0;
   if (!['race', 'countdown', 'menu'].includes(G.state)) return;
   if (frameMsAvg > 21) { perfBad++; perfGood = 0; } else if (frameMsAvg < 17.8) { perfGood++; perfBad = 0; } else { perfBad = 0; perfGood = 0; }
-  if (perfBad >= 3 && view.dpr > view.minDpr + 0.01) { setDpr(Math.max(view.minDpr, view.dpr - 0.15)); perfBad = 0; }
+  if (perfBad >= 3 && view.dpr > view.minDpr + 0.01) { setDpr(Math.max(view.minDpr, view.dpr - 0.15)); perfBad = 0; floorBad = 0; }
   else if (perfGood >= 12 && view.dpr < view.maxDpr - 0.01) { setDpr(Math.min(view.maxDpr, view.dpr + 0.1)); perfGood = 0; }
+  // Çözünürlük tabanda ve hâlâ belirgin yavaşsa (≈38 fps altı) bir alt kademe; kullanıcı kendisi seçtiyse dokunma
+  if (view.dpr <= view.minDpr + 0.01 && frameMsAvg > 26) floorBad++; else floorBad = 0;
+  if (floorBad >= 8 && !settings.qualityUser && settings.quality !== 'low' && !tierWant) { tierWant = settings.quality === 'high' ? 'mid' : 'low'; floorBad = 0; }
+  if (tierWant && G.state !== 'race') applyTier(); // yarış ortasında gölge değişimi takılma yapar; arada uygula
+}
+let floorBad = 0, tierWant = null;
+function applyTier() {
+  settings.quality = tierWant; tierWant = null; store.set('quality', settings.quality);
+  applyQuality(false); refreshMenu(); toast('Daha akıcı oynaman için grafik kalitesi ' + QUALITY[settings.quality].label + ' yapıldı. Ayarlardan değiştirebilirsin.', 3600);
 }
 
 // ---------- ana döngü ----------
