@@ -3,8 +3,7 @@ import { storeSection } from '../stickers.js';
 import { icon } from '../icons.js';
 import { iapInfo, iapBuy } from '../iap.js';
 import {
-  api, esc, toast, sheet, state, on, refreshBadges,
-} from '../core.js';
+  api, esc, toast, sheet, state, on, refreshBadges, iosShell } from '../core.js';
 
 const TL = (n) => `${Number(n).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺`;
 const date = (t) => new Date(t).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -20,6 +19,7 @@ const saleNote = (list) => { const x = list.filter((p) => p.was); if (!x.length)
 // Satın alma: ön bilgilendirme formu + mesafeli satış sözleşmesi (sunucuda bu ürün ve senin bilgilerinle üretilir),
 // iki ayrı ve önceden işaretlenmemiş onay, "ödeme yükümlülüğü doğuracaktır" düğmesi (Mesafeli Sözleşmeler Yönetmeliği md. 5–8, 15)
 export async function buySheet(productId, onDone) {
+  if (iosShell() && !(await iapInfo())) { toast('App Store’a şu an bağlanılamadı. Biraz sonra tekrar dene.'); return; } // iOS'ta yalnız App Store ödemesi
   if (await iapInfo()) { const r = await iapBuy(productId); if (r) { toast(r.dup ? 'Bu satın alma zaten hesabına tanımlı.' : `${r.title} hesabına eklendi 🎉`); onDone?.(); } return; } // uygulamada ödeme mağaza üzerinden
   let d; try { d = await api(`/orders/preview/${encodeURIComponent(productId)}`); } catch (e) { toast(e.message); return; }
   const p = d.product;
@@ -157,7 +157,7 @@ export default async function store(view) {
       <section class="stk-sec"></section>
       ${s.orders.length ? `<h3 class="shop-h">Siparişlerim</h3><div class="orders">${s.orders.map((o) => `<button class="order" data-o="${esc(o.id)}">
         <span class="grow"><b>${esc(o.title)}</b><small>${esc(o.code)} · ${date(o.at)}${o.refund ? ` · ${esc(RSTAT[o.refund.status] || '')}` : ''}</small></span><span class="amt">${TL(o.amount)}</span><span class="st ${STATUS[o.status]?.[1] || ''}">${STATUS[o.status]?.[0] || ''}</span></button>`).join('')}</div>` : ''}
-      <p class="muted pay-foot" style="font-size:12.5px;margin:18px 2px 30px">Ödemeler havale/EFT ile alınır. Satın almadan önce <a class="link" href="#/legal/onbilgi">ön bilgilendirme formu</a> ve <a class="link" href="#/legal/mesafeli">mesafeli satış sözleşmesi</a> gösterilir. <a class="link" href="#/legal/iade">Cayma ve iade politikası</a> · <a class="link" href="#/legal/kunye">Satıcı bilgileri</a></p>`;
+      <p class="muted pay-foot" style="font-size:12.5px;margin:18px 2px 30px">${iosShell() ? 'Ödemeler App Store hesabın üzerinden alınır; iade talepleri App Store üzerinden yapılır. <a class="link" href="#/legal/kosullar">Kullanım koşulları</a> · <a class="link" href="#/legal/gizlilik">Gizlilik</a>' : `Ödemeler havale/EFT ile alınır. Satın almadan önce <a class="link" href="#/legal/onbilgi">ön bilgilendirme formu</a> ve <a class="link" href="#/legal/mesafeli">mesafeli satış sözleşmesi</a> gösterilir. <a class="link" href="#/legal/iade">Cayma ve iade politikası</a> · <a class="link" href="#/legal/kunye">Satıcı bilgileri</a>`}</p>`;
     storeSection(box.querySelector('.stk-sec'));
     supersStoreSection(box.querySelector('.sp-sec'));
     box.querySelectorAll('[data-p]').forEach((b) => {
@@ -166,7 +166,7 @@ export default async function store(view) {
       };
     });
     box.querySelectorAll('[data-o]').forEach((b) => {
-      b.onclick = async () => { try { const o = await api(`/orders/${b.dataset.o}`); if (o.channel) { toast(`${o.title} · ${o.channel === 'google' ? 'Google Play' : 'App Store'} ile satın alındı. İade için o mağazayı kullan.`); return; } paySheet(o, load); } catch (er) { toast(er.message); } };
+      b.onclick = async () => { try { const o = await api(`/orders/${b.dataset.o}`); if (o.channel) { toast(`${o.title} · ${o.channel === 'google' ? 'Google Play' : 'App Store'} ile satın alındı. İade için o mağazayı kullan.`); return; } if (iosShell()) { toast(`${o.title} · ${o.code}. Bu siparişin ayrıntıları swipeup.live sitesinde.`); return; } paySheet(o, load); } catch (er) { toast(er.message); } };
     });
     // Android / iOS uygulamasında: fiyatlar ve ödeme mağazadan (Google Play / App Store)
     iapInfo().then((I) => {

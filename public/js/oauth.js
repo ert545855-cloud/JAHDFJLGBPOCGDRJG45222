@@ -1,5 +1,5 @@
 // Google / Apple ile giriş düğmeleri. Sağlayıcının kendi betiği yalnızca gerektiğinde yüklenir (güvenlik kuralında izinli adresler).
-import { state } from './core.js';
+import { state, iosShell } from './core.js';
 import { report } from './errlog.js';
 
 const loaded = {};
@@ -11,7 +11,9 @@ function loadScript(src) {
   });
   return loaded[src];
 }
-export const oauthCfg = () => state.config?.oauth || {};
+// iOS uygulamasında Google gömülü web görünümünde girişi engeller, Apple penceresi de açılamaz: orada yalnız kullanıcı adı / şifre.
+// (Google / Apple ile kaydolan, "Şifreni mi unuttun" ile şifre belirleyip girer.)
+export const oauthCfg = () => (iosShell() ? {} : state.config?.oauth || {});
 
 // Google girişi uygulama içi tarayıcılarda (Instagram, Facebook, TikTok, X, Snapchat, Android WebView) Google tarafından engellenir
 export const inAppBrowser = () => /FBAN|FBAV|FB_IAB|Instagram|Line\/|TikTok|musical_ly|BytedanceWebview|Twitter|Snapchat|LinkedInApp|; wv\)/i.test(navigator.userAgent || '');

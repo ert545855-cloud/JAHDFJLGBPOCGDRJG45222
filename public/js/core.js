@@ -3,6 +3,8 @@ import { report } from './errlog.js';
 import { remember, forget, accounts } from './accounts.js';
 import { icon } from './icons.js';
 
+// iOS uygulaması (App Store kabuğu) içinde mi? Apple kuralları burada farklı: ödeme yalnız App Store'dan, harici giriş penceresi yok.
+export const iosShell = () => { try { const C = window.Capacitor; return !!(C?.isNativePlatform?.() && C.getPlatform?.() === 'ios'); } catch { return false; } };
 export const state = {
   token: localStorage.getItem('su_token'),
   me: null,

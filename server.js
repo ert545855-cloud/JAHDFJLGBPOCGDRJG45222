@@ -36,7 +36,10 @@ const APP_VERSION = (() => {
 })();
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: true }, maxHttpBufferSize: 1e6, pingInterval: 20000, pingTimeout: 25000 });
+// Canlı bağlantıyı yalnız kendi sayfalarımız açabilir: başka bir sitenin tarayıcıdaki oturumu kullanıp bağlanması engellenir
+// (Origin başlığı yoksa — uygulama içi istemciler, testler — oturum anahtarı zaten zorunlu).
+const sameOrigin = (req) => { const o = req.headers.origin; if (!o) return true; try { return new URL(o).host === req.headers.host; } catch { return false; } };
+const io = new Server(server, { allowRequest: (req, cb) => cb(null, sameOrigin(req)), maxHttpBufferSize: 1e6, pingInterval: 20000, pingTimeout: 25000 });
 
 let JWT_SECRET = process.env.JWT_SECRET;
 let VAPID = null;
@@ -461,7 +464,8 @@ app.use(helmet({
   crossOriginResourcePolicy: false, crossOriginEmbedderPolicy: false,
   crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' }, // Google / Apple giriş penceresi açılabilsin
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' }, // Google girişi kaynağı (origin) doğrulayabilsin; dışarıya yalnız alan adı gider
-  strictTransportSecurity: process.env.RENDER ? { maxAge: 31536000, includeSubDomains: false } : false,
+  // HTTPS zorunlu (tarayıcı http ile gelen bu başlığı yok sayar; yerelde sorun çıkarmaz). Kendi sunucuda (Caddy) da geçerli.
+  strictTransportSecurity: { maxAge: 31536000, includeSubDomains: false },
 }));
 app.disable('x-powered-by');
 app.use(compression());

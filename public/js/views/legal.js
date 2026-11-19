@@ -30,6 +30,7 @@ const PROV = [
   ['Sightengine', 'Fotoğraf denetimi (çıplaklık, şiddet); yüz tanıma yapılmaz', 'Yüklenen fotoğraflar', 'Fransa (AB)'],
   ['Yorum taslağı hizmet sağlayıcısı', 'Fal yorum taslağı (yalnızca açık rızayla)', 'Fal notu, fincan fotoğrafları, burç / kart bilgisi', 'ABD ve diğer'],
   ['Google, Apple', 'Google / Apple ile giriş (seçersen)', 'Kimlik numarası, e-posta, ad', 'ABD'],
+  ['Apple (App Store), Google (Google Play)', 'Uygulama içi satın alma ve doğrulama (yalnız mobil uygulamada satın alırsan)', 'Satın alma kimliği, ürün, tutar; kart bilgisi bize gelmez', 'ABD ve diğer'],
   ['Google, Apple, Mozilla', 'Anlık bildirim iletimi (şifreli)', 'Bildirim içeriği, cihaz bildirim adresi', 'ABD ve diğer'],
   ['Metered (Open Relay)', 'Sesli / görüntülü arama aktarma', 'Şifreli arama trafiği, IP adresi', 'Küresel'],
   ['Spotify, Apple (iTunes arama)', 'Müzik arama ve önizleme', 'Arama kelimesi', 'İsveç, ABD'],
@@ -203,11 +204,14 @@ ${PROVIDERS}
 <h3>6. Jeton ve SwipeUp+</h3>
 <ul>
 <li>Jeton, yalnızca SwipeUp içinde belirli ücretli özelliklerde (hediye, fal, boost, süper beğeni vb.) kullanılan bir kullanım hakkıdır; <b>elektronik para değildir</b>, nakde çevrilemez, başka bir hesaba devredilemez ve satılamaz. Her özelliğin jeton bedeli harcamadan önce gösterilir.</li>
-<li>Satın almalar havale/EFT ile yapılır ve <a class="link" href="#/legal/onbilgi">Ön Bilgilendirme Formu</a> ile <a class="link" href="#/legal/mesafeli">Mesafeli Satış Sözleşmesi</a>’ne tabidir. Fiyatlar Türk lirası ve tüm vergiler dahil gösterilir; gizli ya da ek ücret yoktur.</li>
+<li>Web sitesinde satın almalar havale/EFT ile yapılır ve <a class="link" href="#/legal/onbilgi">Ön Bilgilendirme Formu</a> ile <a class="link" href="#/legal/mesafeli">Mesafeli Satış Sözleşmesi</a>’ne tabidir. Fiyatlar Türk lirası ve tüm vergiler dahil gösterilir; gizli ya da ek ücret yoktur.</li>
 <li>Jeton ve SwipeUp+ elektronik ortamda anında ifa edildiğinden, sipariş ekranındaki ayrı onayınla cayma hakkı bulunmaz; tanımlanmayan siparişler, hatalı ödemeler ve harcanmamış jetonlar için iade koşulları <a class="link" href="#/legal/iade">Cayma ve İade Politikası</a>’ndadır.</li>
 <li>SwipeUp+ seçtiğin süre boyunca geçerlidir; <b>otomatik yenilenmez</b>, süre bitince kendiliğinden sona erer ve senden yeniden ücret alınmaz.</li>
 <li>Ücretsiz deneme sona erdiğinde ücretli üyeliğe kendiliğinden geçilmez.</li>
+<li><b>iPhone / iPad uygulaması:</b> uygulama içindeki satın almalar App Store üzerinden, Apple Medya Hizmetleri Hüküm ve Koşulları’na göre yapılır. Ödeme, faturalama ve iade talepleri Apple tarafından yürütülür (reportaproblem.apple.com). Android uygulamasında aynı şekilde Google Play kuralları geçerlidir.</li>
 </ul>
+<h3>6a. App Store’dan indirilen uygulama</h3>
+<p>SwipeUp iOS uygulamasını App Store’dan indirdiysen: bu Koşullar yalnızca seninle SwipeUp arasındadır, Apple taraf değildir. Uygulamanın bakımı, desteği, içeriği ve uygulamayla ilgili her türlü talep (ürün sorumluluğu, mevzuata uygunluk, fikrî mülkiyet ihlali iddiaları dahil) SwipeUp’ın sorumluluğundadır; Apple’ın bu konularda bir yükümlülüğü yoktur. Uygulamayı yalnızca sahip olduğun ya da kullandığın Apple cihazlarında, App Store Kullanım Kuralları’na uygun şekilde kullanabilirsin. Apple ve bağlı şirketleri bu Koşulların üçüncü taraf lehtarıdır ve Koşulları sana karşı uygulama hakkına sahiptir. Uygulamayla ilgili soru ve şikâyetlerin için Ayarlar › Destek’ten ya da künyedeki adresten bize ulaşabilirsin.</p>
 <h3>7. Reklam, öne çıkarma ve dürüstlük</h3>
 <p>Üyelerin ödeme yaparak öne çıkardığı paylaşımlar “Sponsorlu” etiketiyle gösterilir. SwipeUp sahte profil, sahte eşleşme ya da yapay etkileşim kullanmaz; kullanıcı yorumu ya da puanı satın almaz veya üretmez. Resmî hesaplar (ör. Falcı Teyze) açıkça belirtilir.</p>
 <h3>8. Yayıncılar ve falcılar</h3>
