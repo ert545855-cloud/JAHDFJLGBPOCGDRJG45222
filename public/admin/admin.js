@@ -1,5 +1,6 @@
 // SwipeUp Yönetim paneli
 import { icon } from '/js/icons.js';
+import { chart, daySeries } from './chart.js';
 
 // Panel gizli bir adreste açılır (ör. /y-xxxx/); istekler aynı adresin altındaki /api'ye gider
 export const BASE = location.pathname.split('/').slice(0, 2).join('/');
@@ -249,10 +250,12 @@ async function refreshCounts() {
   } catch {}
 }
 const head = (title, sub, actions = '') => `<div class="head"><h1>${title}</h1>${actions}${sub ? `<div class="sub">${sub}</div>` : ''}</div>`;
-const bars = (series, label = (x) => x.day.slice(8)) => {
-  const max = Math.max(1, ...series.map((s) => s.n));
-  return `<div class="chart">${series.map((s) => `<div class="b" title="${esc(s.day)}: ${s.n}"><em>${s.n || ''}</em><i style="height:${(s.n / max) * 100}%"></i><small>${label(s)}</small></div>`).join('')}</div>`;
-};
+// Çizelge yer tutucusu: HTML'e yazılır, sayfaya eklenince drawCharts() çizer (chart.js)
+const CH = new Map(); let chN = 0;
+const bars = (series, opts = {}) => { const id = `ch${++chN}`; CH.set(id, { series, opts: typeof opts === 'function' ? {} : opts }); return `<div class="vzh" data-ch="${id}"></div>`; };
+function drawCharts(root = document) { root.querySelectorAll('.vzh[data-ch]').forEach((h) => { const c = CH.get(h.dataset.ch); if (!c) return; CH.delete(h.dataset.ch); h.removeAttribute('data-ch'); if (c.multi) chart(h, c.multi); else daySeries(h, c.series, c.opts); }); }
+const multiChart = (cfg) => { const id = `ch${++chN}`; CH.set(id, { multi: cfg }); return `<div class="vzh" data-ch="${id}"></div>`; };
+new MutationObserver(() => { if (document.querySelector('.vzh[data-ch]')) drawCharts(); }).observe(document.documentElement, { childList: true, subtree: true });
 
 // ================= Bölümler =================
 const VIEWS = {};
@@ -273,9 +276,9 @@ VIEWS.overview = async (main) => {
       <div class="stat"><b class="money ${o.income - o.expense >= 0 ? 'in' : 'out'}">${tl(o.income - o.expense)}</b><span>Bu ay net</span><a href="#/erp/gelir">Gelir ve gider</a></div>
     </div>
     <div class="grid g3">
-      <div class="panel"><div class="ph"><h3>Yeni üyeler · 14 gün</h3></div><div class="pb">${bars(o.series.users)}</div></div>
-      <div class="panel"><div class="ph"><h3>Mesajlar · 14 gün</h3></div><div class="pb">${bars(o.series.messages)}</div></div>
-      <div class="panel"><div class="ph"><h3>Eşleşmeler · 14 gün</h3></div><div class="pb">${bars(o.series.matches)}</div></div>
+      <div class="panel"><div class="ph"><h3>Yeni üyeler · 14 gün</h3></div><div class="pb">${bars(o.series.users, { name: 'Yeni üye' })}</div></div>
+      <div class="panel"><div class="ph"><h3>Mesajlar · 14 gün</h3></div><div class="pb">${bars(o.series.messages, { name: 'Mesaj' })}</div></div>
+      <div class="panel"><div class="ph"><h3>Eşleşmeler · 14 gün</h3></div><div class="pb">${bars(o.series.matches, { name: 'Eşleşme' })}</div></div>
     </div>
     <div class="grid g2" style="margin-top:14px">
       <div class="panel"><div class="ph"><h3>Son şikayetler</h3><a class="btn sm" href="#/reports">Tümü</a></div>${reps.length ? reps.slice(0, 5).map((r) => `<div class="case"><div class="who">${userCell(r.toUser)}<span class="chip warn">${esc(REASON[r.reason] || r.reason)}</span></div><div class="muted">${dt(r.at)} · bildiren @${esc(r.fromUser?.username)}</div></div>`).join('') : '<div class="empty">Açık şikayet yok.</div>'}</div>
@@ -469,7 +472,7 @@ VIEWS.ledger = async (main) => {
     <div class="grid g21">
       <div class="panel"><div class="ph"><h3>Kayıtlar</h3></div><div class="tw lst"><div class="spin"></div></div></div>
       <div class="grid" style="align-content:start">
-        <div class="panel"><div class="ph"><h3>Son 6 ay</h3><span class="chip ok">Gelir</span><span class="chip bad">Gider</span></div><div class="pb mchart"></div></div>
+        <div class="panel"><div class="ph"><h3>Son 6 ay</h3></div><div class="pb mchart"></div></div>
         <div class="panel"><div class="ph"><h3>Kategoriler</h3></div><div class="pb cats"></div></div>
       </div></div>`;
   let type = 'gelir'; let data = null;
@@ -501,8 +504,9 @@ VIEWS.ledger = async (main) => {
       : '<div class="empty">Bu ay için kayıt yok. Yukarıdan ilk gelir ya da gideri ekle.</div>';
     // son 6 ay
     const months = Array.from({ length: 6 }, (_, i) => ymd(new Date(y, m - 1 - (5 - i), 1)).slice(0, 7));
-    const max = Math.max(1, ...months.map((k) => Math.max(data.byMonth[k]?.gelir || 0, data.byMonth[k]?.gider || 0)));
-    main.querySelector('.mchart').innerHTML = `<div class="chart">${months.map((k) => { const v = data.byMonth[k] || { gelir: 0, gider: 0 }; return `<div class="b two" title="${k}: +${tl(v.gelir)} / −${tl(v.gider)}"><i style="height:${(v.gelir / max) * 100}%"></i><i style="height:${(v.gider / max) * 100}%"></i><small>${new Date(`${k}-01`).toLocaleDateString('tr-TR', { month: 'short' })}</small></div>`; }).join('')}</div>`;
+    main.querySelector('.mchart').innerHTML = multiChart({ title: 'Son 6 ay gelir ve gider', xName: 'Ay', labels: months.map((k) => new Date(`${k}-01T12:00:00`).toLocaleDateString('tr-TR', { month: 'short', year: '2-digit' })), fmt: tl,
+      tipLabel: (i) => new Date(`${months[i]}-01T12:00:00`).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' }),
+      series: [{ name: 'Gelir', color: 'var(--ch-in)', values: months.map((k) => data.byMonth[k]?.gelir || 0) }, { name: 'Gider', color: 'var(--ch-out)', values: months.map((k) => data.byMonth[k]?.gider || 0) }] });
     const byCat = {};
     items.forEach((x) => { const k = `${x.type}|${x.category}`; byCat[k] = (byCat[k] || 0) + x.amount; });
     main.querySelector('.cats').innerHTML = Object.keys(byCat).length ? Object.entries(byCat).sort((a, b) => b[1] - a[1]).map(([k, v]) => { const [t, c] = k.split('|'); return `<div class="row" style="padding:5px 0"><span class="chip ${t === 'gelir' ? 'ok' : 'bad'}">${t === 'gelir' ? '+' : '−'}</span><span class="grow">${esc(c)}</span><span class="money">${tl(v)}</span></div>`; }).join('') : '<div class="muted">Bu ay kayıt yok.</div>';
@@ -538,7 +542,7 @@ VIEWS.ledger = async (main) => {
 // ---- Şirket yönetimi (ERP) ----
 VIEWS.erp = async (main) => {
   const [{ default: erp }, adm] = await Promise.all([import('./erp.js'), api('/admins').catch(() => ({ items: [] }))]);
-  await erp(main, { api, esc, toast, head, tl, d, today, icon, ledgerView: (c) => VIEWS.ledger(c), admins: adm.items || [] });
+  await erp(main, { api, esc, toast, head, tl, d, today, icon, multiChart, ledgerView: (c) => VIEWS.ledger(c), admins: adm.items || [] });
 };
 
 // ---- Şarkı yarışması ----
@@ -1677,11 +1681,11 @@ VIEWS.growth = async (main) => {
     </div>
     <div class="panel fnl" style="margin-bottom:14px"><div class="ph"><h3>Kayıt hunisi</h3><span class="muted" style="font-size:12px">Son ${days} günde kaydolanlar</span></div><div class="pb"><div class="spin"></div></div></div>
     <div class="grid g2">
-      <div class="panel"><div class="ph"><h3>Günlük aktif kullanıcı</h3></div><div class="pb">${bars(g.dau, short)}</div></div>
-      <div class="panel"><div class="ph"><h3>Yeni kayıt</h3></div><div class="pb">${bars(g.newUsers, short)}</div></div>
+      <div class="panel"><div class="ph"><h3>Günlük aktif kullanıcı</h3></div><div class="pb">${bars(g.dau, { name: 'Aktif kullanıcı' })}</div></div>
+      <div class="panel"><div class="ph"><h3>Yeni kayıt</h3></div><div class="pb">${bars(g.newUsers, { name: 'Yeni kayıt' })}</div></div>
     </div>
     <div class="panel" style="margin-top:14px"><div class="ph"><h3>Özellik kullanımı</h3><span class="muted" style="font-size:12px">Satıra tıkla: günlük grafik</span></div><div class="tw"><table class="tbl feat"><thead><tr><th>Özellik</th><th class="num">Bugün</th><th class="num">Son 7 gün</th><th class="num">Önceki 7 güne göre</th><th class="num">Son ${days} gün</th></tr></thead><tbody>
-      ${g.features.sort((a, b) => b.d7 - a.d7).map((f, i) => `<tr data-i="${i}" style="cursor:pointer"><td><b>${esc(f.name)}</b></td><td class="num">${f.today}</td><td class="num">${f.d7}</td><td class="num">${trend(f.d7, f.prev7)}</td><td class="num">${f.d30}</td></tr><tr class="fx" data-x="${i}" hidden><td colspan="5">${bars(f.series, short)}</td></tr>`).join('')}
+      ${g.features.sort((a, b) => b.d7 - a.d7).map((f, i) => `<tr data-i="${i}" style="cursor:pointer"><td><b>${esc(f.name)}</b></td><td class="num">${f.today}</td><td class="num">${f.d7}</td><td class="num">${trend(f.d7, f.prev7)}</td><td class="num">${f.d30}</td></tr><tr class="fx" data-x="${i}" hidden><td colspan="5">${bars(f.series, { name: f.name })}</td></tr>`).join('')}
     </tbody></table></div></div>`;
   main.querySelector('.gd').onclick = (e) => { const b = e.target.closest('[data-d]'); if (!b) return; sessionStorage.setItem('su_gdays', b.dataset.d); VIEWS.growth(main); };
   // Kayıt hunisi: kayıt → profil fotoğrafı → ilk eşleşme → ilk mesaj

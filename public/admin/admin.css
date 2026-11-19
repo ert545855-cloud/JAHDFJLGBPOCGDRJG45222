@@ -584,3 +584,25 @@ tr.sgw td { background: color-mix(in srgb, #ffc926 10%, transparent); }
 /* Sunucu ve alan adı */
 .logbox { margin: 0; padding: 12px 14px; max-height: 420px; overflow: auto; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; background: var(--soft); border-top: 1px solid var(--line); border-radius: 0 0 var(--r) var(--r); }
 .dnsp .tbl td { vertical-align: top; }
+
+/* ---- Çizelgeler (chart.js) ---- */
+:root { --ch-1: #f2435a; --ch-in: #0b8a5e; --ch-out: #cc4130; --ch-grid: #ececf1; }
+@media (prefers-color-scheme: dark) { :root { --ch-1: #f2435a; --ch-in: #22a874; --ch-out: #ee5d4c; --ch-grid: #24242c; } }
+.vz { position: relative; }
+.vz-box { position: relative; width: 100%; }
+.vz svg { display: block; overflow: visible; }
+.vz-grid line { stroke: var(--ch-grid); stroke-width: 1; shape-rendering: crispEdges; }
+.vz-grid text, .vz-x { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.vz-val { fill: var(--text); font-size: 11.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.vz-cross { stroke: var(--muted); stroke-width: 1; shape-rendering: crispEdges; pointer-events: none; }
+.vz-dot { stroke: var(--panel); stroke-width: 2; pointer-events: none; }
+.vz-bar path { transition: opacity .12s; } .vz svg:has(.vz-bar.on) .vz-bar:not(.on) path { opacity: .45; }
+.vz-hits rect { cursor: default; outline: none; } .vz-hits rect:focus-visible { stroke: var(--text); stroke-width: 1; }
+.vz-tip { position: absolute; z-index: 3; pointer-events: none; min-width: 120px; max-width: 240px; padding: 8px 10px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 6px 24px rgba(0,0,0,.12); font-size: 12px; transform: translateY(-100%) translateY(-4px); }
+.vz-th { color: var(--muted); font-size: 11.5px; margin-bottom: 4px; }
+.vz-tr { display: flex; align-items: center; gap: 7px; } .vz-tr i { width: 10px; height: 2px; border-radius: 1px; flex: none; } .vz-tr b { font-size: 13.5px; font-variant-numeric: tabular-nums; } .vz-tr span { color: var(--muted); }
+.vz-lg { display: flex; flex-wrap: wrap; gap: 14px; margin: 0 0 8px; font-size: 12.5px; color: var(--muted); }
+.vz-lg span { display: inline-flex; align-items: center; gap: 6px; } .vz-lg i.sq { width: 10px; height: 10px; border-radius: 3px; } .vz-lg i.ln { width: 14px; height: 2px; border-radius: 1px; }
+.vz-tbl { margin-top: 6px; font-size: 12.5px; } .vz-tbl summary { cursor: pointer; color: var(--muted); font-size: 12px; width: max-content; }
+.vz-tbl table { width: 100%; border-collapse: collapse; margin-top: 6px; } .vz-tbl th, .vz-tbl td { padding: 4px 6px; border-bottom: 1px solid var(--line); text-align: left; } .vz-tbl .num { text-align: right; font-variant-numeric: tabular-nums; }
+.vz-tbl[open] { max-height: 260px; overflow: auto; }

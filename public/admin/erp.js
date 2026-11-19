@@ -1,6 +1,7 @@
 // Şirket yönetimi (ERP) — yönetim paneli modülü
 export default async function erp(main, H) {
-  const { api, esc, toast, head, tl, d, today, icon, ledgerView, admins } = H;
+  const { api, esc, toast, head, tl, d, today, icon, multiChart, ledgerView, admins } = H;
+  const gg = (rows, title) => multiChart({ title, xName: 'Ay', fmt: tl, labels: rows.map((c) => mlabel(c.month)), tipLabel: (i) => new Date(`${rows[i].month}-15`).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' }), series: [{ name: 'Gelir', color: 'var(--ch-in)', values: rows.map((c) => c.gelir) }, { name: 'Gider', color: 'var(--ch-out)', values: rows.map((c) => c.gider) }] }); // gelir-gider çizelgesi (chart.js)
   const TABS = [['ozet', 'Özet', 'gauge'], ['gelir', 'Gelir-gider', 'sliders'], ['faturalar', 'Faturalar', 'doc'], ['cariler', 'Cariler', 'users'], ['hesaplar', 'Kasa ve banka', 'wallet'], ['personel', 'Personel ve maaş', 'person'], ['gorevler', 'Görevler', 'check'], ['raporlar', 'Raporlar', 'poll'], ['sirket', 'Şirket bilgileri', 'settings']];
   const parts = location.hash.slice(2).split('/');
   const tab = TABS.some((t) => t[0] === parts[1]) ? parts[1] : 'ozet';
@@ -34,7 +35,6 @@ export default async function erp(main, H) {
   T.ozet = async () => {
     const s = await api('/erp/summary');
     const net = s.income - s.expense; const top = s.income + s.expense; const inPct = top ? (s.income / top) * 100 : 50;
-    const max = Math.max(1, ...s.chart.map((c) => Math.max(c.gelir, c.gider)));
     const KIND = { odeme: 'Ödeme', tahsilat: 'Tahsilat', maas: 'Maaş', gorev: 'Görev' };
     const TYPE = { kasa: 'Kasa', banka: 'Banka', pos: 'POS', kredi: 'Kredi kartı' };
     // Büyük rakam: tam kısım iri, kuruş ve ₺ küçük
@@ -70,9 +70,8 @@ export default async function erp(main, H) {
         <a href="#/erp/gorevler"><span>Açık görev</span><b>${s.tasks.todo + s.tasks.doing}</b><small>${s.tasks.overdue ? `<em>${s.tasks.overdue} gecikti</em>` : 'geciken yok'}</small></a>
       </section>
       <div class="grid g21">
-        <div class="panel"><div class="ph"><h3>Son 12 ay</h3><span class="erp-lg in">Gelir</span><span class="erp-lg out">Gider</span></div>
-          <div class="pb"><div class="erp-chart">${s.chart.map((c, i) => `<div class="col${i === s.chart.length - 1 ? ' now' : ''}" title="${mlabel(c.month)}: gelir ${tl(c.gelir)}, gider ${tl(c.gider)}"><div class="bars"><i class="in" style="height:${((c.gelir / max) * 100).toFixed(1)}%"></i><i class="out" style="height:${((c.gider / max) * 100).toFixed(1)}%"></i></div><small>${mlabel(c.month).replace(/ (\d+)$/, '<span class="yy"> $1</span>')}</small></div>`).join('')}</div>
-            <p class="erp-max">En yüksek ay ${tl(max)}</p></div></div>
+        <div class="panel"><div class="ph"><h3>Son 12 ay</h3></div>
+          <div class="pb">${gg(s.chart, 'Son 12 ay gelir ve gider')}</div></div>
         <div class="panel"><div class="ph"><h3>Yaklaşanlar</h3></div><div class="erp-agenda">${s.upcoming.length ? s.upcoming.map((u) => `<div class="erp-ag${u.date < today() ? ' late' : ''}">${leaf(u.date)}<div class="t"><b>${esc(u.text)}</b><small><span class="erp-k k-${u.kind}">${KIND[u.kind] || ''}</span>${u.date < today() ? ' · gecikti' : ''}</small></div>${u.amount != null ? money(u.amount) : ''}</div>`).join('') : '<p class="muted" style="margin:12px 0">Yaklaşan ödeme, tahsilat ya da görev yok.</p>'}</div></div>
       </div>`;
   };
@@ -323,10 +322,9 @@ export default async function erp(main, H) {
     const draw = async () => {
       const r = await api(`/erp/report?year=${year}`);
       const tot = r.monthly.reduce((a, m) => ({ g: a.g + m.gelir, c: a.c + m.gider, vo: a.vo + m.vatOut, vi: a.vi + m.vatIn, s: a.s + m.sales, p: a.p + m.purchases }), { g: 0, c: 0, vo: 0, vi: 0, s: 0, p: 0 });
-      const max = Math.max(1, ...r.monthly.map((m) => Math.max(m.gelir, m.gider)));
       body.innerHTML = `<div class="row" style="gap:8px;margin-bottom:12px"><select class="field yr" style="width:auto">${[0, 1, 2, 3].map((i) => +today().slice(0, 4) - i).map((y) => `<option ${String(y) === year ? 'selected' : ''}>${y}</option>`).join('')}</select><button class="btn csvr">${icon('download')} Kâr-zarar CSV</button></div>
         <div class="stats"><div class="stat"><b class="money in">${tl(tot.g)}</b><span>${year} gelir</span></div><div class="stat"><b class="money out">${tl(tot.c)}</b><span>${year} gider</span></div><div class="stat"><b class="money ${tot.g - tot.c >= 0 ? 'in' : 'out'}">${tl(tot.g - tot.c)}</b><span>${year} net kâr</span></div><div class="stat"><b class="money">${tl(tot.vo - tot.vi)}</b><span>KDV farkı (hesaplanan − indirilecek)</span></div></div>
-        <div class="panel"><div class="ph"><h3>Aylık kâr-zarar</h3></div><div class="pb"><div class="chart">${r.monthly.map((m) => `<div class="b two" title="${m.month}"><i style="height:${(m.gelir / max) * 100}%"></i><i style="height:${(m.gider / max) * 100}%"></i><small>${mlabel(m.month)}</small></div>`).join('')}</div></div>
+        <div class="panel"><div class="ph"><h3>Aylık kâr-zarar</h3></div><div class="pb">${gg(r.monthly, `${year} aylık gelir ve gider`)}</div>
           <div class="tw"><table class="tbl"><thead><tr><th>Ay</th><th class="num">Gelir</th><th class="num">Gider</th><th class="num">Net</th><th class="num">Satış fat.</th><th class="num">Alış fat.</th><th class="num">Hesaplanan KDV</th><th class="num">İndirilecek KDV</th><th class="num">KDV farkı</th></tr></thead><tbody>
           ${r.monthly.map((m) => `<tr><td>${mlabel(m.month)}</td><td class="num">${fmtN(m.gelir)}</td><td class="num">${fmtN(m.gider)}</td><td class="num"><b class="money ${m.net >= 0 ? 'in' : 'out'}">${fmtN(m.net)}</b></td><td class="num">${fmtN(m.sales)}</td><td class="num">${fmtN(m.purchases)}</td><td class="num">${fmtN(m.vatOut)}</td><td class="num">${fmtN(m.vatIn)}</td><td class="num"><b>${fmtN(m.vatOut - m.vatIn)}</b></td></tr>`).join('')}
           <tr style="font-weight:800"><td>Toplam</td><td class="num">${fmtN(tot.g)}</td><td class="num">${fmtN(tot.c)}</td><td class="num">${fmtN(tot.g - tot.c)}</td><td class="num">${fmtN(tot.s)}</td><td class="num">${fmtN(tot.p)}</td><td class="num">${fmtN(tot.vo)}</td><td class="num">${fmtN(tot.vi)}</td><td class="num">${fmtN(tot.vo - tot.vi)}</td></tr></tbody></table></div></div>
