@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="burc_widget_label">Falcı Teyze · Burç</string>
+    <string name="burc_widget_desc">Günün burç yorumu ana ekranında</string>
+</resources>

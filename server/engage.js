@@ -627,6 +627,14 @@ module.exports = function engage(app, ctx) {
     const d = await burcToday(z);
     res.json({ zodiac: z, name: ZODIAC[z][0], sym: ZODIAC[z][1], day: d.day, text: d.text, refCode: req.user.refCode || null });
   }));
+  // Android ana ekran widget'ı (Falcı Teyze): burca göre genel yorum, giriş gerektirmez
+  app.get('/api/burc/widget', ctx.wrap(async (req, res) => {
+    const z = String(req.query.z || ''); if (!ZODIAC[z]) return res.status(400).json({ error: 'Burç seç.' });
+    if (limited(`bw:${ctx.ipOf ? ctx.ipOf(req) : req.ip}`, 240, 3600000)) return res.status(429).json({ error: 'Biraz yavaş.' });
+    const d = await burcToday(z);
+    const dayLabel = new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long', timeZone: 'Europe/Istanbul' });
+    res.set('Cache-Control', 'public, max-age=900').json({ zodiac: z, name: ZODIAC[z][0], sym: ZODIAC[z][1], day: d.day, dayLabel, text: d.text });
+  }));
   setInterval(() => { const lim = addDays(trDay(), -7); store.filter('burc_daily', (x) => x.day < lim).forEach((x) => store.del('burc_daily', x.id)); }, 12 * 3600000).unref();
 
   // ===================================================================

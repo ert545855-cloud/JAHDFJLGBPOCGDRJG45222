@@ -9,7 +9,9 @@ export default async function burc(view) {
   view.innerHTML = `<header class="topbar"><button class="ib" data-back="#/fal" aria-label="Geri">${icon('back')}</button><div class="center">Burç yorumun</div><a class="ib soft" href="#/fal" aria-label="Fal">${egi('fal-burc', 30)}</a></header>
     <div class="bc"><div class="spinner"></div></div>`;
   const box = view.querySelector('.bc');
-  let d; let z = null; let tab = /[?&]h=1/.test(location.hash) ? 'week' : 'day'; let w = null;
+  const q = new URLSearchParams(location.hash.split('?')[1] || ''); const inApp = (() => { try { return sessionStorage.getItem('su_twa') === '1'; } catch { return false; } })();
+  if (q.get('widget') === 'guncelle') setTimeout(() => toast('Widget için uygulamayı güncelle: Play Store’dan SwipeUp’ın son sürümünü yükle.'), 300);
+  let d; let z = /^[a-z]{3,8}$/.test(q.get('z') || '') ? q.get('z') : null; let tab = /[?&]h=1/.test(location.hash) ? 'week' : 'day'; let w = null;
   const day = () => new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' });
   const pickHtml = () => `<div class="bc-pick">${ZODIAC.map(([id, n]) => `<button data-z="${id}" class="${d?.zodiac === id ? 'on' : ''}">${zodiacIcon(id, 40)}<small>${n}</small></button>`).join('')}</div>`;
   const paint = () => {
@@ -30,6 +32,8 @@ export default async function burc(view) {
         <p>${esc(d.text)}</p><span class="bc-by">— Falcı Teyze</span></section>
       <div class="bc-acts"><button class="btn primary block bc-share">${icon('send')} Hikayende paylaş</button>
         <a class="btn block" href="#/fal/burc">Falcı Teyze’ye kişisel yorum sor</a></div>
+      ${inApp ? `<a class="btn block bc-widget" href="intent://burc?z=${d.zodiac}#Intent;scheme=swipeup-widget;package=app.swipeup.twa;S.browser_fallback_url=${encodeURIComponent(`${location.origin}/#/burc?widget=guncelle`)};end">${icon('plus')} Ana ekrana widget olarak ekle</a>
+        <p class="muted bc-tip">Falcı Teyze her gün ${esc(d.name)} yorumunu ana ekranına getirir. Ya da ana ekranda boş bir yere basılı tut → Widget’lar → SwipeUp.</p>` : ''}
       <p class="muted bc-tip">Kartın altında davet bağlantın olur. Arkadaşın bu bağlantıyla katılırsa ikiniz de jeton kazanırsınız.</p>
       <div class="section-t"><span>Başka bir burca bak</span></div>${pickHtml()}
       <a class="bc-pack" href="#/fal/paket">${egi('pack-yillik', 44)}<span class="grow"><b>Yıllık burç raporu</b><small>Önümüzdeki 12 ayın aşk, iş ve para yorumu</small></span><span class="go-chip">Paketler</span></a>

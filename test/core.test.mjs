@@ -102,6 +102,11 @@ test('Parti Kupası: Araba Yarışı ve Gemi Savaşı seçilebilir ve başlar', 
   }
 });
 
+test('burç widget\'ı: giriş gerektirmeden günün yorumu', async () => {
+  const r = await api.get('/api/burc/widget?z=koc'); assert.equal(r.status, 200); assert.equal(r.body.name, 'Koç'); assert.ok(r.body.text.length > 20); assert.ok(r.body.dayLabel);
+  assert.equal((await api.get('/api/burc/widget?z=yok')).status, 400);
+});
+
 test('yönetim paneli dosyaları giriş yapmadan verilmez', async () => {
   const r = await api.get('/test-panel-abc123/admin.js');
   assert.ok(!(typeof r.body === 'string' && r.body.includes('VIEWS')), 'panel kodu açıkta');

@@ -24,6 +24,12 @@ async function main() {
   for (const f of ['gradlew', 'app/build.gradle', 'app/src/main/AndroidManifest.xml']) {
     if (!fs.existsSync(path.join(out, f))) throw new Error('Eksik dosya: ' + f);
   }
+  // Şablon kapanan JCenter deposunu kullanıyor: Maven Central ile değiştir (yoksa bağımlılıklar bulunamıyor)
+  for (const f of ['build.gradle', 'app/build.gradle']) {
+    const g = path.join(out, f); if (!fs.existsSync(g)) continue;
+    let t = fs.readFileSync(g, 'utf8'); t = t.replace(/jcenter\(\)/g, 'mavenCentral()'); fs.writeFileSync(g, t);
+  }
+  require('./widget')(out, { packageId: json.packageId, host: json.host }); // Falcı Teyze burç widget'ı
   console.log('Android projesi hazır:', out, 'sürüm', json.appVersionName, '(' + code + ')');
 }
 

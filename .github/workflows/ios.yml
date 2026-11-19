@@ -39,10 +39,15 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/app/www" && cd "$RUNNER_TEMP/app"
           npm init -y >/dev/null
-          npm i --no-audit --no-fund @capacitor/core@7 @capacitor/cli@7 @capacitor/ios@7 @capgo/native-purchases@7.19.3 # uygulama içi satın alma (App Store)
+          npm i --no-audit --no-fund @capacitor/core@7 @capacitor/cli@7 @capacitor/ios@7
           cp "$GITHUB_WORKSPACE/store/ios/capacitor.config.json" .
           printf '<!doctype html><meta charset="utf-8"><title>SwipeUp</title><meta http-equiv="refresh" content="0;url=https://swipeup.live">' > www/index.html
           npx cap add ios
+          # Uygulama içi satın alma eklentisi (App Store) en az iOS 15 ister: önce proje hedefini yükselt, sonra eklentiyi ekle
+          sed -i '' "s/platform :ios, '[0-9.]*'/platform :ios, '15.0'/" ios/App/Podfile
+          sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*;/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g' ios/App/App.xcodeproj/project.pbxproj
+          grep -n "platform :ios" ios/App/Podfile
+          npm i --no-audit --no-fund @capgo/native-purchases@7.19.3
           npx cap sync ios
 
       - name: Simge, izin açıklamaları ve sürüm

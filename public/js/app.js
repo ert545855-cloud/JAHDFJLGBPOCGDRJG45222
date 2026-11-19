@@ -441,6 +441,7 @@ function termsPrompt() {
 }
 
 async function boot() {
+  try { if (document.referrer.startsWith('android-app://')) sessionStorage.setItem('su_twa', '1'); } catch { /* depolama kapalı */ } // Android uygulamasının içindeyiz (widget gibi yerel özellikler)
   // Yazı tipi açılışı bekletmesin (index.html'de media=print ile iner, burada devreye girer)
   try { const gf = document.getElementById('gfont'); if (gf) gf.media = 'all'; } catch { /* yok */ }
   // Açılacak sayfanın modülünü oturum/ayar istekleriyle aynı anda indirmeye başla
