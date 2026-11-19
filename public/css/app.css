@@ -4405,3 +4405,102 @@ html.land-game #fx-layer { display: none; }
 .gv-ak small { font-size: 12px; }
 .gv-ak.bad span { color: var(--hot, #e0244a); }
 .gv-akm { margin-bottom: 8px; }
+
+/* ===================================================================
+   Bilgisayar düzeni (geniş ekran)
+   Telefon düzenine dokunmaz. 1000 px ve üstünde:
+   - içerik ortada okunaklı bir sütunda durur (telefonda nasıl görünüyorsa öyle),
+   - alttaki yüzen menü sola, yazılı bir kenar çubuğuna dönüşür,
+   - alt sayfalar (sheet) ekranın ortasında pencere olarak açılır,
+   - hikaye, canlı yayın ve arama dikey (9:16) çerçevede, çevresi karartılarak gösterilir,
+   - oyunlar tam ekran kalır.
+   =================================================================== */
+.tb-brand, #tabbar .dx, #tabbar .tl { display: none; }
+
+@media (min-width: 1000px) {
+  :root {
+    --col: 600px;             /* içerik sütunu */
+    --side: 76px;             /* kenar çubuğu (dar: yalnız simge) */
+    --side-gap: 28px;
+    --app-max: var(--col);
+    --dock-h: 0px;            /* alt menü yok: sayfalar alttan boşluk bırakmasın */
+  }
+  html, body { background: var(--surface); }
+  :root[data-skin] body { background: var(--page); background-attachment: fixed; }
+  #app { box-shadow: 0 0 0 1px var(--line); overflow-x: clip; }
+  #view { padding-bottom: calc(32px + var(--safe-b)); }
+
+  /* Kenar çubuğu: sütunun hemen solunda, sütunla birlikte ortalanır */
+  #tabbar {
+    left: max(16px, calc(50% - var(--col) / 2 - var(--side-gap) - var(--side))); top: 20px; bottom: auto; transform: none;
+    width: var(--side); max-width: none; height: auto; max-height: calc(100dvh - 40px);
+    display: flex; flex-direction: column; align-items: stretch; gap: 4px;
+    background: none; border: 0; border-radius: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+  body.no-tabs #tabbar { display: flex; }
+  :root[data-game] #tabbar, body:has(#view > .auth) #tabbar, #tabbar:empty { display: none; }
+  #tabbar a { height: 52px; padding: 0 14px; display: flex; align-items: center; justify-content: center; gap: 14px; border-radius: 16px; color: var(--muted); font-weight: 650; font-size: 16px; transition: background .15s, color .15s; }
+  #tabbar a:hover { background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text); }
+  #tabbar a.on, #tabbar a.on-dx { color: var(--text); background: color-mix(in srgb, var(--text) 8%, transparent); }
+  #tabbar a.on::after { display: none; }
+  #tabbar a .tl { white-space: nowrap; }
+  #tabbar .dx { display: flex; }
+  /* Logo */
+  #tabbar .tb-brand { flex: none; height: 56px; margin-bottom: 10px; padding: 0 10px; background: none !important; color: var(--text); font-size: 26px; }
+  #tabbar .tb-brand .mark { width: 36px; height: 36px; border-radius: 10px; }
+  #tabbar .tb-brand .wmt { display: none; }
+  /* Kaydır: kenar çubuğunun asıl düğmesi, en altta gradyan */
+  #tabbar a.mid { order: 20; margin-top: 14px; height: 54px; background: var(--grad); color: var(--on-uv); box-shadow: 0 10px 24px -12px var(--uv); }
+  #tabbar a.mid:hover { background: var(--grad); filter: brightness(1.06); color: var(--on-uv); }
+  #tabbar a.mid.on { background: var(--grad); color: var(--on-uv); }
+  #tabbar a.mid .center { width: auto; height: auto; margin: 0; border-radius: 0; background: none; box-shadow: none; transform: none; position: relative; }
+  #tabbar a.mid .center svg { width: 26px; height: 26px; }
+  #tabbar .num-badge { border-color: transparent; }
+  #tabbar a.mid .num-badge { background: #fff; color: var(--uv); }
+  #tabbar .me-av { width: 28px; height: 28px; }
+  #tabbar a > .dot-badge { top: 11px; left: 36px; right: auto; }
+  #tabbar span > .dot-badge { top: -2px; right: -3px; }
+  :root[data-event] #tabbar::before, :root[data-event] #tabbar .center::before { display: none; }
+  body.dark-ui #tabbar a { color: rgba(255,255,255,.62); }
+  body.dark-ui #tabbar a:hover, body.dark-ui #tabbar a.on { color: #fff; background: rgba(255,255,255,.1); }
+  body.dark-ui #tabbar .tb-brand { color: #fff; }
+  /* Sayfanın kendi başlığındaki logo kenar çubuğunda zaten var: yer tutsun, görünmesin */
+  #view .topbar .wordmark { visibility: hidden; }
+  #tabbar .tb-brand .wmt { font-family: var(--display); font-weight: 800; letter-spacing: -.04em; }
+
+  /* Siyah tam ekran sayfalar (Vitrin vb.): video dikey çerçevede */
+  body.dark-ui { --col: min(600px, calc(100dvh * 9 / 16)); --app-max: min(600px, calc(100dvh * 9 / 16)); }
+  body.dark-ui #app { box-shadow: none; }
+
+  /* Oyunlar tam ekran kalsın */
+  :root[data-game] { --app-max: 100%; }
+  :root[data-game] #app { max-width: 100%; box-shadow: none; }
+
+  /* Alt sayfa (sheet) → ortada pencere */
+  .sheet {
+    top: 50%; bottom: auto; transform: translate(-50%, -50%);
+    max-width: 520px; max-height: min(84dvh, 780px); border-radius: 24px; padding-bottom: 8px;
+    box-shadow: 0 30px 80px -30px rgba(0,0,0,.55), 0 0 0 1px var(--line);
+    animation: sheet-pop .22s cubic-bezier(.2,.8,.2,1);
+  }
+  .sheet .grab { visibility: hidden; height: 4px; margin: 6px auto 0; }
+  @keyframes sheet-pop { from { opacity: 0; transform: translate(-50%, -47%) scale(.985); } }
+
+  /* Hikaye, canlı yayın, görüntülü arama: dikey çerçeve, çevresi karartılmış */
+  .story-v, .live, .call { max-width: min(var(--col), calc(100dvh * 9 / 16)); box-shadow: 0 0 0 100vmax rgba(6, 6, 10, .92); }
+
+  /* Fare ile kullanım: ince kaydırma çubukları, tıklanabilir yerlerde el imleci */
+  #view { scrollbar-width: thin; }
+  .sheet .menu button:hover { background: var(--surface); }
+  .mk-sell { right: calc(50% - var(--col) / 2 + 16px); }
+}
+
+/* Geniş masaüstü: kenar çubuğu yazılarıyla birlikte */
+@media (min-width: 1240px) {
+  :root { --side: 232px; }
+  #tabbar a { justify-content: flex-start; }
+  #tabbar a .tl { display: inline; }
+  #tabbar .tb-brand { gap: 10px; }
+  #tabbar .tb-brand .wmt { display: inline; }
+  #tabbar a.mid { justify-content: center; }
+}

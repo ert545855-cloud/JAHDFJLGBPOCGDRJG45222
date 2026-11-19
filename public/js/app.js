@@ -3,7 +3,7 @@ import { remember, accountSheet, switchFromUrl } from './accounts.js';
 import { icon } from './icons.js';
 import { initNav } from './nav.js';
 import {
-  state, api, on, emit, connectSocket, refreshBadges, toast, esc, el, applySkin, currentSkin, setGameLook, notifHref, applyLogo, refreshStoryMap, syncPush, sheet, enablePush, pushSupported, pushEnabled,
+  state, api, on, emit, connectSocket, refreshBadges, toast, esc, el, logo, applySkin, currentSkin, setGameLook, notifHref, applyLogo, refreshStoryMap, syncPush, sheet, enablePush, pushSupported, pushEnabled,
 } from './core.js';
 import { initCalls } from './calls.js';
 import { checkVersion, recover, afterBoot } from './update.js';
@@ -97,7 +97,16 @@ function renderTabbar(active) {
     ['chats', '#/chats', `<span style="position:relative;display:grid">${icon('send')}${b.messages ? `<span class="num-badge">${b.messages}</span>` : ''}</span>`, 'Mesajlar', ''],
     ['me', '#/me', `<img class="me-av" src="${esc(state.me?.avatar)}" alt="">${b.notifications ? '<i class="dot-badge"></i>' : ''}`, 'Profil', ''],
   ];
-  tabbar.innerHTML = tabs.map(([k, href, ic, label, cls]) => `<a href="${href}" class="${k === active ? 'on' : ''} ${cls}" aria-label="${label}">${ic}</a>`).join('');
+  // Bilgisayarda (geniş ekran) bu menü soldaki kenar çubuğuna dönüşür: logo, yazılı sekmeler, bildirim ve ayarlar da görünür.
+  // Telefonda .dx öğeleri ve yazılar gizli kalır; alttaki 5'li menü aynen durur.
+  const dx = [
+    ['notif', '#/notifications', `<span style="position:relative;display:grid">${icon('bell')}${b.notifications ? '<i class="dot-badge"></i>' : ''}</span>`, 'Bildirimler'],
+    ['settings', '#/settings', icon('settings'), 'Ayarlar'],
+  ];
+  const path = location.hash.replace(/^#/, '') || '/';
+  tabbar.innerHTML = `<a href="#/" class="tb-brand dx wordmark" aria-label="SwipeUp ana sayfa">${logo()}</a>`
+    + tabs.map(([k, href, ic, label, cls]) => `<a href="${href}" class="${k === active ? 'on' : ''} ${cls}" aria-label="${label}">${ic}<span class="tl">${label}</span></a>`).join('')
+    + dx.map(([, href, ic, label]) => `<a href="${href}" class="dx${path === href.slice(1) ? ' on-dx' : ''}" aria-label="${label}">${ic}<span class="tl">${label}</span></a>`).join('');
 }
 // Profil sekmesine uzun basınca hesap seçici açılır
 {
