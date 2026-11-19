@@ -46,22 +46,20 @@ Play Console’da doldurulacaklar: içerik derecelendirme anketi (tanışma, kul
 
 ## 3. iOS (App Store)
 
-Mac’te:
+iOS projesi depoda `ios-app/` klasöründe hazır (Capacitor 7, Swift Package Manager; CocoaPods gerekmez). Ayrıntılar: `ios-app/CLAUDE.md`.
+
+Mac'te:
 
 ```bash
-mkdir swipeup-ios && cd swipeup-ios
-npm init -y && npm i @capacitor/core @capacitor/cli @capacitor/ios @capacitor/push-notifications
-mkdir www && echo '<!doctype html><title>SwipeUp</title>' > www/index.html
-cp ../store/ios/capacitor.config.json .
-npx cap add ios && npx cap sync ios
-npx cap open ios           # Xcode açılır
+cd ios-app
+npm install
+npm run sync
+npm run open           # Xcode açılır
 ```
 
-Xcode’da: Bundle ID `app.swipeup.ios`, ekibini seç, **Push Notifications** ve **Associated Domains** (`applinks:swipeup.live`) yeteneklerini ekle, `Info.plist`’e kamera, mikrofon, fotoğraf ve konum izin açıklamalarını Türkçe yaz. Sonra Product → Archive → App Store Connect’e yükle.
-
-Render’a ekle: `APPLE_TEAM_ID` (Apple geliştirici takım kimliğin) ve `IOS_BUNDLE` (`app.swipeup.ios`).
-
-**Dikkat:** Apple, yalnızca bir web sitesini saran uygulamaları sık sık reddeder (Kural 4.2). Onay şansını artırmak için kabuğa en azından yerel bildirim (yukarıdaki eklenti) eklenmeli; gerekirse kamera ve paylaşım gibi yerel eklentiler de eklenir. Ret gelirse gerekçeye göre düzeltip yeniden göndeririz.
+Xcode'da: Signing & Capabilities → Team'i seç (Associated Domains hazır). Uygulama içi satın alma için In-App Purchase yeteneğini ekle.
+Sonra cihaz olarak Any iOS Device seç → Product → Archive → Distribute App → App Store Connect → Upload.
+Evrensel bağlantılar için sunucuda `APPLE_TEAM_ID` ortam değişkenini ekip kimliğinle doldur.
 
 ## 4. Veri güvenliği / gizlilik formu için özet
 
