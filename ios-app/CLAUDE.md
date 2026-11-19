@@ -4,9 +4,11 @@ Bu klasör SwipeUp'ın iPhone uygulamasıdır. Xcode'daki yapay zekâ asistanı 
 
 ## Yapı
 
-- Uygulama bir Capacitor 7 kabuğudur: açılınca `https://swipeup.live` adresini tam ekran bir web görünümünde (WKWebView) açar.
+- Uygulama bir Capacitor 8 kabuğudur: açılınca `https://swipeup.live` adresini tam ekran bir web görünümünde (WKWebView) açar.
   Uygulamanın asıl arayüzü ve sunucusu web tarafındadır (depo kökü: `public/`, `server/`); onlara bu klasörden dokunma.
-- Yerel (Swift) kod: `ios/App/App/` (`AppDelegate.swift`, `Info.plist`, `App.entitlements`, `Assets.xcassets`).
+- Yerel (Swift) kod: `ios/App/App/` (`AppDelegate.swift`, `SceneDelegate.swift`, `Info.plist`, `Assets.xcassets`).
+- Uygulama UIScene yaşam döngüsünü kullanır (iOS 27 / Xcode 27 bunu zorunlu tutar; olmadan uygulama açılışta çöker).
+  Pencere `SceneDelegate` içinde kurulur; URL ve evrensel bağlantı olayları `SceneDelegateProxy`'ye iletilir, bunları bozma.
 - Bağımlılıklar Swift Package Manager ile gelir (`ios/App/CapApp-SPM/Package.swift`). Bu dosyayı elle değiştirme;
   `npm run sync` her çalıştığında yeniden yazılır. CocoaPods kullanılmıyor.
 - Uygulama içi satın alma: `@capgo/native-purchases` eklentisi. Web tarafı `window.Capacitor.Plugins.NativePurchases` ile çağırır
@@ -18,7 +20,8 @@ Bu klasör SwipeUp'ın iPhone uygulamasıdır. Xcode'daki yapay zekâ asistanı 
 | --- | --- |
 | Paket kimliği (Bundle ID) | `app.swipeup.ios` |
 | En düşük iOS | 15.0 |
-| Alan adı | `swipeup.live` (Associated Domains: `applinks:swipeup.live`) |
+| Alan adı | `swipeup.live` |
+| Associated Domains | Henüz eklenmedi: ücretsiz (Personal Team) hesap desteklemiyor. Ücretli Apple Developer ekibi seçilince + Capability → Associated Domains → `applinks:swipeup.live` |
 | Uygulamanın açtığı adres | `https://swipeup.live` (`capacitor.config.json` → `server.url`) |
 | Burç kartı verisi (widget için) | `GET https://swipeup.live/api/burc/widget?z=<burç>` — giriş gerektirmez, 15 dk önbelleklenebilir |
 

@@ -33,7 +33,8 @@ jobs:
 
       - name: Xcode
         run: |
-          X=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1); [ -n "$X" ] && sudo xcode-select -s "$X"
+          # Capacitor 8 en az Xcode 26 ister; kurulu en yeni kararlı Xcode'u seç (beta değil)
+          X=$(ls -d /Applications/Xcode_*.app 2>/dev/null | grep -vi beta | sort -V | tail -1); [ -n "$X" ] && sudo xcode-select -s "$X"
           xcodebuild -version
 
       - name: iOS projesini hazırla (ios-app/)

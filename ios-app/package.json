@@ -2,15 +2,15 @@
   "name": "swipeup-ios",
   "private": true,
   "dependencies": {
-    "@capacitor/core": "7.6.10",
-    "@capacitor/ios": "7.6.10",
-    "@capgo/native-purchases": "7.19.3"
+    "@capacitor/core": "8.6.2",
+    "@capacitor/ios": "8.6.2",
+    "@capgo/native-purchases": "8.9.16"
   },
   "scripts": {
     "sync": "cap sync ios",
     "open": "cap open ios"
   },
   "devDependencies": {
-    "@capacitor/cli": "7.6.10"
+    "@capacitor/cli": "8.6.2"
   }
 }

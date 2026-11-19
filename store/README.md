@@ -7,7 +7,7 @@ Hazır olanlar:
 | Ne | Nerede |
 | --- | --- |
 | Android paket ayarları (Trusted Web Activity) | `store/android/twa-manifest.json` |
-| iOS kabuk ayarları (Capacitor) | `store/ios/capacitor.config.json` |
+| iOS projesi (Capacitor, Xcode) | `ios-app/` |
 | Alan adı doğrulaması | Sunucu `/.well-known/assetlinks.json` ve `/.well-known/apple-app-site-association` adreslerini ortam değişkenlerinden üretir |
 | Uygulamaya girmeden hesap silme sayfası | `https://swipeup.live/hesap-silme` (Google Play bunu ister) |
 | Gizlilik politikası | `https://swipeup.live/gizlilik` |
@@ -46,7 +46,7 @@ Play Console’da doldurulacaklar: içerik derecelendirme anketi (tanışma, kul
 
 ## 3. iOS (App Store)
 
-iOS projesi depoda `ios-app/` klasöründe hazır (Capacitor 7, Swift Package Manager; CocoaPods gerekmez). Ayrıntılar: `ios-app/CLAUDE.md`.
+iOS projesi depoda `ios-app/` klasöründe hazır (Capacitor 8, Swift Package Manager; CocoaPods gerekmez). Ayrıntılar: `ios-app/CLAUDE.md`.
 
 Mac'te:
 
@@ -57,7 +57,7 @@ npm run sync
 npm run open           # Xcode açılır
 ```
 
-Xcode'da: Signing & Capabilities → Team'i seç (Associated Domains hazır). Uygulama içi satın alma için In-App Purchase yeteneğini ekle.
+Xcode'da: Signing & Capabilities → Team'i seç; ücretli ekipte + Capability → Associated Domains → `applinks:swipeup.live` ekle. Uygulama içi satın alma için In-App Purchase yeteneğini ekle.
 Sonra cihaz olarak Any iOS Device seç → Product → Archive → Distribute App → App Store Connect → Upload.
 Evrensel bağlantılar için sunucuda `APPLE_TEAM_ID` ortam değişkenini ekip kimliğinle doldur.
 
