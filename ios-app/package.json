@@ -7,6 +7,7 @@
     "@capgo/native-purchases": "8.9.16"
   },
   "scripts": {
+    "postinstall": "node scripts/patch-plugins.js",
     "sync": "cap sync ios",
     "open": "cap open ios"
   },
