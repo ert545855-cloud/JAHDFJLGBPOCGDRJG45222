@@ -2,12 +2,22 @@
   "FileVersion": 3,
   "EngineAssociation": "5.5",
   "Category": "Games",
-  "Description": "SwipeUp City mobile-first playable prototype (source only)",
+  "Description": "SwipeUp City mobile-first Unreal Engine 5 city prototype",
   "Modules": [
     {
       "Name": "SwipeUpCity",
       "Type": "Runtime",
       "LoadingPhase": "Default"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "PythonScriptPlugin",
+      "Enabled": true
+    },
+    {
+      "Name": "EditorScriptingUtilities",
+      "Enabled": true
     }
   ]
 }

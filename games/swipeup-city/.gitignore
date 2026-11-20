@@ -16,4 +16,6 @@ Saved/
 *.mobileprovision
 *.keystore
 *.jks
+ExternalAssets/
+Content/SwipeUpCity/ImportedFab/
 
