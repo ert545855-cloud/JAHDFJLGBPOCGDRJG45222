@@ -18,6 +18,32 @@
     {
       "Name": "EditorScriptingUtilities",
       "Enabled": true
+    },
+    {
+      "Name": "Interchange",
+      "Enabled": true
+    },
+    {
+      "Name": "InterchangeEditor",
+      "Enabled": true,
+      "TargetAllowList": [
+        "Editor"
+      ]
+    },
+    {
+      "Name": "GLTFExporter",
+      "Enabled": true,
+      "TargetAllowList": [
+        "Editor"
+      ]
+    },
+    {
+      "Name": "Fab",
+      "Enabled": true,
+      "Optional": true,
+      "TargetAllowList": [
+        "Editor"
+      ]
     }
   ]
 }

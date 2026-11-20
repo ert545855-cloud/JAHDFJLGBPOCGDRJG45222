@@ -28,7 +28,8 @@ POST /internal/city/redeem -> private game gateway; ticket'i dogrular ve tek sef
 Ticket sunucu tarafinda TTL, nonce, oyuncu ID, oturum, bolge ve tekrar kullanim korumasiyla
 islenmelidir. HTTPS + rate limit + hata kaydi zorunludur.
 
-## Canli SwipeUp icin guvenlik
-- Su anda kullaniciya yalnizca gelistirme bilgi sayfasi gosterilir.
-- Oyun istemcisi ve oturum endpoint'i calisiyor gibi gosterilmez.
-- Mevcut server.js, odemeler, kullanici oturumlari ve iOS native ayarlarina dokunulmaz.
+## Mevcut oyun girişi
+
+- SwipeUp oyun menüsü tarayıcıdaki 3D şehir turuna yönlendirir.
+- Tarayıcı prototipi, yerleşik dokunmatik kontrolleri ve WebGL 2'yi kullanır.
+- Native Unreal başlatıcısı ve oturum entegrasyonu için yukarıdaki cihaz testleri geçerlidir.

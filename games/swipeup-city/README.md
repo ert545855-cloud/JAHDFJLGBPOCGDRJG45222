@@ -1,42 +1,25 @@
-# SwipeUp City — Unreal Engine 5.5 mobile-first city
+# SwipeUp City
 
-A standalone source prototype being developed for SwipeUp's existing games menu
-and future native Android/iOS app integration.
+SwipeUp City, sahil meydanı, park, kafe, otopark ve marinadan oluşan tek oyunculu bir 3D keşif oyunudur. Dört durak dilediğin sırayla ziyaret edilebilir. Turun ardından serbestçe dolaşmaya devam edebilirsin.
 
-## Current implementation
-- Third-person character, camera, movement, jump and sprint input
-- Mobile virtual joystick axes + prototype jump/sprint touch controls
-- Procedurally assembled 3D coastal city at runtime (see Docs/CITY_MAP.md)
-- Main boulevard, hundreds of facade parts, park/fountain, cafe plaza,
-  beach/promenade, marina, palm trees and decorative road infrastructure
-- 19 reusable instanced mesh palette layers designed for low draw-call counts
-- Unreal Editor Python tool to generate original color materials
-- Free Fab asset links and optional local FBX importer
+## Tarayıcıda
 
-## Generate the palette (in Unreal Editor 5.5)
-1. Install Unreal 5.5 and its C++ compiler/SDK dependencies.
-2. Open SwipeUpCity.uproject and compile the C++ modules.
-3. In Unreal Editor: Tools > Execute Python Script > Scripts/generate_city_materials.py.
-   Alternatively set UE_EDITOR_CMD and run Scripts/run_palette_windows.bat.
-4. The editor writes material .uasset files under Content/SwipeUpCity/Materials.
-5. Choose Play: the GameMode spawns a source-generated test city on Entry map.
-6. Test a packaged build on an actual Android/iOS device.
+Deponun kökünde `npm ci` ve `npm start` çalıştır. `http://localhost:3000/city-preview/` adresini aç ya da SwipeUp oyun menüsünden **SwipeUp City → 3D şehir turunu oyna** seçeneğini kullan.
 
-These material .uasset files are generated LOCALLY; they are not in GitHub until
-the build environment generates them. Their generated colors are original.
+- **WASD** veya yön tuşlarıyla hareket et. **Shift** ile koş, **Space** ile zıpla ve kamerayı çevirmek için fareyi sürükle.
+- Dokunmatik ekranda hareket için sol çubuğu, kamera için sahnenin üzerindeki kaydırma hareketini kullan. **Koş** ve **Zıpla** ayrı düğmelerdir.
+- Sahilde matlara yaklaşınca **E** veya **Egzersize katıl** düğmesiyle gruba katıl. Yürümek veya zıplamak egzersizden çıkar.
+- Suya düşersen meydandan devam edersin ve ziyaretlerin o oturumda korunur. Baştan başlamak için **R** veya **Yeniden başla** düğmesini kullan.
 
-## Fab art
-See Docs/FAB_FREE_ASSETS.md and Assets/FabManifest.json. No Fab package has been
-downloaded or installed in this repo. Some packs require import through Unreal
-Editor's Fab plugin; pure FBX packages can be imported with Scripts/import_local_fab_fbx.py.
+Tarayıcı sürümü Three.js ve WebGL 2 kullanır. Işık, gölgeler, yüzey dokuları, 3D karakter animasyonları ve deniz yerelde çizilir. Üçüncü taraf görsel kaynaklar için [varlık listesi](Docs/ART_SOURCES.md).
 
-## Critical status and integration restrictions
-- Code has been committed, but no Unreal compilation or mobile runtime test took place here.
-- The game is NOT playable inside the current SwipeUp Capacitor/TWA app yet.
-- Procedural layout is a visually structured placeholder, not a finished AAA map.
-- Full native one-app integration needs separate technical prototypes on each platform.
-- Dedicated servers, actual vehicle controls, persistence and server-issued login
-  handoff have not been implemented.
-- Do not put Fab raw source files into this public repository.
+## Unreal Engine 5.5
 
-See Docs/MOBILE_INTEGRATION.md, Docs/CITY_MAP.md and Docs/MILESTONES.md.
+1. `SwipeUpCity.uproject` dosyasını Unreal Engine 5.5 ve platforma uygun C++ araç zinciriyle aç.
+2. Editörde **Tools → Execute Python Script** ile `Scripts/prepare_city.py` dosyasını çalıştır. Windows'ta `UE_EDITOR_CMD` yolunu ayarlayıp `Scripts/run_palette_windows.bat` da kullanılabilir.
+3. **Play** ile giriş haritasını başlat. Şehir ve dört durak GameMode tarafından oluşturulur. `WASD`, fare, `Shift`, `Space` ve `R` ile turu dene.
+4. Yerel test paketinde oyuncunun meydanda doğduğunu, kaldırımlar ve iskelenin çarpışmalarını, dört durağın sayıldığını ve suya düşüşten dönüşü doğrula.
+
+Hazırlık betiği renk ve doku malzemelerini, paketle gelen bankı ve varsa yerel FBX, GLB veya glTF dosyalarını içe aktarır. [Fab ve yerel dosya kurulumu](Docs/FAB_FREE_ASSETS.md).
+
+Unreal kaynağı ayrı bir native prototiptir. Animasyonlu mahalle sakinleri ve plaj egzersizi bu sürümde tarayıcıda çalışır. UE 5.5 C++ derlemesi, Unreal Editor içe aktarma testi ve gerçek Android/iOS cihaz testi bu değişiklik için henüz bekliyor.

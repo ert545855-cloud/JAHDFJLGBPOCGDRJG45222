@@ -6,10 +6,10 @@ if "%UE_EDITOR_CMD%"=="" (
   exit /b 2
 )
 set "PROJ=%~dp0..\SwipeUpCity.uproject"
-set "SCRIPT=%~dp0generate_city_materials.py"
+set "SCRIPT=%~dp0prepare_city.py"
 "%UE_EDITOR_CMD%" "%PROJ%" -ExecutePythonScript="%SCRIPT%" -unattended -nosplash -log
 if errorlevel 1 (
-  echo Unreal material generation failed. See Unreal log.
+  echo Unreal city preparation failed. See Unreal log.
   exit /b 1
 )
-echo Color palette generated in local project Content.
+echo City preparation finished. See the Unreal log for the imported materials and meshes.

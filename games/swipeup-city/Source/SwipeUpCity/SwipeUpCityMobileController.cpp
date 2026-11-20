@@ -1,5 +1,7 @@
 #include "SwipeUpCityMobileController.h"
 #include "SwipeUpCityCharacter.h"
+#include "SwipeUpCityGameMode.h"
+#include "Engine/World.h"
 #include "Components/InputComponent.h"
 
 ASwipeUpCityMobileController::ASwipeUpCityMobileController()
@@ -12,7 +14,10 @@ void ASwipeUpCityMobileController::SetupInputComponent()
 {
     Super::SetupInputComponent();
     if (InputComponent)
+    {
         InputComponent->BindTouch(IE_Pressed, this, &ASwipeUpCityMobileController::OnTouchPressed);
+        InputComponent->BindAction("RestartTour", IE_Pressed, this, &ASwipeUpCityMobileController::RestartTour);
+    }
 }
 
 void ASwipeUpCityMobileController::OnTouchPressed(ETouchIndex::Type FingerIndex, FVector Location)
@@ -26,8 +31,14 @@ void ASwipeUpCityMobileController::OnTouchPressed(ETouchIndex::Type FingerIndex,
     ASwipeUpCityCharacter* Character = Cast<ASwipeUpCityCharacter>(GetPawn());
     if (!Character) return;
 
-    if (FVector2D::Distance(Tap, FVector2D(Width * 0.88f, Height * 0.58f)) < Radius)
+    if (FVector2D::Distance(Tap, FVector2D(Width * 0.88f, Height * 0.49f)) < Radius)
         Character->Jump();
-    else if (FVector2D::Distance(Tap, FVector2D(Width * 0.88f, Height * 0.40f)) < Radius)
+    else if (FVector2D::Distance(Tap, FVector2D(Width * 0.88f, Height * 0.30f)) < Radius)
         Character->ToggleSprint();
+}
+
+void ASwipeUpCityMobileController::RestartTour()
+{
+    if (ASwipeUpCityGameMode* City = GetWorld()->GetAuthGameMode<ASwipeUpCityGameMode>())
+        City->RestartTour();
 }

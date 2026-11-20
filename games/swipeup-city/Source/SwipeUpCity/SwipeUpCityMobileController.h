@@ -13,5 +13,6 @@ public:
     virtual void SetupInputComponent() override;
 
 private:
+    void RestartTour();
     void OnTouchPressed(ETouchIndex::Type FingerIndex, FVector Location);
 };
