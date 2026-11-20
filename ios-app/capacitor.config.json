@@ -10,7 +10,8 @@
   "ios": {
     "contentInset": "never",
     "backgroundColor": "#000000",
-    "limitsNavigationsToAppBoundDomains": true
+    "limitsNavigationsToAppBoundDomains": true,
+    "allowsLinkPreview": false
   },
   "plugins": {
     "PushNotifications": { "presentationOptions": ["badge", "sound", "alert"] }

@@ -71,5 +71,8 @@ public class AppleSignInPlugin: CAPPlugin, CAPBridgedPlugin, ASAuthorizationCont
 class AppViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(AppleSignInPlugin())
+        // Uzun basınca Safari'nin bağlantı önizlemesi (Open Link / Copy Link…) açılmasın: uygulama kendi menülerini kullanır
+        // (ör. alt menüde profil sekmesine uzun basınca hesap seçici)
+        webView?.allowsLinkPreview = false
     }
 }

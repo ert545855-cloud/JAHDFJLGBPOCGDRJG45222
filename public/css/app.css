@@ -4573,3 +4573,6 @@ html.land-game #fx-layer { display: none; }
 .pv-x { position: fixed; top: calc(var(--safe-t, 0px) + 14px); right: 14px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .16); color: #fff; border: 0; }
 .pv-x svg { width: 20px; height: 20px; }
 .pf-av { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+/* Alt menü: uzun basınca iPhone'un bağlantı önizlemesi / "Fotoğraflara kaydet" menüsü çıkmasın (profil sekmesinde hesap seçici açılır) */
+#tabbar, #tabbar a, #tabbar img { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
