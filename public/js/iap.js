@@ -19,12 +19,12 @@ export function iapInfo() {
     const kind = nativeIos() ? 'apple' : (await playService()) ? 'google' : null;
     if (!kind) return null;
     let cat; try { cat = await api('/iap/catalog'); } catch { return null; }
-    const skus = cat.items.map((i) => i.sku); const prices = new Map();
+    const skus = cat.items.map((i) => i.sku); const prices = new Map(); const amounts = new Map(); // amounts: sku → { value, currency } (sepet toplamı için)
     try {
-      if (kind === 'google') { const s = await playService(); (await s.getDetails(skus)).forEach((d) => prices.set(d.itemId, fmt(d.price.value, d.price.currency))); }
-      else { const r = await window.Capacitor.Plugins.NativePurchases.getProducts({ productIdentifiers: skus, productType: 'inapp' }); (r?.products || []).forEach((p) => prices.set(p.identifier || p.productIdentifier, p.priceString || fmt(p.price, p.currencyCode))); }
+      if (kind === 'google') { const s = await playService(); (await s.getDetails(skus)).forEach((d) => { prices.set(d.itemId, fmt(d.price.value, d.price.currency)); if (+d.price.value >= 0) amounts.set(d.itemId, { value: +d.price.value, currency: d.price.currency }); }); }
+      else { const r = await window.Capacitor.Plugins.NativePurchases.getProducts({ productIdentifiers: skus, productType: 'inapp' }); (r?.products || []).forEach((p) => { const id = p.identifier || p.productIdentifier; prices.set(id, p.priceString || fmt(p.price, p.currencyCode)); if (+p.price >= 0 && p.currencyCode) amounts.set(id, { value: +p.price, currency: p.currencyCode }); }); }
     } catch { /* fiyatlar gelmezse düğmeler mağaza fiyatsız gösterilir */ }
-    info = { kind, items: cat.items, prices, store: kind === 'google' ? 'Google Play' : 'App Store' };
+    info = { kind, items: cat.items, prices, amounts, fmt, store: kind === 'google' ? 'Google Play' : 'App Store' };
     if (kind === 'google') resumeGoogle(); // yarıda kalan (onaylanmamış) satın almalar
     return info;
   })().finally(() => { pending = null; });
