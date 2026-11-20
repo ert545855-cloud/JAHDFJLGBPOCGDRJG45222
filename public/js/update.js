@@ -9,9 +9,10 @@ let screenOn = false;
 let bannerEl = null;
 const DRAFT = 'su_draft:';
 
-// Arama, canlı yayın, kayıt ya da paylaşım hazırlığı sırasında araya girme
+// Arama, canlı yayın, oyun odası, hızlı tanışma, karaoke, kayıt ya da paylaşım hazırlığı sırasında araya girme.
+// Bu ekranlardan çıkınca güncelleme kendiliğinden yapılır.
 const busy = () => !!document.querySelector('.call')
-  || /^#\/live/.test(location.hash)
+  || /^#\/(live|hizli|karaoke|oyun\/[^/]+\/[\w-]+)/.test(location.hash)
   || !!document.querySelector('.composer .go.rec, .rec-bar')
   || (/^#\/create/.test(location.hash) && !!document.querySelector('.picker > img, .picker > video'));
 

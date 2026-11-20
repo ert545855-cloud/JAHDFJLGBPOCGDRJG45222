@@ -193,6 +193,22 @@ module.exports = function sunucu(app, ctx) {
     res.json({ ok: true, message: a.msg });
   });
 
+  // GitHub'a her gönderimde (.github/workflows/yayinla.yml) sunucuya "yeni kod var" haberi gelir; güncelleme
+  // 5 dakikalık zamanlayıcıyı beklemeden hemen başlar. Giriş gerekmez: bu çağrı yalnız güncelleme birimini
+  // tetikler, o da kodu yalnız GitHub'daki depodan çeker; dışarıdan gelen hiçbir veri komuta karışmaz.
+  // Art arda çağrılar 20 saniyede bire düşürülür.
+  let lastPing = 0;
+  app.post('/api/internal/deploy-ping', async (req, res) => {
+    if (!isVds()) return res.status(404).json({ error: 'Yok.' });
+    const now = Date.now();
+    if (now - lastPing < 20000) return res.status(202).json({ ok: true, queued: false });
+    lastPing = now;
+    const r = await sudo(['start', '--no-block', 'swipeup-guncelle.service']);
+    if (!r.ok) { console.error('[yayinla]', r.err.slice(0, 200)); return res.status(503).json({ error: 'Güncelleme başlatılamadı.' }); }
+    console.log('[yayinla] GitHub gönderimi: güncelleme başlatıldı');
+    res.status(202).json({ ok: true, queued: true });
+  });
+
   // Yedek indir (pg_dump özel biçim; pg_restore ile geri yüklenir)
   app.get('/api/admin/sunucu/yedek/:name', ...gate, (req, res) => {
     const name = String(req.params.name || '');

@@ -539,7 +539,7 @@ const adminUrl = (u) => (typeof u === 'string' && u.startsWith('/admin/') && adm
 
 // ---------- Bakım modu: uygulama kapalı, yönetim paneli çalışır ----------
 const maintenance = () => { const m = store.get('settings', 'maintenance'); return m?.on ? { on: true, message: m.message || '', until: m.until || null, at: m.at || null } : null; };
-const MAINT_OK = /^\/api\/(admin(\/|$)|version$|config$|maintenance$|event$)/;
+const MAINT_OK = /^\/api\/(admin(\/|$)|version$|config$|maintenance$|event$|internal\/deploy-ping$)/;
 app.use((req, res, next) => {
   if (!req.path.startsWith('/api/') || MAINT_OK.test(req.path)) return next();
   const m = maintenance();

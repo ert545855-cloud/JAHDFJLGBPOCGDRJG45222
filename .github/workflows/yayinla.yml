@@ -1,0 +1,29 @@
+name: Yayınla
+
+# main dalına her gönderimde sunucuya haber verir; sunucu yeni kodu GitHub'dan hemen çeker
+# ve yeniden başlar. Telefonda ve bilgisayarda açık olan uygulamalar yeni sürümü birkaç saniye
+# içinde algılayıp kendini yeniler (public/js/update.js).
+# Bu adım çalışmazsa sorun olmaz: sunucu zaten 5 dakikada bir kendisi kontrol ediyor.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: yayinla
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Sunucuya haber ver
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST https://swipeup.live/api/internal/deploy-ping || true)
+            echo "Yanıt: $code"
+            case "$code" in 202) exit 0 ;; esac
+            sleep 15
+          done
+          echo "::warning::Sunucuya ulaşılamadı; 5 dakikalık otomatik kontrol yine güncelleyecek."
