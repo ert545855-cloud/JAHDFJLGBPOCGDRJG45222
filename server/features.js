@@ -28,7 +28,7 @@ module.exports = function features(app, ctx) {
     const u = req.user;
     const q = eco.quota(u);
     res.json({
-      coins: u.coins || 0, earnings: u.earnings || 0, plus: eco.isPlus(u), plusUntil: u.plusUntil || null,
+      coins: u.coins || 0, coinDebt: u.coinDebt || 0, earnings: u.earnings || 0, plus: eco.isPlus(u), plusUntil: u.plusUntil || null,
       boostUntil: (u.boostUntil || 0) > now() ? u.boostUntil : null,
       freeBoost: eco.isPlus(u) && (!u.lastFreeBoost || now() - u.lastFreeBoost > 7 * DAY),
       quota: { likesLeft: q.likesLeft, supersLeft: q.supersLeft },
@@ -80,7 +80,7 @@ module.exports = function features(app, ctx) {
   app.get('/api/wallet', auth, (req, res) => {
     const s = eco.get();
     res.json({
-      coins: req.user.coins || 0, earnings: req.user.earnings || 0, earningsTL: +((req.user.earnings || 0) * s.coinTL).toFixed(2), coinTL: s.coinTL, perCoinTL: +(s.creatorShare * s.coinTL).toFixed(2), paidCoins: Math.min(req.user.paid || 0, req.user.coins || 0),
+      coins: req.user.coins || 0, coinDebt: req.user.coinDebt || 0, earnings: req.user.earnings || 0, earningsTL: +((req.user.earnings || 0) * s.coinTL).toFixed(2), coinTL: s.coinTL, perCoinTL: +(s.creatorShare * s.coinTL).toFixed(2), paidCoins: Math.min(req.user.paid || 0, req.user.coins || 0),
       tx: store.filter('coin_tx', (t) => t.userId === req.user.id).sort((a, b) => b.at - a.at).slice(0, 50),
       earned: store.filter('earn_tx', (t) => t.userId === req.user.id).sort((a, b) => b.at - a.at).slice(0, 50)
         .map((t) => ({ ...t, from: t.fromId ? brief(store.get('users', t.fromId)) : null })),

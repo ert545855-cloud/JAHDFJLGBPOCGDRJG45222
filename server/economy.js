@@ -108,8 +108,16 @@ module.exports = function economy(store) {
   // Bakiyenin satın alınmış kısmı (paid) ayrıca tutulur: kazanca (TL'ye) yalnızca satın alınmış jeton dönüşür,
   // böylece bedava ödül jetonları sahte hesaplarla paraya çevrilemez.
   function addCoins(userId, delta, reason, extra = {}) {
-    const u = store.get('users', userId);
+    let u = store.get('users', userId);
     if (!u) return null;
+    // Jeton borcu (mağaza iadesinde harcanmış jetonlar): yeni gelen jeton önce borcu kapatır
+    if (delta > 0 && (u.coinDebt || 0) > 0 && reason !== 'debt_pay') {
+      const pay = Math.min(delta, u.coinDebt);
+      u = store.update('users', userId, { coinDebt: u.coinDebt - pay });
+      store.put('coin_tx', { id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, userId, delta: 0, debtPaid: pay, reason: 'debt_pay', at: Date.now(), ...(extra.ref ? { ref: extra.ref } : {}) });
+      delta -= pay;
+      if (delta <= 0) return u.coins || 0;
+    }
     const coins = Math.max(0, (u.coins || 0) + delta);
     let paid = Math.min(u.paid || 0, coins);
     if (delta > 0 && reason === 'purchase') paid = Math.min(coins, (u.paid || 0) + delta);
@@ -123,11 +131,23 @@ module.exports = function economy(store) {
   function spend(userId, amount, reason, extra = {}, opts = {}) {
     const u = store.get('users', userId);
     if (!u || (u.coins || 0) < amount) return false;
+    if ((u.coinDebt || 0) > 0 && amount > 0) return false; // iade borcu kapanana kadar jeton harcanamaz
     const paid0 = Math.min(u.paid || 0, u.coins || 0); const bonus0 = (u.coins || 0) - paid0;
     const usePaid = opts.paidFirst ? Math.min(amount, paid0) : Math.max(0, amount - bonus0);
     addCoins(userId, -amount, reason, { ...extra, paid: usePaid });
     store.update('users', userId, { paid: paid0 - usePaid });
     return { paid: usePaid };
+  }
+  // Mağaza iadesi: bakiyeden alınabilen kadarı alınır, harcanmış kısım borç olarak yazılır. Dönen: { taken, debt }
+  function chargeBack(userId, coins, extra = {}) {
+    const u = store.get('users', userId); if (!u || !(coins > 0)) return { taken: 0, debt: 0 };
+    const taken = Math.min(u.coins || 0, coins); const debt = coins - taken;
+    if (taken > 0) addCoins(userId, -taken, 'refund', extra);
+    if (debt > 0) {
+      store.update('users', userId, { coinDebt: (store.get('users', userId).coinDebt || 0) + debt });
+      store.put('coin_tx', { id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, userId, delta: 0, debtAdded: debt, reason: 'refund_debt', at: Date.now(), ...extra });
+    }
+    return { taken, debt };
   }
   // Kazanç TL olarak (kuruş hassasiyetinde) tutulur
   function earn(userId, coins, reason, extra = {}) {
@@ -163,5 +183,5 @@ module.exports = function economy(store) {
     if (p) return { kind: 'plus', id, title: `SwipeUp+ ${p.days} gün`, days: p.days, price: p.now, ...(p.was ? { was: p.was, off: p.off, saleUntil: p.saleUntil } : {}) };
     return null;
   }
-  return { DEFAULTS, get, save, isPlus, addCoins, spend, earn, grantPlus, quota, product, today, priceHistory, lowestBefore, ymd };
+  return { DEFAULTS, get, save, isPlus, addCoins, spend, chargeBack, earn, grantPlus, quota, product, today, priceHistory, lowestBefore, ymd };
 };

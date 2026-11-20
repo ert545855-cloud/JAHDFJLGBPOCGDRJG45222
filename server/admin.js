@@ -791,7 +791,7 @@ module.exports = function mountAdmin(app, ctx) {
     res.json({
       coinTL: s.coinTL, earners,
       items: store.all('payouts').sort((a, b) => (b.status === 'pending') - (a.status === 'pending') || b.at - a.at).slice(0, 200)
-        .map((p) => ({ ...p, user: brief(store.get('users', p.userId)) })),
+        .map((p) => ({ ...p, user: brief(store.get('users', p.userId)), refundReview: store.filter('refund_reviews', (r) => r.status === 'open' && (r.recipients || []).some((x) => x.userId === p.userId && x.deducted == null)).length })), // mağaza iadesi incelemesinde alıcı mı
     });
   });
   app.post('/api/admin/payouts/:id', adminAuth, (req, res) => {

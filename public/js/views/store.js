@@ -3,6 +3,7 @@ import { storeSection } from '../stickers.js';
 import { icon } from '../icons.js';
 import { iapInfo, iapBuy } from '../iap.js';
 import { addToCart, cartPaySheet, promoBanner, giftMode, setCartCount } from '../cart.js';
+import { debtNote } from './wallet.js';
 import {
   api, esc, toast, sheet, state, on, refreshBadges, iosShell } from '../core.js';
 
@@ -131,6 +132,7 @@ export default async function store(view) {
         <div><small>Jeton bakiyen</small><b>${icon('coin')} ${s.coins.toLocaleString('tr-TR')}</b></div>
         <div class="${s.plus ? 'on' : ''}"><small>Üyelik</small><b>${s.plus ? `${icon('crown')} SwipeUp+` : 'Ücretsiz'}</b>${s.plus ? `<span>${state.me.plusTrial && state.me.plusTrial.until >= s.plusUntil - 60000 ? `Ücretsiz deneme · ${Math.max(1, Math.ceil((s.plusUntil - Date.now()) / 86400000))} gün kaldı` : `${date(s.plusUntil)} tarihine kadar`}</span>` : `<span>Bugün ${s.quota.likesLeft ?? '∞'} beğeni · ${s.quota.supersLeft} süper hakkın kaldı</span>`}</div>
       </section>
+      ${s.coinDebt ? debtNote(s.coinDebt) : ''}
       ${promoBanner(cart?.today)}
       ${s.payEnabled ? '' : '<div class="note-box pay-soon">Ödeme sistemi çok yakında açılıyor. O zamana kadar ücretsiz özellikleri kullanmaya devam edebilirsin.</div>'}
       <h3 class="shop-h">${icon('crown')} SwipeUp+</h3>

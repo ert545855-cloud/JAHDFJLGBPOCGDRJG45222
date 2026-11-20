@@ -85,7 +85,7 @@ module.exports = function iap(app, ctx) {
       const d = new Date(now() + 3 * 3600000).toISOString().slice(0, 10);
       store.put('adm_ledger', { id: nanoid(10), type: 'gelir', amount, date: d, category: item.kind === 'plus' ? 'Abonelik' : 'Uygulama içi satış', note: `${o.code} · ${title} · ${by} · @${store.get('users', uid)?.username || '?'}`, currency: 'TRY', by, auto: true, orderId: o.id, createdAt: now() });
     }
-    store.put('iap', { id, userId: uid, sku: item.sku, kind: item.kind, orderId: o.id, channel, test: !!extra.test, status: 'granted', at: now(), ...(extra.token ? { token: extra.token } : {}), ...(extra.storeOrder ? { storeOrder: extra.storeOrder } : {}) });
+    store.put('iap', { id, userId: uid, sku: item.sku, kind: item.kind, orderId: o.id, channel, test: !!extra.test, status: 'granted', at: now(), ...(extra.token ? { token: extra.token } : {}), ...(extra.storeOrder ? { storeOrder: extra.storeOrder } : {}), ...(extra.tx ? { tx: extra.tx } : {}) });
     notify(uid, { type: 'order', text: item.kind === 'plus' ? '✨ Satın alman tamamlandı! SwipeUp+ üyeliğin aktif.' : `🪙 Satın alman tamamlandı! ${title} hesabına eklendi.`, title: 'SwipeUp', url: '/#/store' });
     emitTo(uid, 'wallet', {});
     return { dup: false, order: o };
@@ -122,28 +122,111 @@ module.exports = function iap(app, ctx) {
         if (t.bundleId !== bundle()) throw fail('Bu satın alma SwipeUp’a ait değil.');
         if (t.revocationDate) throw fail('Bu satın alma iade edilmiş.');
         const item = bySku(t.productId); if (!item) throw fail('Ürün bulunamadı.');
-        return grant(req.user.id, item, 'apple', tid, { test: !!t.sandbox, storeOrder: t.originalTransactionId, qty: t.quantity || 1 });
+        return grant(req.user.id, item, 'apple', tid, { test: !!t.sandbox, storeOrder: t.originalTransactionId, qty: t.quantity || 1, tx: tid });
       });
       res.json(out(req.user.id, r));
     } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
   }));
 
-  // ---- İade edilen Google satın almaları: jeton ya da üyelik geri alınır ----
+  // ---- Mağaza iadesi (Google Play ve App Store): jeton ya da üyelik geri alınır ----
+  // Harcanmış jetonlar borç olarak yazılır (eco.chargeBack); harcanan jetonlar başkasına kazanç olarak gittiyse
+  // Yönetim → Siparişler → İade incelemeleri'ne kayıt düşer (kazanç ödemesinden önce kontrol edilsin).
+  function refund(doc, by) {
+    if (!doc || doc.status === 'refunded') return null;
+    const o = store.get('orders', doc.orderId); const u = store.get('users', doc.userId);
+    store.update('iap', doc.id, { status: 'refunded', refundedAt: now() });
+    if (!u) return null;
+    let cb = { taken: 0, debt: 0 }; let days = 0;
+    if (doc.kind === 'coins' && o?.coins) cb = eco.chargeBack(u.id, o.coins, { ref: o.id, channel: doc.channel });
+    if (doc.kind === 'plus') { const p = eco.product(o?.productId); days = o?.days || (p?.days || 0) * (o?.qty || 1); if (days) store.update('users', u.id, { plusUntil: Math.max(now(), (u.plusUntil || 0) - days * DAY) }); }
+    if (o) store.update('orders', o.id, { status: 'refunded', note: `${by} iadesi`, refundedAt: now(), ...(doc.kind === 'coins' ? { refundTaken: cb.taken, refundDebt: cb.debt } : {}) });
+    if (o && !o.test) {
+      const d = new Date(now() + 3 * 3600000).toISOString().slice(0, 10);
+      store.put('adm_ledger', { id: nanoid(10), type: 'gider', amount: o.amount, date: d, category: 'Satış iadesi', note: `${o.code} · ${o.title} · ${by} iadesi · @${u.username}`, currency: 'TRY', by, auto: true, orderId: o.id, createdAt: now() });
+    }
+    // Harcanmış jeton başka birine kazanç olarak gittiyse inceleme kaydı
+    if (cb.debt > 0) {
+      const map = new Map();
+      store.filter('earn_tx', (t) => t.fromId === u.id && t.at >= (o?.at || 0)).forEach((t) => map.set(t.userId, Math.round(((map.get(t.userId) || 0) + t.coins) * 100) / 100));
+      const recipients = [...map].map(([userId, amount]) => ({ userId, amount })).sort((a, b) => b.amount - a.amount).slice(0, 30);
+      store.put('refund_reviews', { id: nanoid(10), userId: u.id, orderId: o?.id || null, channel: doc.channel, title: o?.title || '', coins: o?.coins || 0, taken: cb.taken, debt: cb.debt, recipients, status: recipients.length ? 'open' : 'info', at: now() });
+    }
+    const left = cb.debt > 0 ? ` Harcadığın ${cb.debt} jeton borç olarak yazıldı; borç kapanana kadar jeton harcayamazsın, yeni jetonların önce bu borcu kapatır.` : '';
+    notify(u.id, { type: 'order', text: `${o?.title || 'Satın alman'} ${by} üzerinden iade edildi; hesabından düşüldü.${left}`, title: 'SwipeUp', url: '/#/store' });
+    emitTo(u.id, 'wallet', {});
+    return cb;
+  }
+  ctx.iapRefund = refund;
   async function voided() {
     if (!sec().google?.sa) return;
     const s = store.get('meta', 'iap_void') || { id: 'iap_void', since: now() - 25 * DAY };
     const j = await gApi(`/purchases/voidedpurchases?startTime=${s.since}&maxResults=1000`);
-    for (const v of j.voidedPurchases || []) {
-      const doc = store.get('iap', keyOf('google', v.purchaseToken)); if (!doc || doc.status === 'refunded') continue;
-      const o = store.get('orders', doc.orderId); const u = store.get('users', doc.userId); if (!u) continue;
-      if (doc.kind === 'coins' && o?.coins) eco.addCoins(u.id, -Math.min(u.coins || 0, o.coins), 'refund', { ref: o.id, channel: 'google' });
-      if (doc.kind === 'plus') { const p = eco.product(o?.productId); const days = o?.days || (p?.days || 0) * (o?.qty || 1); if (days) store.update('users', u.id, { plusUntil: Math.max(now(), (u.plusUntil || 0) - days * DAY) }); }
-      store.update('iap', doc.id, { status: 'refunded', refundedAt: now() }); if (o) store.update('orders', o.id, { status: 'refunded', note: 'Google Play iadesi' });
-      notify(u.id, { type: 'order', text: `${o?.title || 'Satın alman'} Google Play üzerinden iade edildi; hesabından düşüldü.`, title: 'SwipeUp', url: '/#/store' });
-    }
+    for (const v of j.voidedPurchases || []) refund(store.get('iap', keyOf('google', v.purchaseToken)), 'Google Play');
     store.put('meta', { ...s, since: now() - DAY, at: now() });
   }
+  // App Store: iade bildirimi (App Store Server Notifications V2) — içerik güvenilmez, satın alma Apple'a yeniden sorulur
+  const jwsBody = (x) => { try { return JSON.parse(Buffer.from(String(x || '').split('.')[1] || '', 'base64url').toString() || '{}'); } catch { return {}; } };
+  async function appleCheck(tid) {
+    const doc = store.get('iap', keyOf('apple', tid)); if (!doc || doc.status === 'refunded') return false;
+    const t = await appleTx(tid); if (!t.revocationDate) return false;
+    refund(doc, 'App Store'); return true;
+  }
+  app.post('/api/iap/apple/notify', ctx.wrap(async (req, res) => {
+    if (limited(`apn:${ctx.ipOf ? ctx.ipOf(req) : req.ip}`, 120, 600000)) return res.status(429).json({ error: 'Biraz yavaş.' });
+    const n = jwsBody(req.body?.signedPayload);
+    if (['REFUND', 'REVOKE'].includes(n.notificationType)) {
+      const tid = String(jwsBody(n.data?.signedTransactionInfo).transactionId || '').replace(/[^\d]/g, '').slice(0, 40);
+      if (tid && sec().apple?.key) await appleCheck(tid).catch((e) => console.error('[iap] apple iade', e.message));
+    }
+    res.json({ ok: true }); // Apple 200 bekler; tanınmayan bildirimler de onaylanır
+  }));
+  // Bildirim ayarlanmamışsa: son 90 günün App Store satın almaları 12 saatte bir Apple'a sorulur
+  async function appleSweep() {
+    if (!sec().apple?.key) return;
+    const list = store.filter('iap', (x) => x.channel === 'apple' && x.status === 'granted' && now() - x.at < 90 * DAY).sort((a, b) => (a.checkedAt || 0) - (b.checkedAt || 0)).slice(0, 300);
+    for (const x of list) {
+      const o = store.get('orders', x.orderId); const tid = o?.storeTx || x.tx; if (!tid) continue;
+      try { await appleCheck(tid); store.update('iap', x.id, { checkedAt: now() }); } catch (e) { console.error('[iap] apple kontrol', e.message); break; } // eslint-disable-line no-await-in-loop
+    }
+  }
+  const ta = setInterval(() => appleSweep().catch((e) => console.error('[iap] apple iade kontrolü', e.message)), 12 * 3600000); ta.unref?.();
   const tv = setInterval(() => voided().catch((e) => console.error('[iap] iade kontrolü', e.message)), 6 * 3600000); tv.unref?.();
+
+  // ---- Yönetim: iade incelemeleri (Siparişler yetkisi) ----
+  const rvOut = (r) => { const u = store.get('users', r.userId);
+    return { ...r, user: u ? { id: u.id, username: u.username, name: u.name, coins: u.coins || 0, debt: u.coinDebt || 0 } : null,
+      recipients: (r.recipients || []).map((x) => { const v = store.get('users', x.userId); return { ...x, username: v?.username || '?', earnings: v?.earnings || 0, payoutPending: !!store.find('payouts', (p) => p.userId === x.userId && p.status === 'pending') }; }) }; };
+  app.get('/api/admin/refundreviews', A.adminAuth, (req, res) => {
+    const st = String(req.query.status || 'open');
+    const list = store.filter('refund_reviews', (r) => st === 'all' || r.status === st).sort((a, b) => b.at - a.at).slice(0, 100);
+    res.json({ items: list.map(rvOut), open: store.filter('refund_reviews', (r) => r.status === 'open').length });
+  });
+  app.post('/api/admin/refundreviews/:id', A.adminAuth, (req, res) => {
+    const r = store.get('refund_reviews', req.params.id); if (!r) return res.status(404).json({ error: 'Kayıt bulunamadı.' });
+    const act = String(req.body?.action || '');
+    if (act === 'deduct') { // alıcının bekleyen kazancından düş (ödenmiş kısım geri alınamaz)
+      const x = (r.recipients || []).find((y) => y.userId === String(req.body?.userId || '')); if (!x) return res.status(400).json({ error: 'Alıcı bulunamadı.' });
+      if (x.deducted != null) return res.status(409).json({ error: 'Bu alıcıdan zaten düşüldü.' });
+      const v = store.get('users', x.userId); const want = Math.max(0, Math.min(+req.body?.amount || x.amount, x.amount));
+      const cut = Math.round(Math.min(v?.earnings || 0, want) * 100) / 100;
+      if (v && cut > 0) { store.update('users', v.id, { earnings: Math.round(((v.earnings || 0) - cut) * 100) / 100 }); store.put('earn_tx', { id: nanoid(12), userId: v.id, coins: -cut, reason: 'refund_clawback', fromId: r.userId, at: now(), ref: r.id }); notify(v.id, { type: 'order', text: `Kazancından ${(cut * eco.get().coinTL).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺ düşüldü: sana gönderilen hediyelerin bir kısmı, gönderen kişinin mağaza iadesiyle geri alındı.`, title: 'SwipeUp', url: '/#/wallet' }); }
+      x.deducted = cut; x.deductedAt = now();
+      store.update('refund_reviews', r.id, { recipients: r.recipients });
+      A.audit?.(req.admin, 'iade incelemesi: kazançtan düştü', x.userId, `${cut} · ${r.title}`);
+      return res.json(rvOut(store.get('refund_reviews', r.id)));
+    }
+    if (act === 'close') {
+      store.update('refund_reviews', r.id, { status: 'closed', closedAt: now(), note: String(req.body?.note || '').slice(0, 300), by: req.admin.username });
+      A.audit?.(req.admin, 'iade incelemesini kapattı', r.userId, r.title);
+      return res.json(rvOut(store.get('refund_reviews', r.id)));
+    }
+    if (act === 'forgive') { // jeton borcunu sil
+      const u = store.get('users', r.userId); if (u) store.update('users', u.id, { coinDebt: 0 });
+      A.audit?.(req.admin, 'jeton borcunu sildi', r.userId, `${u?.coinDebt || 0}`);
+      return res.json(rvOut(store.get('refund_reviews', r.id)));
+    }
+    res.status(400).json({ error: 'Geçersiz işlem.' });
+  });
 
   // ---- Yönetim (yalnız sahip) ----
   const gate = [A.adminAuth, A.owner];
