@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#163d43">
+  <title>SwipeUp City · Mercan Limanı</title>
+  <meta name="description" content="Mercan Limanı’nı keşfet, işe gir, kafe işlet ve sahil bulvarında araç sür.">
+  <link rel="stylesheet" href="./city.css">
+  <script type="module" src="./game.mjs"></script>
+</head>
+<body>
+  <main id="city">
+    <div id="view" aria-label="Mercan Limanı üç boyutlu oyun alanı"></div>
+
+    <header class="top">
+      <div class="brand"><span class="mark" aria-hidden="true">S</span> SWIPEUP <strong>CITY</strong></div>
+      <button id="pause" type="button" hidden>Duraklat</button>
+    </header>
+
+    <section id="hud" class="hud" aria-label="Oyun durumu" hidden>
+      <div class="wallet"><span id="cash">280 kredi</span><span id="social">0 sosyal puan</span></div>
+      <div class="tour"><strong id="place">Mercan Limanı</strong><span id="tour">0 / 4 durak</span></div>
+      <div id="task"></div>
+      <div id="speed" hidden></div>
+    </section>
+    <aside id="map" class="map" aria-label="Liman haritası" hidden><canvas id="map-canvas" width="200" height="180"></canvas><span>K · Kuzey</span></aside>
+    <p id="toast" class="toast" role="status" hidden></p>
+
+    <div id="action-bar" class="action-bar" hidden>
+      <button id="interact" type="button" hidden>Etkileş</button>
+      <button id="vehicle" type="button" hidden>Araca bin</button>
+    </div>
+    <div id="touch" class="touch" hidden>
+      <div id="stick" class="stick" aria-hidden="true"><span></span></div>
+      <div class="touch-actions">
+        <button id="run" type="button" aria-pressed="false">Koş</button>
+        <button id="jump" type="button">Zıpla</button>
+      </div>
+    </div>
+    <p id="controls" class="controls" hidden><kbd>WASD</kbd> Hareket <kbd>Fare</kbd> Kamera <kbd>Shift</kbd> Koş <kbd>Space</kbd> Zıpla</p>
+
+    <section id="intro" class="intro">
+      <h1>Mercan Limanı</h1>
+      <p>Kıyıda dolaş, bir vardiyaya katıl ve kazandığın kredilerle kendi kafeni aç.</p>
+      <button id="start" type="button" disabled>Şehir yükleniyor…</button>
+      <p id="loading" class="loading" role="status">3D modeller hazırlanıyor.</p>
+    </section>
+
+    <dialog id="menu">
+      <header><div><h2 id="menu-title"></h2><p id="menu-summary"></p></div><button id="close-menu" aria-label="Menüyü kapat" type="button">Kapat</button></header>
+      <div id="options"></div>
+      <p id="menu-notice" role="status"></p>
+    </dialog>
+  </main>
+</body>
+</html>
