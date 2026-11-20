@@ -9,7 +9,7 @@ const S = { token: true, me: null, counts: {} };
 try { localStorage.removeItem('su_admin'); } catch {}
 const PANEL_H = { 'X-Panel': '1' };
 const can = (p) => S.me?.role === 'owner' || (S.me?.perms || []).includes(p);
-const SEC_PERM = { growth: 'growth', users: 'users', support: 'support', reports: 'reports', appeals: 'appeals', flags: 'flags', verify: 'verify', orders: 'orders', payouts: 'payouts', market: 'market', ledger: 'erp', erp: 'erp', promos: 'promos', quests: 'quests', songs: 'songs', contests: 'contests', fal: 'fal', content: 'content', media: 'content', announce: 'announce', notes: 'notes', audit: 'audit', errors: 'audit', database: 'database', maintenance: 'maintenance', settings: 'settings', tags: 'tags', engage: 'engage', karaoke: 'engage', photomod: 'reports', hukuk: 'hukuk', aktivite: 'users', sunucu: 'owner' };
+const SEC_PERM = { growth: 'growth', users: 'users', support: 'support', reports: 'reports', appeals: 'appeals', flags: 'flags', verify: 'verify', orders: 'orders', payouts: 'payouts', market: 'market', ledger: 'erp', erp: 'erp', promos: 'promos', cartpromos: 'settings', quests: 'quests', songs: 'songs', contests: 'contests', fal: 'fal', content: 'content', media: 'content', announce: 'announce', notes: 'notes', audit: 'audit', errors: 'audit', database: 'database', maintenance: 'maintenance', settings: 'settings', tags: 'tags', engage: 'engage', karaoke: 'engage', photomod: 'reports', hukuk: 'hukuk', aktivite: 'users', sunucu: 'owner' };
 const canSec = (k) => !SEC_PERM[k] || can(SEC_PERM[k]);
 const root = document.getElementById('root');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -63,6 +63,7 @@ const SECTIONS = [
   ['market', 'Store', 'bag', 'marketOpen'],
   ['erp', 'Şirket (ERP)', 'wallet'],
   ['promos', 'Reklamlar', 'bolt'],
+  ['cartpromos', 'Sepet indirimleri', 'gift'],
   ['quests', 'Görevler ve çark', 'check'],
   ['engage', 'Etkileşim', 'flame'],
   ['fal', 'Fal', 'star', 'falPending'],
@@ -1038,19 +1039,22 @@ VIEWS.orders = async (main) => {
     const r = await api(`/orders?status=${status}`);
     main.querySelector('.sum').innerHTML = `<div class="stat"><b class="money in">${tl(r.monthTotal)}</b><span>Bu ay onaylanan satış</span></div><div class="stat"><b>${r.monthCount}</b><span>Bu ay sipariş</span></div>`;
     lst.innerHTML = r.items.length ? `<table class="tbl"><thead><tr><th>Kod</th><th>Kullanıcı</th><th>Ürün</th><th class="num">Tutar</th><th>Gönderen</th><th>Tarih</th><th>Durum</th><th></th></tr></thead><tbody>
-      ${r.items.map((o) => `<tr data-id="${esc(o.id)}"><td><b class="mono">${esc(o.code)}</b></td><td>${userCell(o.user)}</td><td>${esc(o.title)}</td><td class="num"><b>${tl(o.amount)}</b></td><td>${esc(o.sender || '—')}</td><td>${dt(o.paidAt || o.at)}</td>
+      ${r.items.map((o) => `<tr data-id="${esc(o.id)}" ${o.cart ? `data-cart="${esc(o.cart)}" data-st="${esc(o.status)}" data-amt="${o.amount}"` : ''}><td><b class="mono">${esc(o.code)}</b>${o.cart ? `<div class="muted" style="font-size:11.5px">Sepet <b class="mono">${esc(o.cart)}</b>${o.cartPct ? ` · %${o.cartPct} indirim` : ''}</div>` : ''}</td><td>${userCell(o.user)}</td><td>${esc(o.title)}</td><td class="num"><b>${tl(o.amount)}</b>${o.listPrice > o.amount ? `<div class="muted" style="font-size:11px"><s>${tl(o.listPrice)}</s></div>` : ''}</td><td>${esc(o.sender || '—')}</td><td>${dt(o.paidAt || o.at)}</td>
         <td><span class="chip ${OST[o.status][0]}">${OST[o.status][1]}</span>${o.note ? `<div class="muted" style="font-size:11.5px">${esc(o.note)}</div>` : ''}</td>
         <td>${['pending', 'paid'].includes(o.status) ? `<div class="row"><button class="btn sm ok" data-ok="1">${icon('check')} Onayla</button><button class="btn sm danger" data-ok="0">Reddet</button></div>` : ''}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">Bu listede sipariş yok.</div>';
   };
   main.querySelector('.tabs').onclick = (e) => { const b = e.target.closest('[data-s]'); if (!b) return; status = b.dataset.s; main.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('on', x === b)); load(); };
   lst.onclick = async (e) => {
     const b = e.target.closest('[data-ok]'); if (!b) return;
-    const id = b.closest('[data-id]').dataset.id;
+    const row = b.closest('[data-id]'); const id = row.dataset.id;
     const ok = b.dataset.ok === '1';
+    // Sepet siparişi: aynı sepet kodundaki bütün açık siparişler tek havaleyle ödenir, birlikte sonuçlanır
+    const group = row.dataset.cart ? [...lst.querySelectorAll(`[data-cart="${CSS.escape(row.dataset.cart)}"]`)].filter((x) => ['pending', 'paid'].includes(x.dataset.st)) : [row];
+    const sum = group.reduce((a, x) => a + (+x.dataset.amt || 0), 0);
     let note = '';
-    if (ok && !confirm('Ödeme banka hesabına ulaştı mı? Onaylanınca ürün kullanıcıya tanımlanır.')) return;
-    if (!ok) { note = prompt('Ret nedeni (kullanıcı görür):', 'Ödeme hesabımıza ulaşmadı.'); if (note === null) return; }
-    try { await api(`/orders/${id}`, { body: { approve: ok, note } }); toast(ok ? 'Onaylandı, kullanıcıya tanımlandı.' : 'Reddedildi.'); load(); refreshCounts(); } catch (er) { toast(er.message); }
+    if (ok && !confirm(group.length > 1 ? `Sepet ${row.dataset.cart}: ${group.length} siparişin toplamı ${tl(sum)}. Bu tutar banka hesabına ulaştı mı? Onaylanınca hepsi kullanıcıya tanımlanır.` : 'Ödeme banka hesabına ulaştı mı? Onaylanınca ürün kullanıcıya tanımlanır.')) return;
+    if (!ok) { note = prompt(group.length > 1 ? `Sepetteki ${group.length} sipariş reddedilecek. Ret nedeni (kullanıcı görür):` : 'Ret nedeni (kullanıcı görür):', 'Ödeme hesabımıza ulaşmadı.'); if (note === null) return; }
+    try { for (const x of group) await api(`/orders/${x.dataset.id}`, { body: { approve: ok, note } }); toast(ok ? `Onaylandı, kullanıcıya tanımlandı${group.length > 1 ? ` (${group.length} sipariş)` : ''}.` : 'Reddedildi.'); load(); refreshCounts(); } catch (er) { toast(er.message); load(); }
   };
   await load();
 };
@@ -1733,6 +1737,50 @@ VIEWS.promos = async (main) => {
     if (reason === null) return;
     try { await api(`/promos/${b.closest('[data-id]').dataset.id}/stop`, { body: { reason } }); toast('Durduruldu, kalan jeton iade edildi.'); VIEWS.promos(main); } catch (er) { toast(er.message); }
   });
+};
+
+// ---- Sepet indirimleri ----
+const WDAYS = [[1, 'Pzt'], [2, 'Sal'], [3, 'Çar'], [4, 'Per'], [5, 'Cum'], [6, 'Cmt'], [0, 'Paz']];
+VIEWS.cartpromos = async (main) => {
+  const paint = (r) => {
+    const st = r.stats;
+    main.innerHTML = `${head('Sepet indirimleri', 'Seçtiğin günlerde sepette en az belirlenen sayıda ürün olunca indirim. Web sitesinde (havale/EFT) indirim fiyata uygulanır. Android ve iOS uygulamasında fiyatı Google Play / App Store belirlediği için aynı oran <b>hediye</b> olarak verilir: jeton paketlerinde %X ekstra jeton, SwipeUp+ sürelerinde %X ekstra gün. Aynı anda birden çok kampanya geçerliyse en yüksek oran uygulanır.')}
+      <div class="stats"><div class="stat"><b>${st.webCarts}</b><span>Web sepet siparişi (30 gün)</span></div><div class="stat"><b class="money">${tl(st.webDiscount)}</b><span>Web’de yapılan indirim</span></div>
+        <div class="stat"><b>${st.appCarts}</b><span>Uygulamada hediyeli sepet</span></div><div class="stat"><b>${st.bonusCoins.toLocaleString('tr-TR')} · ${st.bonusDays}</b><span>Hediye jeton · SwipeUp+ günü</span></div></div>
+      <div class="panel"><div class="ph"><h3>Kampanyalar</h3><span class="muted" style="font-size:12.5px">Bugün: ${esc(r.todayName)}</span></div><div class="tw">${r.list.length ? `<table class="tbl"><thead><tr><th>Ad</th><th>Günler</th><th class="num">En az ürün</th><th class="num">Oran</th><th>Tarih aralığı</th><th>Durum</th><th></th></tr></thead><tbody>
+        ${r.list.map((c) => `<tr data-id="${esc(c.id)}"><td><b>${esc(c.title)}</b></td><td>${c.days.length === 7 ? 'Her gün' : esc(c.dayNames.join(', '))}</td><td class="num">${c.minItems}</td><td class="num"><b>%${c.pct}</b></td>
+          <td class="muted" style="font-size:12.5px">${c.from || c.to ? `${c.from ? d(c.from + 'T12:00:00') : '…'} – ${c.to ? d(c.to + 'T12:00:00') : '…'}` : 'Süresiz'}</td>
+          <td>${!c.on ? '<span class="chip">Kapalı</span>' : c.active ? '<span class="chip ok">Bugün geçerli</span>' : '<span class="chip info">Açık · bugün değil</span>'}</td>
+          <td><div class="row" style="gap:6px"><button class="btn sm tg">${c.on ? 'Kapat' : 'Aç'}</button><button class="btn sm ed">Düzenle</button><button class="btn sm danger dl">Sil</button></div></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Henüz kampanya yok. Aşağıdan ekle.</div>'}</div></div>
+      <form class="panel cp-form" style="margin-top:14px"><div class="ph"><h3 class="cp-h">Yeni kampanya</h3></div><div class="pb fgrid">
+        <label>Kampanya adı<input class="field" name="title" maxlength="60" placeholder="Hafta sonu sepet indirimi" required></label>
+        <label>İndirim oranı (%)<input class="field" type="number" name="pct" min="1" max="70" value="20" required></label>
+        <label>Sepette en az ürün<input class="field" type="number" name="minItems" min="2" max="10" value="2" required></label>
+        <label>Başlangıç (isteğe bağlı)<input class="field" type="date" name="from"></label>
+        <label>Bitiş (isteğe bağlı)<input class="field" type="date" name="to"></label>
+        <div><span class="muted" style="font-size:12.5px">Geçerli günler</span><div class="row cp-days" style="gap:6px;flex-wrap:wrap;margin-top:6px">${WDAYS.map(([v, l]) => `<label class="chip" style="cursor:pointer;gap:4px"><input type="checkbox" name="d" value="${v}" ${v === 6 || v === 0 ? 'checked' : ''}> ${l}</label>`).join('')}</div></div>
+        <div class="row" style="gap:8px"><button class="btn primary sm">${icon('check')} <span class="cp-sv">Ekle</span></button><button type="button" class="btn sm cp-cancel" hidden>Vazgeç</button></div></div></form>
+      <p class="muted" style="font-size:12.5px;margin:10px 2px">Fiyat Etiketi Yönetmeliği: kampanya, sepette gösterilen fiyat ve sipariş belgelerinde (ön bilgilendirme formu, sözleşme) sepet dışı fiyatla birlikte yazılır. Uygulama mağazalarında hediye, kullanıcıya “ekstra jeton / gün” olarak gösterilir; mağaza fiyatı değiştirilmez.</p>`;
+    const f = main.querySelector('.cp-form'); let editing = null;
+    const fill = (c) => { editing = c?.id || null; f.title.value = c?.title || ''; f.pct.value = c?.pct || 20; f.minItems.value = c?.minItems || 2; f.from.value = c?.from || ''; f.to.value = c?.to || '';
+      f.querySelectorAll('[name=d]').forEach((x) => { x.checked = c ? c.days.includes(+x.value) : ['6', '0'].includes(x.value); });
+      main.querySelector('.cp-h').textContent = c ? `Düzenle: ${c.title}` : 'Yeni kampanya'; main.querySelector('.cp-sv').textContent = c ? 'Kaydet' : 'Ekle'; main.querySelector('.cp-cancel').hidden = !c; if (c) f.scrollIntoView({ behavior: 'smooth' }); };
+    main.querySelector('.cp-cancel').onclick = () => fill(null);
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const body = { title: f.title.value, pct: +f.pct.value, minItems: +f.minItems.value, from: f.from.value, to: f.to.value, days: [...f.querySelectorAll('[name=d]:checked')].map((x) => +x.value) };
+      try { paint(await api(editing ? `/cartpromos/${editing}` : '/cartpromos', editing ? { method: 'PUT', body } : { body })); toast('Kaydedildi.'); } catch (er) { toast(er.message); }
+    };
+    main.querySelector('.tw').onclick = async (e) => {
+      const row = e.target.closest('[data-id]'); if (!row) return; const c = r.list.find((x) => x.id === row.dataset.id);
+      if (e.target.closest('.ed')) return fill(c);
+      try {
+        if (e.target.closest('.tg')) paint(await api(`/cartpromos/${c.id}`, { method: 'PUT', body: { on: !c.on } }));
+        if (e.target.closest('.dl') && confirm(`“${c.title}” silinsin mi?`)) paint(await api(`/cartpromos/${c.id}`, { method: 'DELETE' }));
+      } catch (er) { toast(er.message); }
+    };
+  };
+  paint(await api('/cartpromos'));
 };
 
 // ---- Günlük görevler ----

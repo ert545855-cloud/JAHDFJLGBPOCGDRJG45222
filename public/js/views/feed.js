@@ -22,6 +22,7 @@ export default async function feed(view) {
       <a class="ib" href="#/search" aria-label="Ara">${icon('search')}</a>
       <a class="ib" href="#/create" aria-label="Oluştur">${icon('plusSq')}</a>
       <a class="ib" href="#/notifications" aria-label="Bildirimler">${icon('bell')}<i class="dot-badge nb" style="top:8px;right:8px;${state.badges.notifications ? '' : 'display:none'}"></i></a>
+      <a class="ib cart-ib" href="#/store" aria-label="Mağaza">${icon('cart')}<span class="num-badge cb" ${state.badges.cart ? '' : 'hidden'}>${state.badges.cart || ''}</span></a>
     </header>
     <div class="stories" aria-label="Hikayeler ve canlı yayınlar"></div>
     <div class="maint-slot"></div>
@@ -96,7 +97,7 @@ export default async function feed(view) {
   offs.push(on('stories:update', loadStories));
   offs.push(on('people:new', loadPeople));
   offs.push(on('reconnected', () => { loadStories(); loadPeople(); }));
-  offs.push(on('badges', (b) => { view.querySelector('.nb').style.display = b.notifications ? '' : 'none'; }));
+  offs.push(on('badges', (b) => { view.querySelector('.nb').style.display = b.notifications ? '' : 'none'; const cb = view.querySelector('.cb'); if (cb) { cb.hidden = !b.cart; cb.textContent = b.cart || ''; } }));
   offs.push(paintEventBanner(view.querySelector('.event-slot')));
   // "Senin için" kartları: görevler, çark, yarışma, şarkı yarışması, fal — tek kaydırmalı şerit
   const railEl = view.querySelector('.promo-rail'); const track = railEl.querySelector('.pr-track'); const dots = railEl.querySelector('.pr-dots');

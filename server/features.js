@@ -45,7 +45,7 @@ module.exports = function features(app, ctx) {
     if (!p) return res.status(400).json({ error: 'Ürün bulunamadı.' });
     const s = eco.get();
     if (!s.bank.iban) return res.status(503).json({ error: 'Ödeme şu an kapalı. Lütfen daha sonra tekrar dene.' });
-    if (store.filter('orders', (o) => o.userId === req.user.id && ['pending', 'paid'].includes(o.status)).length >= 3) {
+    if (store.filter('orders', (o) => o.userId === req.user.id && !o.cart && ['pending', 'paid'].includes(o.status)).length >= 3) { // sepet siparişleri ayrıca sınırlanır (server/cart.js)
       return res.status(429).json({ error: 'Onay bekleyen siparişlerin var. Önce onlar sonuçlansın.' });
     }
     // Mesafeli Sözleşmeler Yönetmeliği md. 6-8 ve 15: ön bilgilendirme ile sözleşme onayı ve cayma hakkı istisnası onayı ayrı ayrı alınmadan sipariş kurulmaz

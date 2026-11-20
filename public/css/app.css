@@ -4504,3 +4504,40 @@ html.land-game #fx-layer { display: none; }
   #tabbar .tb-brand .wmt { display: inline; }
   #tabbar a.mid { justify-content: center; }
 }
+
+/* ---- Sepet ---- */
+.cart-ib { position: relative; }
+.cart-ib .num-badge { position: absolute; top: 3px; right: 0; }
+.cart-ib .num-badge[hidden] { display: none; }
+.pw { display: grid; gap: 6px; align-content: start; }
+.pw > .plan, .pw > .pack { height: 100%; }
+.add-cart { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; border-radius: 999px; background: var(--surface); border: 1.5px solid var(--line); font-weight: 700; font-size: 13px; color: var(--text); transition: transform .15s, border-color .15s; }
+.add-cart svg { width: 17px; height: 17px; }
+.add-cart:active { transform: scale(.96); border-color: var(--uv); }
+.add-cart[disabled] { opacity: .5; }
+.cart-promo { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin: 12px 0 2px; border-radius: var(--r-lg); background: var(--surface); border: 1.5px dashed var(--uv); color: var(--text); text-decoration: none; }
+.cart-promo.on { border-style: solid; background: color-mix(in srgb, var(--uv) 10%, var(--surface)); }
+.cart-promo .cp-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--grad); color: var(--on-uv); flex: none; }
+.cart-promo .cp-ic svg { width: 22px; height: 22px; }
+.cart-promo b { display: block; font-size: 14.5px; }
+.cart-promo small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.cart-page { padding-bottom: 30px; }
+.cart-list { list-style: none; padding: 0; margin: 14px 0 10px; display: grid; gap: 8px; }
+.cart-list li { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: var(--r-lg); background: var(--surface); }
+.cart-list .ci-ic { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: var(--bg); color: #e0a526; flex: none; }
+.cart-list .ci-ic svg { width: 21px; height: 21px; }
+.cart-list b { display: block; font-size: 14.5px; }
+.cart-list small { color: var(--muted); font-size: 12px; }
+.cart-list .qty { display: flex; align-items: center; gap: 4px; }
+.cart-list .qty .ib { width: 32px; height: 32px; border-radius: 10px; background: var(--bg); font-weight: 800; font-size: 17px; }
+.cart-list .qty .ib svg { width: 16px; height: 16px; }
+.cart-list .qty b { min-width: 18px; text-align: center; }
+.cart-list .amt { font-weight: 800; font-size: 14px; min-width: 76px; text-align: right; }
+.cart-sum { display: grid; gap: 6px; padding: 12px 14px; border-radius: var(--r-lg); background: var(--surface); margin-bottom: 8px; }
+.cart-sum > div { display: flex; justify-content: space-between; font-size: 14px; }
+.cart-sum .disc b { color: var(--ok, #19a463); }
+.cart-sum .tot { border-top: 1px solid var(--line); padding-top: 8px; font-size: 16px; }
+.cart-sum .tot b { font-weight: 800; }
+.cart-page .go { margin-top: 10px; }
+.cart-empty { display: grid; justify-items: center; gap: 10px; padding: 40px 18px; text-align: center; }
+.cart-empty .big svg { width: 54px; height: 54px; }

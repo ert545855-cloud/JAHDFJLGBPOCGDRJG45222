@@ -2,6 +2,7 @@ import { supersStoreSection } from '../supers.js';
 import { storeSection } from '../stickers.js';
 import { icon } from '../icons.js';
 import { iapInfo, iapBuy } from '../iap.js';
+import { addToCart, cartPaySheet, promoBanner, giftMode, setCartCount } from '../cart.js';
 import {
   api, esc, toast, sheet, state, on, refreshBadges, iosShell } from '../core.js';
 
@@ -74,6 +75,7 @@ export function refundSheet(order, onDone) {
     },
   });
 }
+const addBtn = (id, on) => `<button class="add-cart" data-c="${esc(id)}" ${on ? '' : 'disabled'}>${icon('cart')} Sepete ekle</button>`;
 const groupIban = (s) => String(s || '').replace(/(.{4})/g, '$1 ').trim();
 
 export function paySheet(order, onDone) {
@@ -117,17 +119,19 @@ export function paySheet(order, onDone) {
 }
 
 export default async function store(view) {
-  view.innerHTML = `<header class="topbar"><button class="ib" data-back="#/me" aria-label="Geri">${icon('back')}</button><div class="center">Mağaza</div><a class="ib soft" href="#/wallet" aria-label="Kazançlarım">${icon('gift')}</a></header>
+  view.innerHTML = `<header class="topbar"><button class="ib" data-back="#/me" aria-label="Geri">${icon('back')}</button><div class="center">Mağaza</div><a class="ib soft" href="#/wallet" aria-label="Kazançlarım">${icon('gift')}</a><a class="ib cart-ib" href="#/cart" aria-label="Sepetim">${icon('cart')}<span class="num-badge cb" ${state.badges?.cart ? '' : 'hidden'}>${state.badges?.cart || ''}</span></a></header>
     <div class="shop"><div class="spinner"></div></div>`;
   const box = view.querySelector('.shop');
   const load = async () => {
-    const s = await api('/store');
+    const [s, cart] = await Promise.all([api('/store'), api('/cart').catch(() => null), giftMode()]);
+    if (cart) setCartCount(cart.count);
     state.me.coins = s.coins; state.me.plus = s.plus;
     box.innerHTML = `
       <section class="wallet-card">
         <div><small>Jeton bakiyen</small><b>${icon('coin')} ${s.coins.toLocaleString('tr-TR')}</b></div>
         <div class="${s.plus ? 'on' : ''}"><small>Üyelik</small><b>${s.plus ? `${icon('crown')} SwipeUp+` : 'Ücretsiz'}</b>${s.plus ? `<span>${state.me.plusTrial && state.me.plusTrial.until >= s.plusUntil - 60000 ? `Ücretsiz deneme · ${Math.max(1, Math.ceil((s.plusUntil - Date.now()) / 86400000))} gün kaldı` : `${date(s.plusUntil)} tarihine kadar`}</span>` : `<span>Bugün ${s.quota.likesLeft ?? '∞'} beğeni · ${s.quota.supersLeft} süper hakkın kaldı</span>`}</div>
       </section>
+      ${promoBanner(cart?.today)}
       ${s.payEnabled ? '' : '<div class="note-box pay-soon">Ödeme sistemi çok yakında açılıyor. O zamana kadar ücretsiz özellikleri kullanmaya devam edebilirsin.</div>'}
       <h3 class="shop-h">${icon('crown')} SwipeUp+</h3>
       <ul class="perks compact">
@@ -140,13 +144,13 @@ export default async function store(view) {
         <li>${icon('eye')}<span>Profillere görünmeden bak</span></li>
         <li>${icon('crown')}<span>Profil teması ve renkli isim</span></li>
       </ul>
-      <div class="plans">${s.plusPlans.map((p) => `<button class="plan" data-p="${esc(p.id)}" ${s.payEnabled ? '' : 'disabled'}>
-        ${p.off ? `<span class="tag">%${p.off} indirim</span>` : p.tag ? `<span class="tag">${esc(p.tag)}</span>` : ''}<b>${p.days >= 30 && p.days % 30 === 0 ? `${p.days / 30} ay` : `${p.days} gün`}</b>${priceHtml(p)}<small>${TL((p.now ?? p.price) / Math.max(1, p.days / 30))} / ay</small></button>`).join('')}</div>${saleNote(s.plusPlans)}
+      <div class="plans">${s.plusPlans.map((p) => `<div class="pw"><button class="plan" data-p="${esc(p.id)}" ${s.payEnabled ? '' : 'disabled'}>
+        ${p.off ? `<span class="tag">%${p.off} indirim</span>` : p.tag ? `<span class="tag">${esc(p.tag)}</span>` : ''}<b>${p.days >= 30 && p.days % 30 === 0 ? `${p.days / 30} ay` : `${p.days} gün`}</b>${priceHtml(p)}<small>${TL((p.now ?? p.price) / Math.max(1, p.days / 30))} / ay</small></button>${addBtn(p.id, s.payEnabled)}</div>`).join('')}</div>${saleNote(s.plusPlans)}
       <p class="muted shop-note">Fiyatlar Türk lirası ve tüm vergiler dahildir. SwipeUp+ otomatik yenilenmez; süre bitince kendiliğinden sona erer.</p>
       <h3 class="shop-h">${icon('coin')} Jeton</h3>
       <p class="muted" style="margin:-4px 2px 10px;font-size:14px">Canlı yayınlarda hediye gönder, Falcı Teyze’ye fal baktır, boost ile öne çık.</p>
-      <div class="packs" style="--cols:${s.coinPacks.length === 4 || s.coinPacks.length < 3 ? 2 : 3}">${s.coinPacks.map((p) => `<button class="pack" data-p="${esc(p.id)}" ${s.payEnabled ? '' : 'disabled'}>${p.off ? `<span class="tag">%${p.off} indirim</span>` : p.tag ? `<span class="tag">${esc(p.tag)}</span>` : ''}
-        <span class="coins">${icon('coin')}${p.coins.toLocaleString('tr-TR')}</span>${priceHtml(p)}<small class="unit">jeton başı ${TL((p.now ?? p.price) / p.coins)}</small></button>`).join('')}</div>${saleNote(s.coinPacks)}
+      <div class="packs" style="--cols:${s.coinPacks.length === 4 || s.coinPacks.length < 3 ? 2 : 3}">${s.coinPacks.map((p) => `<div class="pw"><button class="pack" data-p="${esc(p.id)}" ${s.payEnabled ? '' : 'disabled'}>${p.off ? `<span class="tag">%${p.off} indirim</span>` : p.tag ? `<span class="tag">${esc(p.tag)}</span>` : ''}
+        <span class="coins">${icon('coin')}${p.coins.toLocaleString('tr-TR')}</span>${priceHtml(p)}<small class="unit">jeton başı ${TL((p.now ?? p.price) / p.coins)}</small></button>${addBtn(p.id, s.payEnabled)}</div>`).join('')}</div>${saleNote(s.coinPacks)}
       <p class="muted shop-note">Tüm vergiler dahil. Jeton nakde çevrilemez ve devredilemez; her özelliğin jeton bedeli harcamadan önce gösterilir.</p>
       <div class="uses">
         <div>${icon('gift')}<span><b>Hediyeler</b>${s.gifts.slice(0, 4).map((g) => `${g.em} ${g.coins}`).join(' · ')}…</span></div>
@@ -156,7 +160,7 @@ export default async function store(view) {
       <section class="sp-sec"></section>
       <section class="stk-sec"></section>
       ${s.orders.length ? `<h3 class="shop-h">Siparişlerim</h3><div class="orders">${s.orders.map((o) => `<button class="order" data-o="${esc(o.id)}">
-        <span class="grow"><b>${esc(o.title)}</b><small>${esc(o.code)} · ${date(o.at)}${o.refund ? ` · ${esc(RSTAT[o.refund.status] || '')}` : ''}</small></span><span class="amt">${TL(o.amount)}</span><span class="st ${STATUS[o.status]?.[1] || ''}">${STATUS[o.status]?.[0] || ''}</span></button>`).join('')}</div>` : ''}
+        <span class="grow"><b>${esc(o.title)}</b><small>${o.cart ? `Sepet ${esc(o.cart)}` : esc(o.code)} · ${date(o.at)}${o.refund ? ` · ${esc(RSTAT[o.refund.status] || '')}` : ''}</small></span><span class="amt">${TL(o.amount)}</span><span class="st ${STATUS[o.status]?.[1] || ''}">${STATUS[o.status]?.[0] || ''}</span></button>`).join('')}</div>` : ''}
       <p class="muted pay-foot" style="font-size:12.5px;margin:18px 2px 30px">${iosShell() ? 'Ödemeler App Store hesabın üzerinden alınır; iade talepleri App Store üzerinden yapılır. <a class="link" href="#/legal/kosullar">Kullanım koşulları</a> · <a class="link" href="#/legal/gizlilik">Gizlilik</a>' : `Ödemeler havale/EFT ile alınır. Satın almadan önce <a class="link" href="#/legal/onbilgi">ön bilgilendirme formu</a> ve <a class="link" href="#/legal/mesafeli">mesafeli satış sözleşmesi</a> gösterilir. <a class="link" href="#/legal/iade">Cayma ve iade politikası</a> · <a class="link" href="#/legal/kunye">Satıcı bilgileri</a>`}</p>`;
     storeSection(box.querySelector('.stk-sec'));
     supersStoreSection(box.querySelector('.sp-sec'));
@@ -165,13 +169,15 @@ export default async function store(view) {
         buySheet(b.dataset.p, load);
       };
     });
+    box.querySelectorAll('[data-c]').forEach((b) => { b.onclick = async () => { b.disabled = true; await addToCart(b.dataset.c); b.disabled = false; }; });
     box.querySelectorAll('[data-o]').forEach((b) => {
-      b.onclick = async () => { try { const o = await api(`/orders/${b.dataset.o}`); if (o.channel) { toast(`${o.title} · ${o.channel === 'google' ? 'Google Play' : 'App Store'} ile satın alındı. İade için o mağazayı kullan.`); return; } if (iosShell()) { toast(`${o.title} · ${o.code}. Bu siparişin ayrıntıları swipeup.live sitesinde.`); return; } paySheet(o, load); } catch (er) { toast(er.message); } };
+      b.onclick = async () => { try { const o = await api(`/orders/${b.dataset.o}`); if (o.channel) { toast(`${o.title} · ${o.channel === 'google' ? 'Google Play' : 'App Store'} ile satın alındı. İade için o mağazayı kullan.`); return; } if (iosShell()) { toast(`${o.title} · ${o.code}. Bu siparişin ayrıntıları swipeup.live sitesinde.`); return; } if (o.cart && ['pending', 'paid'].includes(o.status)) { cartPaySheet(o.cart, load); return; } paySheet(o, load); } catch (er) { toast(er.message); } };
     });
     // Android / iOS uygulamasında: fiyatlar ve ödeme mağazadan (Google Play / App Store)
     iapInfo().then((I) => {
       if (!I || !box.isConnected) return;
       box.querySelector('.pay-soon')?.remove();
+      box.querySelectorAll('.add-cart').forEach((b) => { b.disabled = false; });
       box.querySelectorAll('.plans [data-p], .packs [data-p]').forEach((b) => { const pr = I.prices.get(`swipeup.${b.dataset.p}`); b.disabled = false; if (pr) { const el = b.querySelector('.price'); if (el) el.textContent = pr; b.querySelectorAll('small').forEach((x) => { x.hidden = true; }); } });
       box.querySelectorAll('.sale-note').forEach((x) => x.remove());
       const f = box.querySelector('.pay-foot'); if (f) f.textContent = `Ödemeler ${I.store} hesabın üzerinden alınır; fiyatlar ${I.store} tarafından gösterilir. İade talepleri ${I.store} üzerinden yapılır. Jeton nakde çevrilemez, SwipeUp+ otomatik yenilenmez.`;
@@ -179,5 +185,6 @@ export default async function store(view) {
   };
   await load();
   const off = on('wallet', () => { load(); refreshBadges(); });
-  return off;
+  const off2 = on('badges', (b) => { const cb = view.querySelector('.cb'); if (cb) { cb.hidden = !b.cart; cb.textContent = b.cart || ''; } });
+  return () => { off(); off2(); };
 }

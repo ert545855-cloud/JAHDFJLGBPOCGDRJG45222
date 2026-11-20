@@ -2029,7 +2029,7 @@ app.get('/api/badges', auth, (req, res) => {
   const likes = store.filter('swipes', (s) => s.to === me && s.dir !== 'left' && !mySwipes.has(s.from)).length;
   const fal = req.user.role === 'falci' ? store.filter('messages', (m) => m.fal?.status === 'pending' && chats.has(m.chatId)).length : 0;
   const requests = store.filter('follows', (f) => f.to === me && f.status === 'pending').length;
-  res.json({ notifications: notifs, messages: new Set(msgs.map((m) => m.chatId)).size, likes, fal, requests, coins: req.user.coins || 0, plus: eco.isPlus(req.user) });
+  res.json({ notifications: notifs, messages: new Set(msgs.map((m) => m.chatId)).size, likes, fal, requests, coins: req.user.coins || 0, plus: eco.isPlus(req.user), cart: (Array.isArray(req.user.cart) ? req.user.cart : []).reduce((a, x) => a + (x.qty || 0), 0) });
 });
 
 // ---------- Canlı ----------
@@ -2254,6 +2254,7 @@ require('./server/minigames')(app, featureCtx); // sohbet içi mini oyunlar: XOX
 require('./server/kupa')(app, featureCtx); // Parti Kupası (3D)
 require('./server/farm')(app, featureCtx); // SwipeFarm: çiftlik oyunu
 require('./server/iap')(app, featureCtx);
+require('./server/cart')(app, featureCtx); // sepet ve sepet kampanyaları (iap'tan sonra)
 require('./server/nudge')(app, featureCtx); // akıllı hatırlatmalar ve haftalık özet e-postası
 if (process.env.NODE_ENV === 'test') { // yalnız otomatik testlerde (test/): koleksiyonu oku, hatırlatma turunu hemen çalıştır
   app.get('/api/_test/col/:name', (req, res) => res.json(store.all(req.params.name)));

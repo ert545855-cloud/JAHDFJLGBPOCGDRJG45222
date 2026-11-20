@@ -54,6 +54,7 @@ const routes = [
   [/^\/legal\/(\w+)$/, 'legal', { tabs: false, any: true }],
   [/^\/install$/, 'install', { tabs: false, any: true }],
   [/^\/store$/, 'store', { tabs: false }],
+  [/^\/cart$/, 'cart', { tabs: false }],
   [/^\/wallet$/, 'wallet', { tabs: false }],
   [/^\/verify$/, 'verify', { tabs: false }],
   [/^\/requests$/, 'requests', { tabs: false }],
@@ -101,6 +102,7 @@ function renderTabbar(active) {
   // Telefonda .dx öğeleri ve yazılar gizli kalır; alttaki 5'li menü aynen durur.
   const dx = [
     ['notif', '#/notifications', `<span style="position:relative;display:grid">${icon('bell')}${b.notifications ? '<i class="dot-badge"></i>' : ''}</span>`, 'Bildirimler'],
+    ['store', '#/store', `<span style="position:relative;display:grid">${icon('cart')}${b.cart ? `<span class="num-badge">${b.cart}</span>` : ''}</span>`, 'Mağaza'],
     ['settings', '#/settings', icon('settings'), 'Ayarlar'],
   ];
   const path = location.hash.replace(/^#/, '') || '/';

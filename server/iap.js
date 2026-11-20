@@ -87,7 +87,7 @@ module.exports = function iap(app, ctx) {
     emitTo(uid, 'wallet', {});
     return { dup: false, order: o };
   }
-  const out = (uid, r) => { const u = store.get('users', uid); return { ok: true, dup: r.dup, coins: u?.coins || 0, plusUntil: u?.plusUntil || null, title: r.order?.title || '' }; };
+  const out = (uid, r) => { const u = store.get('users', uid); return { ok: true, dup: r.dup, coins: u?.coins || 0, plusUntil: u?.plusUntil || null, title: r.order?.title || '', orderId: r.order?.id || null }; };
 
   // ---- Telefon uç noktaları ----
   app.get('/api/iap/catalog', auth, (req, res) => res.json({ items: catalog(), google: !!sec().google?.sa, apple: !!sec().apple?.key }));
