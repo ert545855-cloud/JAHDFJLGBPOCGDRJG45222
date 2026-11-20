@@ -6,6 +6,8 @@
 
 class UInstancedStaticMeshComponent;
 
+// Mobile-first coastal city source map. Repeated pieces are hardware-instanced.
+// Fab art can replace the underlying placeholder meshes without changing layout data.
 UCLASS()
 class SWIPEUPCITY_API ASwipeUpCityBlockout : public AActor
 {
@@ -15,16 +17,28 @@ public:
     virtual void BeginPlay() override;
 
 private:
-    UPROPERTY(VisibleAnywhere)
-    UInstancedStaticMeshComponent* Ground;
-    UPROPERTY(VisibleAnywhere)
-    UInstancedStaticMeshComponent* Roads;
-    UPROPERTY(VisibleAnywhere)
-    UInstancedStaticMeshComponent* Buildings;
-    UPROPERTY(VisibleAnywhere)
-    UInstancedStaticMeshComponent* Park;
-    UPROPERTY(VisibleAnywhere)
-    UInstancedStaticMeshComponent* TreeTrunks;
-    UPROPERTY(VisibleAnywhere)
-    UInstancedStaticMeshComponent* TreeTops;
+    enum ELayer : int32
+    {
+        Terrain, Road, Sidewalk, Beach, Sea, Lawn, Line, Concrete, Cream,
+        Terracotta, BlueWall, Glass, Roof, Iron, Timber, Trunk, Leaf,
+        PinkAccent, GoldAccent, LayerCount
+    };
+
+    UPROPERTY(VisibleAnywhere, Category="SwipeUp City")
+    TArray<TObjectPtr<UInstancedStaticMeshComponent>> MeshLayers;
+
+    UPROPERTY(VisibleAnywhere, Category="SwipeUp City")
+    TObjectPtr<UInstancedStaticMeshComponent> PalmCanopies;
+
+    void Box(int32 Layer, const FVector& Position, const FVector& Size, float Yaw = 0.f);
+    void Palm(float X, float Y, float Scale = 1.f);
+    void StreetLamp(float X, float Y, float Angle = 0.f);
+    void Bench(float X, float Y, float Angle = 0.f);
+    void CafeTable(float X, float Y, bool Umbrella);
+    void Building(float X, float Y, int32 Floors, float Width, float Depth,
+                  int32 Style, FRandomStream& Random);
+    void ParkSquare(float X, float Y, FRandomStream& Random);
+    void CityBlock(int32 Col, int32 Row, FRandomStream& Random);
+    void BuildCity();
+    void AddSunlight();
 };
