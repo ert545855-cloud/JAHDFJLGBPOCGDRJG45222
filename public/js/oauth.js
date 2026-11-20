@@ -11,9 +11,10 @@ function loadScript(src) {
   });
   return loaded[src];
 }
-// iOS uygulamasında Google gömülü web görünümünde girişi engeller, Apple penceresi de açılamaz: orada yalnız kullanıcı adı / şifre.
-// (Google / Apple ile kaydolan, "Şifreni mi unuttun" ile şifre belirleyip girer.)
-export const oauthCfg = () => (iosShell() ? {} : state.config?.oauth || {});
+// iOS uygulamasında Google gömülü web görünümünde girişi engeller (orada Google düğmesi yok; Google ile kaydolan
+// "Şifreni mi unuttun" ile şifre belirleyip girer). Apple ile giriş uygulamanın yerel penceresiyle yapılır (AppleSignIn eklentisi).
+const nativeApple = () => !!window.Capacitor?.Plugins?.AppleSignIn;
+export const oauthCfg = () => (iosShell() ? (nativeApple() ? { apple: { native: true } } : {}) : state.config?.oauth || {});
 
 // Google girişi uygulama içi tarayıcılarda (Instagram, Facebook, TikTok, X, Snapchat, Android WebView) Google tarafından engellenir
 export const inAppBrowser = () => /FBAN|FBAV|FB_IAB|Instagram|Line\/|TikTok|musical_ly|BytedanceWebview|Twitter|Snapchat|LinkedInApp|; wv\)/i.test(navigator.userAgent || '');
@@ -78,8 +79,21 @@ export async function takeGoogleReturn() {
   } catch { return { purpose, error: 'Bağlantı kurulamadı. Tekrar dene.' }; }
 }
 
+// Yerel Apple girişinin ek bilgileri (sunucuya kimlik belgesiyle birlikte gider): tek kullanımlık nonce ve ilk girişteki ad
+let appleExtra = null;
+export const oauthExtra = (provider, credential) => (provider === 'apple' && appleExtra?.token === credential ? { nonce: appleExtra.nonce, nameHint: appleExtra.name } : {});
+const rnd = () => Array.from(crypto.getRandomValues(new Uint8Array(24)), (b) => b.toString(16).padStart(2, '0')).join('');
+const sha256 = async (s) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))), (b) => b.toString(16).padStart(2, '0')).join('');
+
 export async function appleCredential() {
   const a = oauthCfg().apple; if (!a) throw new Error('Apple ile giriş açık değil.');
+  if (a.native) { // iOS uygulaması: Apple'ın yerel penceresi
+    const nonce = rnd();
+    let r; try { r = await window.Capacitor.Plugins.AppleSignIn.authorize({ nonce: await sha256(nonce) }); } catch (e) { if (/CANCELED/.test(String(e?.code || ''))) return null; throw new Error(e?.message || 'Apple ile giriş tamamlanmadı.'); }
+    if (!r?.identityToken) return null;
+    appleExtra = { token: r.identityToken, nonce, name: r.name || '' };
+    return r.identityToken;
+  }
   await loadScript('https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/tr_TR/appleid.auth.js');
   window.AppleID.auth.init({ clientId: a.clientId, scope: 'name email', redirectURI: a.redirectURI, usePopup: true });
   const r = await window.AppleID.auth.signIn();

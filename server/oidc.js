@@ -7,7 +7,8 @@ const jwt = require('jsonwebtoken');
 const list = (v) => String(v || '').split(',').map((s) => s.trim()).filter(Boolean);
 const P = {
   google: { jwks: () => process.env.GOOGLE_JWKS_URL || 'https://www.googleapis.com/oauth2/v3/certs', iss: ['accounts.google.com', 'https://accounts.google.com'], aud: () => list(process.env.GOOGLE_CLIENT_ID) },
-  apple: { jwks: () => process.env.APPLE_JWKS_URL || 'https://appleid.apple.com/auth/keys', iss: ['https://appleid.apple.com'], aud: () => list(process.env.APPLE_CLIENT_ID) },
+  // Apple: web (Services ID) + iOS uygulaması (paket kimliği; yerel "Apple ile giriş" penceresi)
+  apple: { jwks: () => process.env.APPLE_JWKS_URL || 'https://appleid.apple.com/auth/keys', iss: ['https://appleid.apple.com'], aud: () => list(process.env.APPLE_CLIENT_ID), native: () => list(process.env.IOS_BUNDLE || 'app.swipeup.ios') },
 };
 
 const cache = {}; // sağlayıcı → { keys: Map(kid → KeyObject), at }
@@ -24,7 +25,8 @@ async function keys(name, force = false) {
   return m;
 }
 
-const enabled = (name) => P[name].aud().length > 0;
+const audAll = (name) => [...P[name].aud(), ...(P[name].native ? P[name].native() : [])];
+const enabled = (name) => audAll(name).length > 0;
 // Uygulamaya ve panele gönderilen ayar (gizli bilgi içermez)
 function publicConfig() {
   return {
@@ -34,7 +36,8 @@ function publicConfig() {
 }
 
 // Dönen: { provider, sub, email (doğrulanmışsa), name }
-async function verify(name, token) {
+// opts.nonce: iOS uygulamasındaki yerel Apple girişinde istemcinin ürettiği tek kullanımlık değer (belgede SHA-256'sı bulunur)
+async function verify(name, token, opts = {}) {
   if (!P[name]) throw new Error('Bilinmeyen giriş yöntemi.');
   if (!enabled(name)) throw new Error(`${name === 'google' ? 'Google' : 'Apple'} ile giriş henüz açılmadı.`);
   const dec = jwt.decode(String(token || ''), { complete: true });
@@ -44,8 +47,13 @@ async function verify(name, token) {
   if (!key) key = (await keys(name, true)).get(kid);
   if (!key) throw new Error('Giriş bilgisi doğrulanamadı.');
   let p;
-  try { p = jwt.verify(token, key, { algorithms: ['RS256'], audience: P[name].aud(), issuer: P[name].iss, clockTolerance: 60 }); } catch { throw new Error('Giriş bilgisi geçersiz ya da süresi dolmuş. Tekrar dene.'); }
+  try { p = jwt.verify(token, key, { algorithms: ['RS256'], audience: audAll(name), issuer: P[name].iss, clockTolerance: 60 }); } catch { throw new Error('Giriş bilgisi geçersiz ya da süresi dolmuş. Tekrar dene.'); }
   if (!p.sub) throw new Error('Giriş bilgisi geçersiz.');
+  // Uygulama içi (yerel) Apple girişi: belge yeniden kullanılamasın diye nonce zorunlu
+  if (P[name].native && P[name].native().includes(p.aud)) {
+    const want = opts.nonce ? crypto.createHash('sha256').update(String(opts.nonce)).digest('hex') : null;
+    if (!want || p.nonce !== want) throw new Error('Giriş bilgisi doğrulanamadı. Tekrar dene.');
+  }
   const verified = p.email_verified === true || p.email_verified === 'true';
   return { provider: name, sub: String(p.sub), email: p.email && verified ? String(p.email).toLowerCase() : null, name: p.name ? String(p.name).slice(0, 40) : null };
 }

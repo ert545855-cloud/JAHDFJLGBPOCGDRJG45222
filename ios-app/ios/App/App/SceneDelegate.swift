@@ -10,7 +10,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Pencere sahnenin tamamını kaplar (Info.plist'te storyboard yok; tek pencere burada kurulur)
         window = UIWindow(windowScene: windowScene)
         window?.backgroundColor = .black
-        window?.rootViewController = CAPBridgeViewController()
+        window?.rootViewController = AppViewController() // yerel eklentileri (Apple ile giriş) kaydeden köprü
         window?.makeKeyAndVisible()
 
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)

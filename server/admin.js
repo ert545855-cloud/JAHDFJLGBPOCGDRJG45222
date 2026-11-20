@@ -28,7 +28,7 @@ module.exports = function mountAdmin(app, ctx) {
   const adminOut = (a) => ({ id: a.id, username: a.username, name: a.name, role: a.role === 'owner' ? 'owner' : 'moderator', perms: PERM.permsOf(a), disabled: !!a.disabled, createdAt: a.createdAt, lastLogin: a.lastLogin || null,
     totp: !!a.totpSecret, recoveryLeft: (a.totpRc || []).length, google: a.googleEmail || (a.googleSub ? 'bağlı' : null), apple: a.appleSub ? (a.appleEmail || 'bağlı') : null });
   const userRow = (u) => ({
-    ...brief(u), tags: u.tags || [], email: u.email || null, age: u.age, city: u.city, status: statusOf(u), coins: u.coins || 0, earnings: u.earnings || 0, plusUntil: u.plusUntil || null, birthdate: u.birthdate || null, banReason: u.banReason || null, bannedUntil: u.bannedUntil || null,
+    ...brief(u), coinDebt: u.coinDebt || 0, refunds: store.filter('orders', (o) => o.userId === u.id && o.status === 'refunded').length, tags: u.tags || [], email: u.email || null, age: u.age, city: u.city, status: statusOf(u), coins: u.coins || 0, earnings: u.earnings || 0, plusUntil: u.plusUntil || null, birthdate: u.birthdate || null, banReason: u.banReason || null, bannedUntil: u.bannedUntil || null,
     posts: store.filter('posts', (p) => p.userId === u.id).length,
     reports: store.filter('reports', (r) => r.to === u.id).length,
     matches: store.filter('matches', (m) => m.users.includes(u.id)).length,
@@ -338,6 +338,11 @@ module.exports = function mountAdmin(app, ctx) {
       appeals: store.filter('appeals', (a) => a.userId === u.id).sort((a, b) => b.at - a.at),
       recentPosts: store.filter('posts', (p) => p.userId === u.id).sort((a, b) => b.createdAt - a.createdAt).slice(0, 9).map((p) => ({ id: p.id, type: p.type, media: p.media, poster: p.poster, caption: p.caption })),
       history: store.filter('adm_audit', (x) => x.target === u.id).sort((a, b) => b.at - a.at).slice(0, 20),
+      // Satın alma iadeleri (mağaza ya da havale): kullanıcı kartında not olarak görünür
+      refundList: store.filter('orders', (o) => o.userId === u.id && o.status === 'refunded').sort((a, b) => (b.refundedAt || b.closedAt || b.at) - (a.refundedAt || a.closedAt || a.at)).slice(0, 20)
+        .map((o) => ({ code: o.code, title: o.title, amount: o.amount, channel: o.channel || null, at: o.refundedAt || o.closedAt || o.at, taken: o.refundTaken ?? null, debt: o.refundDebt || 0, test: !!o.test, note: o.note || '' })),
+      clawbacks: store.filter('refund_reviews', (r) => (r.recipients || []).some((x) => x.userId === u.id)).sort((a, b) => b.at - a.at).slice(0, 10)
+        .map((r) => { const x = r.recipients.find((y) => y.userId === u.id); return { at: r.at, from: store.get('users', r.userId)?.username || '?', amount: x.amount, deducted: x.deducted ?? null, status: r.status }; }),
     });
   });
 

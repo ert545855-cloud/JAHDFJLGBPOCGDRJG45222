@@ -738,7 +738,7 @@ app.post('/api/auth/oauth', wrap(async (req, res) => {
   const provider = req.body?.provider === 'apple' ? 'apple' : 'google';
   const P = provider === 'google' ? 'Google' : 'Apple';
   let id;
-  try { id = await oidc.verify(provider, req.body?.credential); } catch (e) { console.warn(`[oauth] ${provider} doğrulanamadı:`, e.message); return res.status(401).json({ error: e.message }); }
+  try { id = await oidc.verify(provider, req.body?.credential, { nonce: req.body?.nonce }); } catch (e) { console.warn(`[oauth] ${provider} doğrulanamadı:`, e.message); return res.status(401).json({ error: e.message }); }
   const key = `${provider}Sub`;
   const u = store.find('users', (x) => x[key] === id.sub);
   if (u) return res.json({ token: signIn(req, u, P), user: pub(store.get('users', u.id), u.id) });
@@ -758,7 +758,7 @@ app.post('/api/auth/oauth', wrap(async (req, res) => {
   }
   // Yeni hesap: doğum tarihi (18+) ve kullanım koşulları gerekir; ilk istekte form istenir
   const { birthdate, accept } = req.body || {};
-  if (!birthdate || !accept) return res.json({ needSignup: true, provider, name: id.name || '', email: id.email || '', username: usernameFrom(id) });
+  if (!birthdate || !accept) return res.json({ needSignup: true, provider, name: id.name || String(req.body?.nameHint || '').trim().slice(0, 40), email: id.email || '', username: usernameFrom(id) });
   if (limited('reg:' + ipOf(req), 8, 3600000)) return res.status(429).json({ error: 'Çok fazla kayıt denemesi. Bir saat sonra tekrar dene.' });
   const age = ageOf(birthdate);
   if (age == null) return res.status(400).json({ error: 'Doğum tarihini gir.' });
@@ -796,7 +796,7 @@ app.get('/api/me/logins', auth, (req, res) => res.json({ password: !req.user.noP
 app.post('/api/me/logins', auth, wrap(async (req, res) => {
   const provider = req.body?.provider === 'apple' ? 'apple' : 'google';
   let id;
-  try { id = await oidc.verify(provider, req.body?.credential); } catch (e) { return res.status(400).json({ error: e.message }); }
+  try { id = await oidc.verify(provider, req.body?.credential, { nonce: req.body?.nonce }); } catch (e) { return res.status(400).json({ error: e.message }); }
   const other = store.find('users', (x) => x.id !== req.user.id && x[`${provider}Sub`] === id.sub);
   if (other) return res.status(409).json({ error: `Bu ${provider === 'google' ? 'Google' : 'Apple'} hesabı başka bir SwipeUp hesabına bağlı.` });
   store.update('users', req.user.id, { [`${provider}Sub`]: id.sub });

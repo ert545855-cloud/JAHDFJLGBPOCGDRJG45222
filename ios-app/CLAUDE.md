@@ -41,7 +41,11 @@ npm run open         # Xcode'da açar (ios/App/App.xcodeproj)
 - `ios/App/App/PrivacyInfo.xcprivacy` Apple'ın gizlilik bildirimidir (App Store zorunlu tutar). Yeni veri türü toplanırsa ya da
   yeni izin eklenirse bu dosyayı da güncelle. Uygulama izleme (tracking) yapmaz; ATS açık, yalnız HTTPS.
 - Web tarafı iOS kabuğunu `iosShell()` (public/js/core.js) ile tanır. Kabukta: ödeme yalnız App Store (havale/EFT akışı
-  gösterilmez, kural 3.1.1); Google / Apple ile giriş düğmeleri gizli (gömülü web görünümünde çalışmaz), giriş kullanıcı adı/şifre.
+  gösterilmez, kural 3.1.1); Google ile giriş gizli (gömülü web görünümünde çalışmaz); Apple ile giriş yerel pencereyle.
+- Apple ile giriş: yerel eklenti `ios/App/App/AppleSignInPlugin.swift` (web'den `Capacitor.Plugins.AppleSignIn.authorize`).
+  `AppViewController` (aynı dosyada) eklentiyi köprüye kaydeder; `SceneDelegate` bu denetleyiciyi kullanır. Çalışması için
+  ücretli ekip seçiliyken Signing & Capabilities → + Capability → **Sign in with Apple** eklenmeli (ücretsiz ekipte yok).
+  Sunucu kimlik belgesini paket kimliği (`app.swipeup.ios`) ve tek kullanımlık nonce ile doğrular (`server/oidc.js`).
 - Pencere storyboard'suz, `SceneDelegate` içinde kurulur; iPad'de bölünmüş ekran kapalıdır (`UIRequiresFullScreen`).
 - Web görünümünde yalnızca `swipeup.live` açılır (`WKAppBoundDomains`); yeni bir alan adı gerekiyorsa hem `Info.plist`'e hem
   `capacitor.config.json` → `server.allowNavigation`'a ekle.

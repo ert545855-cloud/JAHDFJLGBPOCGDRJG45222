@@ -2,7 +2,7 @@ import { api, setSession, esc, logo, state, toast, iosShell } from '../core.js';
 import { icon } from '../icons.js';
 import { legalSheet } from './legal.js';
 import { pendingRef } from '../extras.js';
-import { googleButton, appleCredential, oauthCfg } from '../oauth.js';
+import { googleButton, appleCredential, oauthCfg, oauthExtra } from '../oauth.js';
 import { LANGS, getLang, setLang } from '../i18n.js';
 
 // Kayıtta onay ve bilgilendirme (KVKK): koşullar kabul edilir; aydınlatma metni yalnızca bilgilendirir (onay istenmez);
@@ -22,7 +22,7 @@ const goHome = (created) => { if (location.search) history.replaceState(null, ''
 async function oauthSignIn(view, provider, credential, err) {
   err.textContent = '';
   try {
-    const r = await api('/auth/oauth', { body: { provider, credential, ref: pendingRef() } });
+    const r = await api('/auth/oauth', { body: { provider, credential, ...oauthExtra(provider, credential), ref: pendingRef() } });
     if (r.needSignup) return oauthSignup(view, provider, credential, r);
     setSession(r.token, r.user);
     goHome(false);
@@ -53,7 +53,7 @@ function oauthLink(view, provider, credential, msg) {
     const btn = f.querySelector('button'); btn.disabled = true;
     try {
       if (!f.password.value) throw new Error('Şifreni gir.');
-      const r = await api('/auth/oauth', { body: { provider, credential, password: f.password.value, ref: pendingRef() } });
+      const r = await api('/auth/oauth', { body: { provider, credential, ...oauthExtra(provider, credential), password: f.password.value, ref: pendingRef() } });
       setSession(r.token, r.user);
       toast(`${P} hesabın bağlandı. Bundan sonra tek dokunuşla girersin.`);
       goHome(false);
@@ -86,7 +86,7 @@ function oauthSignup(view, provider, credential, info) {
     try {
       if (!f.birthdate.value) throw new Error('Doğum tarihini gir.');
       if (!f.accept.checked) throw new Error('Devam etmek için Kullanım Koşulları’nı kabul etmelisin.');
-      const r = await api('/auth/oauth', { body: { provider, credential, birthdate: f.birthdate.value, accept: true, name: f.name.value, username: f.username.value, consents: readConsents(f), ref: pendingRef() } });
+      const r = await api('/auth/oauth', { body: { provider, credential, ...oauthExtra(provider, credential), birthdate: f.birthdate.value, accept: true, name: f.name.value, username: f.username.value, consents: readConsents(f), ref: pendingRef() } });
       setSession(r.token, r.user);
       try { localStorage.removeItem('su_ref'); } catch { /* yok */ }
       if (r.recoveryCode) codeScreen(view, r.recoveryCode, () => goHome(true)); else goHome(true);
@@ -254,7 +254,7 @@ export default function auth(view, mode) {
     </form>
     ${oauthCfg().google || oauthCfg().apple ? `<div class="oauth"><div class="or"><span>ya da</span></div>${oauthCfg().google ? '<div class="g-btn"></div>' : ''}${oauthCfg().apple ? '<button type="button" class="btn block ap-btn">Apple ile devam et</button>' : ''}</div>` : ''}
     ${reg ? '' : '<div class="forgot"><a class="muted" href="#/forgot">Şifreni mi unuttun?</a></div>'}
-    ${!reg && iosShell() ? '<p class="muted" style="font-size:12.5px;text-align:center;margin:4px 8px 0">Google ya da Apple ile kaydolduysan “Şifreni mi unuttun?” ile hesabına bir şifre belirleyip buradan girebilirsin.</p>' : ''}
+    ${!reg && iosShell() ? '<p class="muted" style="font-size:12.5px;text-align:center;margin:4px 8px 0">Google ile kaydolduysan “Şifreni mi unuttun?” ile hesabına bir şifre belirleyip buradan girebilirsin.</p>' : ''}
     ${reg ? '' : `<a class="ins-cta" href="#/install"><img src="/icons/icon-192.png" alt=""><span><b>Uygulamayı telefona yükle</b><small>iPhone ve Android · ücretsiz</small></span>${icon('download')}</a>`}
     ${reg ? '' : `<div class="legal-links"><a href="/tanitim">SwipeUp nedir?</a> · <a href="#/legal/gizlilik">Gizlilik</a> · <a href="#/legal/kosullar">Koşullar</a> · <a href="#/legal/kvkk">KVKK</a> · <a href="#/legal/cerez">Çerezler</a> · <a href="#/legal/kunye">Künye</a></div>`}
     <div class="lang-pick" data-noi18n>${LANGS.map(([k, n]) => `<button type="button" data-l="${k}" class="${getLang() === k ? 'on' : ''}">${n}</button>`).join('<span>·</span>')}</div>
