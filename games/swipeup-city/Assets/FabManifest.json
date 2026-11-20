@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "project": "SwipeUp City",
+  "status": "No Fab assets imported",
+  "licensed_assets": [],
+  "notes": [
+    "Only Unreal built-in primitive meshes are used by the source prototype.",
+    "Each Fab download must be imported in Unreal Editor and its license, platform and redistribution rights verified.",
+    "Commit .uasset assets with Git LFS where required; never publish third-party paid assets to a public repository without permission."
+  ]
+}
