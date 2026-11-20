@@ -1,46 +1,39 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "project": "SwipeUp City",
-  "acquisition": "user action required",
-  "asset_files_imported": false,
-  "artifact_license_policy": "Do not commit Fab licensed source assets to public GitHub",
-  "candidates": [
+  "fab_packages_imported": false,
+  "editor_plugins": [
     {
-      "name": "Modular Urban houses",
-      "url": "https://www.fab.com/listings/c6a42d9c-f2c5-4155-8ced-b1d6d1592f41",
-      "role": "buildings",
-      "listing_price_observed": "Free",
-      "status": "awaiting acquisition"
+      "name": "Fab",
+      "status": "optional project reference"
     },
     {
-      "name": "Modern Street Props - 16 Pieces",
-      "url": "https://www.fab.com/listings/7c886031-bd5c-410c-8fb5-5fee015abafd",
-      "role": "street furniture",
-      "listing_price_observed": "Free",
-      "status": "awaiting acquisition"
-    },
-    {
-      "name": "Date palm and vegetation",
-      "url": "https://www.fab.com/listings/48b44812-8895-47de-aec1-b1cda046a24d",
-      "role": "coastal vegetation",
-      "listing_price_observed": "Free",
-      "status": "awaiting acquisition"
-    },
-    {
-      "name": "Voxel Cars",
-      "url": "https://www.fab.com/listings/61e577d9-1897-4bbf-acae-dbbe7d01cf74",
-      "role": "vehicles",
-      "listing_price_observed": "Free",
-      "status": "awaiting acquisition"
-    },
-    {
-      "name": "City Park Environment Collection",
-      "url": "https://www.fab.com/listings/11cc2abb-126c-4452-9fe4-6f2381d96544",
-      "role": "park",
-      "listing_price_observed": "Free",
-      "status": "awaiting acquisition"
+      "name": "GLTFExporter",
+      "url": "https://www.fab.com/listings/ca4cc53a-8ff5-47b0-9715-b7cf4daa6a14",
+      "status": "enabled for Unreal 5.5 Editor"
     }
   ],
-  "placeholder_meshes": "Unreal Engine built-in Cube and Cone",
-  "materials": "Editor script generates 19 original .uasset palette materials locally"
+  "candidates": [
+    {
+      "name": "Free Modular Roads Starter",
+      "url": "https://www.fab.com/listings/a377c7c3-13a0-404a-bf8d-a34279b1e500",
+      "role": "road modules"
+    },
+    {
+      "name": "City Sample Buildings",
+      "url": "https://www.fab.com/listings/008fe959-5511-428e-93bd-f99b1179f6d5",
+      "role": "selected facades"
+    },
+    {
+      "name": "City Sample Vehicles",
+      "url": "https://www.fab.com/listings/2909157b-ddfa-4cef-a925-69dc2467021f",
+      "role": "parked vehicles"
+    },
+    {
+      "name": "Lower Sector Building Kit",
+      "url": "https://www.fab.com/listings/709924e0-3128-4d23-9d36-fe35991d03c0",
+      "role": "environment props"
+    }
+  ],
+  "bundled_cc0": "../Docs/ART_SOURCES.md"
 }

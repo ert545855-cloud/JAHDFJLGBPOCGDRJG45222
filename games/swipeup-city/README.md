@@ -1,42 +1,43 @@
-# SwipeUp City — Unreal Engine 5.5 mobile-first city
+# SwipeUp City · Mercan Limanı
 
-A standalone source prototype being developed for SwipeUp's existing games menu
-and future native Android/iOS app integration.
+Unreal Engine 5.5 ile bağımsız Android ve iOS hedefleyen üçüncü şahıs açık dünya projesi. Mercan Limanı’nda çalış, kazandığın şehir kredileriyle kafe işlet veya garajını genişlet. Sahil pazarından parka, açık hava sahnesinden deniz fenerine kadar yürüyerek veya araçla gez.
 
-## Current implementation
-- Third-person character, camera, movement, jump and sprint input
-- Mobile virtual joystick axes + prototype jump/sprint touch controls
-- Procedurally assembled 3D coastal city at runtime (see Docs/CITY_MAP.md)
-- Main boulevard, hundreds of facade parts, park/fountain, cafe plaza,
-  beach/promenade, marina, palm trees and decorative road infrastructure
-- 19 reusable instanced mesh palette layers designed for low draw-call counts
-- Unreal Editor Python tool to generate original color materials
-- Free Fab asset links and optional local FBX importer
+[Yeni Mercan Kafe](Docs/mercan-kafe.webp) · [Altı otomobilin vitrin renderı](Docs/mercan-garaj.webp) · [Dünya haritası ve kurallar](Docs/CITY_MAP.md)
 
-## Generate the palette (in Unreal Editor 5.5)
-1. Install Unreal 5.5 and its C++ compiler/SDK dependencies.
-2. Open SwipeUpCity.uproject and compile the C++ modules.
-3. In Unreal Editor: Tools > Execute Python Script > Scripts/generate_city_materials.py.
-   Alternatively set UE_EDITOR_CMD and run Scripts/run_palette_windows.bat.
-4. The editor writes material .uasset files under Content/SwipeUpCity/Materials.
-5. Choose Play: the GameMode spawns a source-generated test city on Entry map.
-6. Test a packaged build on an actual Android/iOS device.
+## Şehirde yapabileceklerin
 
-These material .uasset files are generated LOCALLY; they are not in GitHub until
-the build environment generates them. Their generated colors are original.
+| Sistem | Oynanış |
+| --- | --- |
+| Mercan Kafe | 850 krediye devral. Malzeme al, aç, bekleyen siparişleri servis et ve iki kez yükselt. Seviyeler yeni masa ve pergola ekler, kapasite ve sipariş geliri artar. |
+| Barista | Mercan Kafe’de vardiyaya gir, kahveyi hazırla ve Sahil Sahnesi’ne götür. |
+| Kurye | Paket Merkezi’nden gönderiyi al ve Yelken İskelesi’ne teslim et. |
+| Taksici | Taksi Durağı’nda vardiyaya başla. İki duraktan yolcu al ve Paket Merkezi’nde indir. Araç durmuşken etkileşime gir. |
+| Fotoğrafçı | Fener Terası’nda vardiyaya başla. İskele ve parkta çekim yap, albümü terasta teslim et. |
+| Sosyal etkinlik | Sahil Sahnesi’nde dört vuruşlu ritim dansına katıl. Sahil Kulübü’nde grupla yoga yap veya üç duraklı süreli koşuya gir. |
+| Garaj | Hatchback ve panelvan başlangıçta kullanılabilir. Açık tavan, SUV, pickup ve coupé şehir kredileriyle açılır. Her aracın gövdesi, hızlanması, azami hızı ve direksiyon tepkisi farklıdır. |
 
-## Fab art
-See Docs/FAB_FREE_ASSETS.md and Assets/FabManifest.json. No Fab package has been
-downloaded or installed in this repo. Some packs require import through Unreal
-Editor's Fab plugin; pure FBX packages can be imported with Scripts/import_local_fab_fbx.py.
+Yerel kayıt bakiyeyi, aktif vardiya adımını, kafe stok ve seviyesini, sosyal puanı ve araç anahtarlarını saklar. Şehir turunu baştan başlatmak bu ilerlemeyi korur. Etkinlikler şehirdeki NPC gruplarıyla tek oyunculu olarak gerçekleşir.
 
-## Critical status and integration restrictions
-- Code has been committed, but no Unreal compilation or mobile runtime test took place here.
-- The game is NOT playable inside the current SwipeUp Capacitor/TWA app yet.
-- Procedural layout is a visually structured placeholder, not a finished AAA map.
-- Full native one-app integration needs separate technical prototypes on each platform.
-- Dedicated servers, actual vehicle controls, persistence and server-issued login
-  handoff have not been implemented.
-- Do not put Fab raw source files into this public repository.
+## Unreal Editor’de aç
 
-See Docs/MOBILE_INTEGRATION.md, Docs/CITY_MAP.md and Docs/MILESTONES.md.
+1. Unreal Engine 5.5 ve C++ araç zinciriyle `SwipeUpCity.uproject` dosyasını aç ve proje modüllerini derle.
+2. **Tools → Execute Python Script** ile `Scripts/prepare_city.py` dosyasını çalıştır. Güncel sürüm garaj için yeni parlak boya malzemesi üretir. Windows’ta `UE_EDITOR_CMD` yolunu ayarlayıp `Scripts/run_palette_windows.bat` ile de çalıştırabilirsin.
+3. **Play → Standalone Game** ile yerel oyun penceresini aç. Native mobil paket için platformun SDK ve imzalama araçları gerekir.
+
+| İşlem | Klavye ve fare | Telefon |
+| --- | --- | --- |
+| Hareket, kamera | WASD, fare | Sol ve sağ çubuk |
+| Koş veya zıpla | Shift, Space | Koş, Zıpla |
+| Araca bin veya in | E | Bin, İn |
+| Araç kullan, fren | WASD, Space | Sol çubuk, Fren |
+| Mekân, görev ve etkinlik | F ile aç ve onayla, ↑/↓ ile seç | Etkileş düğmesine, ardından bir satıra dokun |
+| Dans | “Şimdi bas” anında F | “Şimdi bas” anında Ritim |
+| Duraklat veya baştan başla | Esc, R | Duraklat, Baştan Başla |
+
+## Doğrulama
+
+C++17 kurallar testi dört mesleği, kafe alım ve yükseltmelerini, stok ve araç alımlarını, etkinlik ödülünü ve kayıt geri yüklemeyi kapsar. Proje dizininde `g++ -std=c++17 Tests/CityLifeRulesTest.cpp -o /tmp/city-life-test && /tmp/city-life-test` ile çalışır.
+
+Görseller Blender’da, projedeki özgün model verisinden oluşturuldu. Garaj görünümü altı modeli aynı sırada gösteren bir vitrin kompozisyonudur. Unreal Editor derlemesi, oyun içi geçişler ve gerçek Android/iOS testleri bu ortamda bekliyor.
+
+[Fab ve yerel varlık kurulumu](Docs/FAB_FREE_ASSETS.md)

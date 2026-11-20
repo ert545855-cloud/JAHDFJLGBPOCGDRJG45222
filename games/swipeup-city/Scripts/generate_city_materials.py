@@ -4,10 +4,23 @@ Run inside Unreal Editor 5.5 with PythonScriptPlugin and EditorScriptingUtilitie
 This is source automation, not a prebuilt .uasset. Safe to run again.
 """
 
+from pathlib import Path
+
 import unreal
 
 ROOT = "/Game/SwipeUpCity/Materials"
 MASTER = "M_CityPalette"
+ART = "/Game/SwipeUpCity/CityArt"
+SOURCE = Path(__file__).resolve().parent.parent / "Assets/CC0"
+SURFACES = {
+    "Road": ("asphalt", 275.0, "#9aa0ac"),
+    "Sidewalk": ("pavers", 192.0, "#eaddc6"),
+    "Beach": ("sand", 360.0, "#efce97"),
+    "Cream": ("plaster", 210.0, "#f4dcc0"),
+    "Terracotta": ("plaster", 210.0, "#cf927a"),
+    "BlueWall": ("plaster", 210.0, "#92aeb6"),
+    "Timber": ("deck", 160.0, "#d3b693"),
+}
 
 # Names must match LayerNames in SwipeUpCityBlockout.cpp
 # color hex, roughness, metallic
@@ -47,35 +60,86 @@ def create_asset(name, asset_class, factory):
     return unreal.AssetToolsHelpers.get_asset_tools().create_asset(name, ROOT, asset_class, factory)
 
 
+def load_surface(name):
+    path = f"{ART}/{name}"
+    if unreal.EditorAssetLibrary.does_asset_exist(path):
+        return unreal.EditorAssetLibrary.load_asset(path)
+
+    task = unreal.AssetImportTask()
+    task.set_editor_property("filename", str(SOURCE / (name + ".jpg")))
+    task.set_editor_property("destination_path", ART)
+    task.set_editor_property("destination_name", name)
+    task.set_editor_property("automated", True)
+    task.set_editor_property("save", True)
+    unreal.AssetToolsHelpers.get_asset_tools().import_asset_tasks([task])
+    return next((obj for obj in task.get_objects() if isinstance(obj, unreal.Texture2D)), None)
+
+
+def create_master(name, aligned_function=None, sample_texture=None):
+    master = create_asset(name, unreal.Material, unreal.MaterialFactoryNew())
+    ml = unreal.MaterialEditingLibrary
+    if ml.get_num_material_expressions(master) > 0:
+        return master
+
+    color = ml.create_material_expression(master, unreal.MaterialExpressionVectorParameter, -660, -220)
+    color.set_editor_property("parameter_name", unreal.Name("CityColor"))
+    color.set_editor_property("default_value", unreal.LinearColor(0.8, 0.8, 0.8, 1))
+    base = color
+
+    if aligned_function and sample_texture:
+        source = ml.create_material_expression(master, unreal.MaterialExpressionTextureObjectParameter, -780, 40)
+        source.set_editor_property("parameter_name", unreal.Name("SurfaceTexture"))
+        source.set_editor_property("texture", sample_texture)
+        tile = ml.create_material_expression(master, unreal.MaterialExpressionVectorParameter, -780, 280)
+        tile.set_editor_property("parameter_name", unreal.Name("TileSize"))
+        tile.set_editor_property("default_value", unreal.LinearColor(210, 210, 210, 1))
+        aligned = ml.create_material_expression(master, unreal.MaterialExpressionMaterialFunctionCall, -480, 40)
+        aligned.set_material_function(aligned_function)
+        multiply = ml.create_material_expression(master, unreal.MaterialExpressionMultiply, -210, -170)
+        connections = [
+            ml.connect_material_expressions(source, "", aligned, "TextureObject"),
+            ml.connect_material_expressions(tile, "RGB", aligned, "TextureSize"),
+            ml.connect_material_expressions(aligned, "XYZ Texture", multiply, "A"),
+            ml.connect_material_expressions(color, "RGB", multiply, "B"),
+        ]
+        if not all(connections):
+            unreal.log_warning("SwipeUp City: could not connect world-aligned texture. Using solid materials.")
+            ml.delete_all_material_expressions(master)
+            return None
+        base = multiply
+
+    ml.connect_material_property(base, "", unreal.MaterialProperty.MP_BASE_COLOR)
+
+    rough = ml.create_material_expression(master, unreal.MaterialExpressionScalarParameter, -420, 440)
+    rough.set_editor_property("parameter_name", unreal.Name("Roughness"))
+    rough.set_editor_property("default_value", 0.85)
+    ml.connect_material_property(rough, "", unreal.MaterialProperty.MP_ROUGHNESS)
+
+    metal = ml.create_material_expression(master, unreal.MaterialExpressionScalarParameter, -420, 560)
+    metal.set_editor_property("parameter_name", unreal.Name("Metalness"))
+    metal.set_editor_property("default_value", 0.0)
+    ml.connect_material_property(metal, "", unreal.MaterialProperty.MP_METALLIC)
+
+    ml.recompile_material(master)
+    unreal.EditorAssetLibrary.save_asset(ROOT + "/" + name, only_if_is_dirty=False)
+    return master
+
+
 def setup():
     unreal.EditorAssetLibrary.make_directory(ROOT)
-    master = create_asset(MASTER, unreal.Material, unreal.MaterialFactoryNew())
+    unreal.EditorAssetLibrary.make_directory(ART)
     ml = unreal.MaterialEditingLibrary
-
-    if ml.get_num_material_expressions(master) == 0:
-        color_expr = ml.create_material_expression(
-            master, unreal.MaterialExpressionVectorParameter, -350, -220
-        )
-        color_expr.set_editor_property("parameter_name", unreal.Name("CityColor"))
-        color_expr.set_editor_property("default_value", unreal.LinearColor(0.8, 0.8, 0.8, 1))
-        ml.connect_material_property(color_expr, "", unreal.MaterialProperty.MP_BASE_COLOR)
-
-        rough_expr = ml.create_material_expression(
-            master, unreal.MaterialExpressionScalarParameter, -350, 20
-        )
-        rough_expr.set_editor_property("parameter_name", unreal.Name("Roughness"))
-        rough_expr.set_editor_property("default_value", 0.85)
-        ml.connect_material_property(rough_expr, "", unreal.MaterialProperty.MP_ROUGHNESS)
-
-        metal_expr = ml.create_material_expression(
-            master, unreal.MaterialExpressionScalarParameter, -350, 220
-        )
-        metal_expr.set_editor_property("parameter_name", unreal.Name("Metalness"))
-        metal_expr.set_editor_property("default_value", 0.0)
-        ml.connect_material_property(metal_expr, "", unreal.MaterialProperty.MP_METALLIC)
-
-        ml.recompile_material(master)
-    unreal.EditorAssetLibrary.save_asset(ROOT + "/" + MASTER, only_if_is_dirty=False)
+    master = create_master(MASTER)
+    aligned = unreal.load_asset(
+        "/Engine/Functions/Engine_MaterialFunctions02/Texturing/WorldAlignedTexture.WorldAlignedTexture"
+    )
+    materials = {}
+    textured = None
+    if aligned:
+        for surface in sorted({data[0] for data in SURFACES.values()}):
+            materials[surface] = load_surface(surface)
+        if materials["asphalt"]:
+            textured = create_master("M_CitySurface", aligned, materials["asphalt"])
 
     for name, (hex_color, roughness, metalness) in PALETTE.items():
         instance = create_asset(
@@ -83,7 +147,15 @@ def setup():
             unreal.MaterialInstanceConstant,
             unreal.MaterialInstanceConstantFactoryNew(),
         )
-        ml.set_material_instance_parent(instance, master)
+        settings = SURFACES.get(name)
+        surface = materials.get(settings[0]) if settings else None
+        if surface and textured:
+            _, size, hex_color = settings
+            ml.set_material_instance_parent(instance, textured)
+            ml.set_material_instance_texture_parameter_value(instance, "SurfaceTexture", surface)
+            ml.set_material_instance_vector_parameter_value(instance, "TileSize", unreal.LinearColor(size, size, size, 1))
+        else:
+            ml.set_material_instance_parent(instance, master)
         ml.set_material_instance_vector_parameter_value(
             instance, "CityColor", linear_color(hex_color)
         )

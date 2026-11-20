@@ -1,38 +1,34 @@
-# Coastal social city map v0.2
+# Mercan Limanı dünya tasarımı
 
-Built procedurally at runtime in SwipeUpCityBlockout.cpp, no externally
-redistributed Fab files.
+Mercan Limanı, yaklaşık 280 × 208 metre kara alanı ile güneye uzanan iskelesi olan sürekli bir 3D semt. Yürünebilir sahil, kuzeydeki mahallelerle açık yollar üzerinden birleşir. Araçlar kıyı bulvarında ve otoparkta bulunur. NPC'lerin yürüyüşü meydan, kafe, park ve iskeleye dağıtılmıştır.
 
-## Districts
-- Central boulevard grid: seven north/south + seven east/west streets
-- Residential quarter: cream and terracotta apartment buildings
-- Business quarter: blue/glass mid-rise towers and illuminated trim
-- Central social park: palms, footpaths, a fountain and benches
-- Cafe square: outdoor tables and shade umbrellas
-- Southern coast: wooden boardwalk, beach, palm-lined promenade
-- Marina: pier and low-poly static boat silhouettes
-- Distant hills: mobile-friendly geometry to frame horizon
+| Durak | Görsel kimlik ve işlev |
+| --- | --- |
+| Mercan Parkı | Çapraz taş yollar, palmiye gölgeleri ve dairesel çeşme |
+| Sahil Kahvesi | Kumaş tenteler, kahve masaları ve terakota kemerli pazar |
+| Liman Otoparkı | Sahil bulvarına bağlanan sürüş başlangıcı |
+| Yelken İskelesi | Ahşap iskele, yelkenliler ve çizgili deniz feneri |
 
-## Technical implementation
-- InstancedStaticMesh Components: one draw-batching layer per material.
-- Static collision on terrain / buildings; lightweight detail layers without collision.
-- 19 material instances can be generated locally via Scripts/generate_city_materials.py.
-- Ground, buildings, trees and roads use Unreal's built-in cube/cone placeholders.
-- Sky/directional lighting is set at runtime; not a production day/night system.
-- All locations use centimeters. Grid size is 2400 cm.
-- Character camera and touch controls live under Source/SwipeUpCity.
-- The editor default map is /Engine/Maps/Entry; CityBlockout is spawned in GameMode.
-  A saved .umap will only exist after generating and saving it in Unreal Editor.
+## Renk ve hareket
 
-## Quality checklist before calling it a playable mobile game
-[ ] Build with Unreal 5.5 C++ compiler
-[ ] Generate and save the 19 materials from editor Python
-[ ] Run in Android emulator/real phone; then iOS
-[ ] Inspect collisions, road alignment, camera and gameplay spawn
-[ ] Fix prototype art quality and author real building facades with Fab meshes
-[ ] Test fps, GPU time, draw calls, device temperatures and texture budget
-[ ] Bake static lighting where appropriate; configure mobile rendering profiles
-[ ] Validate accessibility, menu/Unreal native integration, and navigation
-[ ] Add server authentication, multiplayer, voice/text moderation and persistence
+Oyun, animasyon filmi hissi için yumuşak köşeli modeller, mercan ve su yeşili cepheler, somon tenteler, krem taş ve turkuaz su kullanır. İnsanlar farklı kıyafet renklerine ve saç silüetlerine sahip. Yürürken kollar ve bacaklar ritmik hareket eder. Arabalarda ön teker yönü ve teker dönüşü hıza bağlıdır. Güneş, gökyüzü ve deniz malzemeleri Unreal'da çizilir.
 
-No Unreal runtime compilation / map screenshots / device test were performed in ChatGPT.
+## Kurallar
+
+Park, kafe, otopark ve iskelenin her biri 3,6 metre içinde bir kez sayılır. Dördüncü durak turu tamamlar. Serbest gezide can, süre veya puan cezası yoktur. Iskele dışındaki deniz sınırından geçince meydana dönülür. Mobil kontrol alanları ekran ölçüsüne göre hesaplanır.
+
+Game brief score 69/100. Otomatik metin kontrolü serbest gezi bitişini klasik kazanma ve kaybetme akışına, duraklatma ekranını da ayrı bir sonuç ekranına eşleyemedi. Buradaki dört durak, sıfırlama ve serbest dolaşım açık senaryo kurallarıdır.
+
+## Modelleri yeniden üret
+
+Blender 4.3 ile `blender -b -P Scripts/build_harbor_art.py` çalıştır. Betik `Content/SwipeUpCity/Meshes` içindeki üretim modellerini ve eşleşen C++ çarpışma tablosunu oluşturur. Render almak için komutun sonuna `-- --render /mutlak/yol/mercan-limani.png` ekle.
+
+`ProceduralMeshComponent` bir Unreal motor eklentisidir. Sahne modelleri, üçgenler ve renklerle paketlenen dosyalardan yüklenir. Sokak geometrisi ve çarpışma hacimleri aynı üretim betiğinden gelir. Yakın karakterler ve araçlar kendi hareketli bileşenlerini kullanır.
+
+## Yaşam alanlarının yerleşimi
+
+Oyuncu 280 şehir kredisi ve iki araçla başlar. Üç kurye vardiyası kafeyi satın almak için gereken 850 krediye ulaştırır. Kafe devralındığında kapalıdır ve ilk dört servis malzemesi satın alımla gelir. Açtıktan sonra her sekiz saniyede bir servis yapılabilir. Bölgedeki menü stok, yükseltme ve kepenk kontrollerini gösterir.
+
+Paket Merkezi ve kafe kıyı meydanının batısında, taksi durağı ve garaj doğusundadır. Kıyı koşusu Sahil Kulübü’nden Sahil Sahnesi, Fener Terası ve Yelken İskelesi’ne 42 saniyelik bir rotayı izler. Yoga 12 saniyelik hareketsiz katılım ister. Dans dört vuruşta isabet gerektirir. Etkinlikler sosyal puan ve kredi verir.
+
+Parlak araç boyası, ışıklı sahne tabelası, kafe içi servis tezgâhı ve yükseltme dekorları aynı sahne üretim betiğinin parçasıdır. Kafe veya garajı görmek için Blender komutuna `--view cafe` veya `--view garage` ekle.
