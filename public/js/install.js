@@ -78,10 +78,10 @@ export function maybeShowInstall() {
   try { localStorage.setItem('su_install_seen', String(Date.now())); } catch {}
   const bg = document.createElement('div'); bg.className = 'sheet-bg';
   const sh = document.createElement('div'); sh.className = 'sheet ins-sheet'; sh.setAttribute('role', 'dialog');
-  sh.innerHTML = `<div class="grab"></div><div class="ins-head"><img src="/icons/icon-192.png" alt=""><div><b>SwipeUp’ı ${isIOS() ? 'iPhone’a' : 'telefonuna'} yükle</b><span>Ücretsiz · uygulama gibi tam ekran · bildirimler</span></div></div>
+  sh.innerHTML = `<div class="grab"></div><button type="button" class="sh-x" aria-label="Kapat"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="ins-head"><img src="/icons/icon-192.png" alt=""><div><b>SwipeUp’ı ${isIOS() ? 'iPhone’a' : 'telefonuna'} yükle</b><span>Ücretsiz · uygulama gibi tam ekran · bildirimler</span></div></div>
     <div class="ins-body">${guideHtml()}</div><div class="ins-foot"><button class="btn block ins-later">Şimdi değil</button></div>`;
   const close = () => { bg.remove(); sh.remove(); };
-  bg.onclick = close; sh.querySelector('.ins-later').onclick = close;
+  bg.onclick = close; sh.querySelector('.ins-later').onclick = close; sh.querySelector('.sh-x').onclick = close;
   document.getElementById('sheet-root').append(bg, sh);
   wireGuide(sh, close);
 }

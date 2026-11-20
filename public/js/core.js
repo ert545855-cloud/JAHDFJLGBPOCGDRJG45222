@@ -456,11 +456,13 @@ export function inlineHint(anchor, key, text, where = 'beforebegin') {
 export function sheet(title, bodyHtml, { onMount, footer, onClose } = {}) {
   const root = document.getElementById('sheet-root');
   const bg = el('<div class="sheet-bg"></div>');
-  const sh = el(`<div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>
+  const sh = el(`<div class="sheet${title ? '' : ' no-t'}" role="dialog" aria-modal="true"><div class="grab"></div><button type="button" class="sh-x" aria-label="Kapat">${icon('close')}</button>
     ${title ? `<div class="sh-t">${esc(title)}</div>` : ''}<div class="sh-b">${bodyHtml}</div>${footer || ''}</div>`);
   let closed = false;
   const close = () => { if (closed) return; closed = true; bg.remove(); sh.remove(); window.removeEventListener('hashchange', close); onClose?.(); };
   bg.onclick = close;
+  // X: arka plana dokunmakla aynı (arka plana bağlı başka dinleyiciler de çalışsın, ör. hikayeyi devam ettir)
+  sh.querySelector('.sh-x').onclick = () => bg.click();
   window.addEventListener('hashchange', close);
   // aşağı sürükleyerek kapat
   let y0 = null;
@@ -469,6 +471,17 @@ export function sheet(title, bodyHtml, { onMount, footer, onClose } = {}) {
   root.append(bg, sh);
   onMount?.(sh, close);
   return close;
+}
+
+// ---- Fotoğrafı tam ekran göster (profil resmi vb.) ----
+export function viewPhoto(src, label = 'Fotoğraf') {
+  if (!src) return;
+  const ov = el(`<div class="pv" role="dialog" aria-modal="true" aria-label="${esc(label)}"><img src="${esc(src)}" alt="${esc(label)}"><button type="button" class="pv-x" aria-label="Kapat">${icon('close')}</button></div>`);
+  const close = () => { ov.remove(); window.removeEventListener('hashchange', close); document.removeEventListener('keydown', key); };
+  const key = (e) => { if (e.key === 'Escape') close(); };
+  ov.onclick = (e) => { if (e.target.tagName !== 'IMG') close(); };
+  window.addEventListener('hashchange', close); document.addEventListener('keydown', key);
+  document.body.append(ov);
 }
 
 // ---- Avatar ----

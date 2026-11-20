@@ -317,18 +317,18 @@ function showAnnouncement(a) {
   let seen = [];
   try { seen = JSON.parse(localStorage.getItem('su_ann_seen') || '[]'); } catch {}
   if (!a?.id || seen.includes(a.id) || document.querySelector('.ann-modal')) return;
-  const m = el(`<div class="ann-modal" role="dialog" aria-label="Duyuru"><div class="inner">
+  const m = el(`<div class="ann-modal" role="dialog" aria-label="Duyuru"><div class="inner"><button type="button" class="sh-x" aria-label="Kapat">${icon('close')}</button>
       <img src="/icons/mark.png" alt=""><h2>${esc(a.title || 'SwipeUp')}</h2><p>${esc(a.text)}</p>
       <div class="acts">${a.url && a.url !== '/#/notifications' ? '<button class="btn primary go">Göz at</button><button class="btn ok-b">Kapat</button>' : '<button class="btn primary ok-b">Tamam</button>'}</div></div></div>`);
   const close = () => { m.remove(); try { localStorage.setItem('su_ann_seen', JSON.stringify([...seen, a.id].slice(-30))); } catch {} };
-  m.querySelector('.ok-b').onclick = close;
+  m.querySelector('.ok-b').onclick = close; m.querySelector('.sh-x').onclick = close;
   m.querySelector('.go')?.addEventListener('click', () => { close(); location.hash = a.url.replace(/^\//, ''); });
   m.onclick = (e) => { if (e.target === m) close(); };
   document.body.append(m);
 }
 
 export function showMatch(user, chatId) {
-  const m = el(`<div class="match-modal" role="dialog" aria-label="Eşleşme">
+  const m = el(`<div class="match-modal" role="dialog" aria-label="Eşleşme"><button type="button" class="sh-x mm-x" aria-label="Kapat">${icon('close')}</button>
     <div class="inner">
       <div class="title">Eşleştiniz!</div>
       <p>Sen ve ${esc(user.name)} birbirinizi beğendiniz.</p>
@@ -336,7 +336,7 @@ export function showMatch(user, chatId) {
       <a class="btn primary block" href="#/chat/${esc(chatId)}" style="background:#fff;color:#f2435a">Mesaj gönder</a>
       <button class="btn block" style="background:transparent;color:#fff">Kaydırmaya devam et</button>
     </div></div>`);
-  m.querySelector('button').onclick = () => m.remove();
+  m.querySelectorAll('button').forEach((b) => { b.onclick = () => m.remove(); });
   m.querySelector('a').onclick = () => m.remove();
   document.body.append(m);
   if (navigator.vibrate) navigator.vibrate([30, 60, 30]);

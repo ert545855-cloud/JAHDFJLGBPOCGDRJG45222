@@ -1,6 +1,6 @@
 import { icon } from '../icons.js';
 import {
-  state, api, esc, num, avatar, sheet, toast, openChatWith, saved, enablePush, disablePush, pushEnabled, pushHint, blockUser, reportUser, unmatchUser, lastSeen, isOn, SKINS, applySkin, currentSkin, nm, richText,
+  state, api, esc, num, avatar, sheet, viewPhoto, toast, openChatWith, saved, enablePush, disablePush, pushEnabled, pushHint, blockUser, reportUser, unmatchUser, lastSeen, isOn, SKINS, applySkin, currentSkin, nm, richText,
 } from '../core.js';
 import { gridTile } from '../components.js';
 import { voiceChip, promptCards, promptReply, superMessage, profileCard } from '../extras.js';
@@ -200,10 +200,10 @@ export default async function profile(view, username) {
     </header>
     <section class="ig-hero ${u.pTheme?.bg ? `pt pt-${esc(u.pTheme.bg)}` : ''}">
       <div class="ig-top">
-        <${avHref ? `a href="${esc(avHref)}"` : 'div'} class="av-wrap ${u.frame ? `fr fr-${esc(u.frame)}` : ''}">
+        <div class="av-wrap pf-av ${u.frame ? `fr fr-${esc(u.frame)}` : ''}" role="button" tabindex="0" aria-label="Profil resmi">
           ${u.live || u.hasStory ? `<div class="ring ${u.live ? 'live' : u.storySeen ? 'seen' : ''}"><img class="av" src="${esc(u.avatar)}" alt=""></div>` : `<img class="av" src="${esc(u.avatar)}" alt="">`}
           ${u.live ? '<span class="live-tag">CANLI</span>' : self && !u.hasStory ? `<span class="plus">${icon('plus')}</span>` : (!self && isOn(u) ? '<i class="online"></i>' : '')}
-        </${avHref ? 'a' : 'div'}>
+        </div>
         <div class="ig-stats">
           <div><b>${num(u.postCount ?? u.posts.length)}</b><span>gönderi</span></div>
           <button class="fl"><b>${num(u.followers)}</b><span>takipçi</span></button>
@@ -283,6 +283,21 @@ export default async function profile(view, username) {
   showTab('grid');
 
   wireHlRow(view, { self, reload: () => profile(view, username) });
+  // Profil resmine dokununca: resim tam ekran açılır. Canlı yayın / hikaye varsa (ya da kendi profilinse) önce seçenek sorulur.
+  const pfAv = view.querySelector('.pf-av');
+  if (pfAv) {
+    pfAv.onclick = () => {
+      if (!avHref) return viewPhoto(u.avatar, `${u.name || u.username} profil resmi`);
+      const what = u.live ? 'Canlı yayını izle' : u.hasStory ? 'Hikayeyi gör' : 'Hikaye ekle';
+      const close = sheet(null, `<div class="menu"><button class="m-go">${icon(u.live ? 'live' : u.hasStory ? 'play' : 'plus')}${what}</button><button class="m-ph">${icon('image')}Profil resmini gör</button></div>`, {
+        onMount(sh) {
+          sh.querySelector('.m-go').onclick = () => { close(); location.hash = avHref.replace(/^#/, ''); };
+          sh.querySelector('.m-ph').onclick = () => { close(); viewPhoto(u.avatar, `${u.name || u.username} profil resmi`); };
+        },
+      });
+    };
+    pfAv.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pfAv.click(); } };
+  }
   view.querySelector('.fl').onclick = () => peopleSheet('Takipçiler', u.id, 'followers');
   view.querySelector('.np-add')?.addEventListener('click', () => setNowPlaying(view, () => profile(view, username)));
   view.querySelector('.np-open')?.addEventListener('click', async (e) => {

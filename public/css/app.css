@@ -4557,3 +4557,19 @@ html.land-game #fx-layer { display: none; }
   .home-top .wordmark .mark { width: 28px; height: 28px; }
   .home-top .ib { width: 35px; }
 }
+
+/* Pencereleri kapatma düğmesi (X) */
+.sh-x { position: absolute; top: 10px; right: 12px; z-index: 3; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); color: var(--text); border: 0; }
+.sh-x svg { width: 18px; height: 18px; }
+.sh-x:active { transform: scale(.92); }
+.sheet.no-t .sh-b { padding-top: 30px; }
+.ins-sheet .ins-head { padding-right: 44px; }
+.ann-modal .inner { position: relative; }
+.match-modal .mm-x { position: fixed; top: calc(var(--safe-t, 0px) + 14px); right: 14px; background: rgba(255, 255, 255, .16); color: #fff; }
+
+/* Fotoğrafı tam ekran göster (profil resmi) */
+.pv { position: fixed; inset: 0; z-index: 130; display: grid; place-items: center; background: rgba(6, 4, 10, .92); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); animation: fade .2s; padding: calc(var(--safe-t, 0px) + 56px) 16px calc(var(--safe-b, 0px) + 24px); }
+.pv img { max-width: min(92vw, 560px); max-height: 100%; width: auto; height: auto; border-radius: 22px; object-fit: contain; box-shadow: 0 30px 70px -20px rgba(0, 0, 0, .7); animation: up2 .25s cubic-bezier(.2,.8,.2,1); }
+.pv-x { position: fixed; top: calc(var(--safe-t, 0px) + 14px); right: 14px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .16); color: #fff; border: 0; }
+.pv-x svg { width: 20px; height: 20px; }
+.pf-av { cursor: pointer; -webkit-tap-highlight-color: transparent; }
