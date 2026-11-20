@@ -16,7 +16,7 @@ const RAIL = ['quests', 'wheel', 'contest', 'song'];
 
 export default async function feed(view) {
   view.innerHTML = `
-    <header class="topbar">
+    <header class="topbar home-top">
       <div class="wordmark">${logo()}</div>
       <a class="ib" href="#/fal" aria-label="Fal" style="font-size:22px">🔮</a>
       <a class="ib" href="#/search" aria-label="Ara">${icon('search')}</a>
