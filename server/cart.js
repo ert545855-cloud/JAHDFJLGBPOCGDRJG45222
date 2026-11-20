@@ -133,12 +133,13 @@ module.exports = function cart(app, ctx) {
     const ids = [...new Set((Array.isArray(req.body?.orderIds) ? req.body.orderIds : []).map((x) => str(x, 20)))].slice(0, MAX_ITEMS);
     const t = now();
     const orders = ids.map((id) => store.get('orders', id)).filter((o) => o && o.userId === req.user.id && o.channel && o.status === 'approved' && !o.cartBonus && t - o.at < BONUS_WINDOW);
-    const c = best(orders.length);
+    const units = orders.reduce((a, o) => a + (o.qty || 1), 0); // adetli satın almada her adet bir ürün sayılır
+    const c = best(units);
     if (!c || orders.some((o) => !activeAt(c, o.at))) return res.json({ bonus: null });
     let coins = 0; let days = 0;
     for (const o of orders) {
       if (o.kind === 'coins') coins += Math.floor((o.coins || 0) * c.pct / 100);
-      else { const p = eco.product(o.productId); days += Math.max(1, Math.round((p?.days || 30) * c.pct / 100)); }
+      else { const p = eco.product(o.productId); days += Math.max(1, Math.round((o.days || (p?.days || 30) * (o.qty || 1)) * c.pct / 100)); }
     }
     const id = nanoid(10);
     orders.forEach((o) => store.update('orders', o.id, { cartBonus: id }));

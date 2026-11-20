@@ -31,20 +31,26 @@ export function promoBanner(today) {
 // ---------- Uygulama: mağazadan sırayla satın al, sonra kampanya hediyesini iste ----------
 export async function storeCheckout(cart, onDone) {
   const I = await iapInfo(); if (!I) return false;
-  const units = cart.items.flatMap((x) => Array.from({ length: x.qty }, () => x));
-  const ids = []; let done = 0; let stopped = false;
-  for (const it of units) {
-    toast(`${I.store}: ${done + 1}/${units.length} · ${it.product.title}`, { ms: 2500 });
-    const r = await iapBuy(it.id); // eslint-disable-line no-await-in-loop
-    if (!r) { stopped = true; break; }
-    if (r.orderId) ids.push(r.orderId);
-    done += 1;
-    // Alınanı sepetten düş (yarıda kalırsa kalanlar sepette bekler)
-    const left = (cart.items.find((x) => x.id === it.id).qty -= 1);
-    try { const c = await api(`/cart/items/${encodeURIComponent(it.id)}`, { method: 'PUT', body: { qty: left } }); setCartCount(c.count); } catch { /* sayaç bir sonraki açılışta düzelir */ } // eslint-disable-line no-await-in-loop
+  // Her satır (ürün × adet) App Store'da tek ödeme penceresinde alınır. Google Play'de adet pencerede seçilir;
+  // sunucunun bildirdiği adet kadar sepetten düşülür, eksik kalan varsa aynı ürün için pencere yeniden açılır.
+  const lines = cart.items.filter((x) => x.qty > 0);
+  const ids = []; let units = 0; let stopped = false;
+  for (const [i, it] of lines.entries()) {
+    let left = it.qty;
+    while (left > 0 && !stopped) {
+      toast(`Ödeme ${i + 1}/${lines.length} · ${it.product.title}${left > 1 ? ` × ${left}` : ''}`, { ms: 2500 });
+      const r = await iapBuy(it.id, I.kind === 'apple' ? left : 1); // eslint-disable-line no-await-in-loop
+      if (!r) { stopped = true; break; }
+      if (r.orderId) ids.push(r.orderId);
+      const got = Math.max(1, r.qty || 1); units += got; left = Math.max(0, left - got);
+      // Alınanı sepetten düş (yarıda kalırsa kalanlar sepette bekler)
+      try { const c = await api(`/cart/items/${encodeURIComponent(it.id)}`, { method: 'PUT', body: { qty: left } }); setCartCount(c.count); } catch { /* sayaç bir sonraki açılışta düzelir */ } // eslint-disable-line no-await-in-loop
+    }
+    if (stopped) break;
   }
+  const done = units;
   let bonus = null;
-  if (ids.length >= 2) { try { bonus = (await api('/cart/bonus', { body: { orderIds: ids } })).bonus; } catch { /* hediye yoksa sessiz geç */ } }
+  if (units >= 2 && ids.length) { try { bonus = (await api('/cart/bonus', { body: { orderIds: ids } })).bonus; } catch { /* hediye yoksa sessiz geç */ } }
   const parts = bonus ? [bonus.coins ? `${bonus.coins} jeton` : '', bonus.days ? `${bonus.days} gün SwipeUp+` : ''].filter(Boolean).join(' + ') : '';
   if (done) toast(`${done} ürün hesabına eklendi${parts ? ` · 🎁 kampanya hediyesi: ${parts}` : ''}${stopped ? ' · kalanlar sepette' : ''}.`, { ms: 6000 });
   onDone?.();

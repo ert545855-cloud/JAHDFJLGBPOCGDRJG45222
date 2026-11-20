@@ -32,7 +32,9 @@ export function iapInfo() {
 }
 
 // Satın al: mağazanın ödeme penceresi açılır, sonra sunucu doğrular. Dönen: sunucu yanıtı ya da null (vazgeçildi)
-export async function iapBuy(productId) {
+// qty: App Store'da aynı üründen birden çok adet tek pencerede alınır. Google Play'de adet, mağaza penceresinde seçilir
+// (Play Console'da ürüne "çoklu adet" açıksa); sunucu gerçek adedi mağazadan okur ve yanıtta döner (r.qty).
+export async function iapBuy(productId, qty = 1) {
   const I = await iapInfo(); if (!I) return null; const sku = `swipeup.${productId}`;
   if (!I.items.some((i) => i.sku === sku)) { toast('Bu ürün mağazada satılmıyor.'); return null; }
   if (I.kind === 'google') {
@@ -45,7 +47,7 @@ export async function iapBuy(productId) {
     try { const r = await api('/iap/google', { body: { sku, token } }); await resp.complete('success'); return r; } catch (e) { await resp.complete('fail').catch(() => {}); toast(e.message); return null; }
   }
   const NP = window.Capacitor.Plugins.NativePurchases; let t;
-  try { t = await NP.purchaseProduct({ productIdentifier: sku, productType: 'inapp', quantity: 1 }); } catch (e) { if (!/cancel/i.test(String(e?.message || e?.code || ''))) toast('Satın alma tamamlanamadı.'); return null; }
+  try { t = await NP.purchaseProduct({ productIdentifier: sku, productType: 'inapp', quantity: Math.max(1, Math.min(10, qty | 0 || 1)) }); } catch (e) { if (!/cancel/i.test(String(e?.message || e?.code || ''))) toast('Satın alma tamamlanamadı.'); return null; }
   const transactionId = t?.transactionId || t?.transaction?.transactionId || t?.id;
   try { return await api('/iap/apple', { body: { transactionId } }); } catch (e) { toast(e.message); return null; }
 }

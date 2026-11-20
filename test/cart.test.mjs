@@ -15,7 +15,7 @@ before(async () => {
     const send = (c, o) => { res.writeHead(c, { 'Content-Type': 'application/json' }); res.end(o ? JSON.stringify(o) : ''); };
     if (req.url === '/token') return send(200, { access_token: 'gtok', expires_in: 3600 });
     const g = req.url.match(/\/purchases\/products\/[^/]+\/tokens\/([^/:]+)(:consume)?$/);
-    if (g) return g[2] ? send(204) : g[1].startsWith('good') ? send(200, { purchaseState: 0, consumptionState: 0, orderId: `GPA.${g[1]}` }) : send(404, { error: { message: 'yok' } });
+    if (g) return g[2] ? send(204) : g[1].startsWith('good') ? send(200, { purchaseState: 0, consumptionState: 0, orderId: `GPA.${g[1]}`, ...(g[1].includes('qty3') ? { quantity: 3 } : {}) }) : send(404, { error: { message: 'yok' } });
     if (req.url.includes('voidedpurchases')) return send(200, {});
     send(404, {});
   });
@@ -71,4 +71,14 @@ test('uygulama: mağazadan alınan 2 ürüne hediye bir kez verilir', async () =
   assert.equal(again.body.bonus, null);
   const b = await register(api);
   assert.equal((await api.post('/api/cart/bonus', { orderIds: [g1.body.orderId, g2.body.orderId] }, { token: b.token })).body.bonus, null);
+});
+
+test('uygulama: adetli satın alma tek seferde tanımlanır ve kampanyada adet sayılır', async () => {
+  const a = await register(api);
+  const r = await api.post('/api/iap/google', { sku: 'swipeup.j100', token: 'good-qty3-1' }, { token: a.token });
+  assert.equal(r.status, 200, JSON.stringify(r.body)); assert.equal(r.body.qty, 3); assert.equal(r.body.coins, 300);
+  const st = await api.get('/api/store', { token: a.token });
+  const o = st.body.orders.find((x) => x.id === r.body.orderId); assert.equal(o.amount, 300); assert.match(o.title, /× 3/);
+  const b = await api.post('/api/cart/bonus', { orderIds: [r.body.orderId] }, { token: a.token });
+  assert.equal(b.body.bonus.coins, 60); // tek sipariş ama 3 adet: %20 × 300
 });
