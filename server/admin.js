@@ -724,11 +724,12 @@ module.exports = function mountAdmin(app, ctx) {
   const orderRow = ({ docs, ...o }) => ({ ...o, legalOk: !!o.legal?.pre && !!o.legal?.waive, user: store.get('users', o.userId) ? userRow(store.get('users', o.userId)) : null }); // sözleşme metni listede taşınmaz
   app.get('/api/admin/orders', adminAuth, (req, res) => {
     const st = String(req.query.status || 'open');
-    const list = store.filter('orders', (o) => st === 'all' || (st === 'open' ? ['pending', 'paid'].includes(o.status) : o.status === st))
+    const list = store.filter('orders', (o) => st === 'all' || (st === 'open' ? ['pending', 'paid'].includes(o.status) : st === 'store' ? !!o.channel : st === 'havale' ? !o.channel : o.status === st))
       .sort((a, b) => (b.status === 'paid') - (a.status === 'paid') || b.at - a.at).slice(0, 300);
     const month = new Date(); month.setDate(1); month.setHours(0, 0, 0, 0);
     const approved = store.filter('orders', (o) => o.status === 'approved' && o.closedAt >= month.getTime());
-    res.json({ items: list.map(orderRow), monthTotal: approved.reduce((a, o) => a + o.amount, 0), monthCount: approved.length });
+    const real = approved.filter((o) => !o.test); const by = (ch) => real.filter((o) => (o.channel || 'havale') === ch).reduce((a, o) => a + o.amount, 0);
+    res.json({ items: list.map(orderRow), monthTotal: real.reduce((a, o) => a + o.amount, 0), monthCount: real.length, monthBy: { havale: by('havale'), apple: by('apple'), google: by('google') } });
   });
   app.post('/api/admin/orders/:id', adminAuth, (req, res) => {
     const o = store.get('orders', req.params.id);
