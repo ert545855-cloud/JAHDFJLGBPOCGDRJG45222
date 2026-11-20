@@ -23,7 +23,8 @@ public:
 
 private:
     void UpdateTour();
-    void ReturnToPlaza(APawn* Pawn) const;
+    void SpawnCityOccupants(UWorld& World) const;
+    void ReturnToPlaza(APlayerController* Player) const;
 
     UPROPERTY()
     TArray<TObjectPtr<ATextRenderActor>> Markers;

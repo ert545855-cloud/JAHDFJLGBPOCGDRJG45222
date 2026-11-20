@@ -2,14 +2,12 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
-#include "Components/StaticMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "UObject/ConstructorHelpers.h"
 
 ASwipeUpCityCharacter::ASwipeUpCityCharacter()
 {
-    PrimaryActorTick.bCanEverTick = false;
+    PrimaryActorTick.bCanEverTick = true;
     GetCapsuleComponent()->InitCapsuleSize(34.f, 88.f);
     bUseControllerRotationPitch = false;
     bUseControllerRotationYaw = false;
@@ -23,20 +21,29 @@ ASwipeUpCityCharacter::ASwipeUpCityCharacter()
 
     CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
     CameraBoom->SetupAttachment(GetRootComponent());
-    CameraBoom->TargetArmLength = 330.f;
+    CameraBoom->TargetArmLength = 437.f;
     CameraBoom->SetRelativeLocation(FVector(0.f, 0.f, 65.f));
     CameraBoom->bUsePawnControlRotation = true;
+    CameraBoom->bEnableCameraLag = true;
+    CameraBoom->CameraLagSpeed = 17.f;
 
     FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
     FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
     FollowCamera->bUsePawnControlRotation = false;
 
-    PlaceholderBody = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("PrototypeBody"));
-    PlaceholderBody->SetupAttachment(GetCapsuleComponent());
-    PlaceholderBody->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    PlaceholderBody->SetRelativeScale3D(FVector(0.48f, 0.48f, 1.6f));
-    static ConstructorHelpers::FObjectFinder<UStaticMesh> Cylinder(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
-    if (Cylinder.Succeeded()) PlaceholderBody->SetStaticMesh(Cylinder.Object);
+}
+
+void ASwipeUpCityCharacter::BeginPlay()
+{
+    Super::BeginPlay();
+    if (GetNetMode() != NM_DedicatedServer)
+        Avatar.Attach(*this, *GetCapsuleComponent(), FVector(0, 0, -GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
+}
+
+void ASwipeUpCityCharacter::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+    if (!IsHidden()) Avatar.Animate(DeltaTime, GetVelocity().Size2D());
 }
 
 void ASwipeUpCityCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)

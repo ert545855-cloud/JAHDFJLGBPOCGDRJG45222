@@ -30,6 +30,6 @@ islenmelidir. HTTPS + rate limit + hata kaydi zorunludur.
 
 ## Mevcut oyun girişi
 
-- SwipeUp oyun menüsü tarayıcıdaki 3D şehir turuna yönlendirir.
-- Tarayıcı prototipi, yerleşik dokunmatik kontrolleri ve WebGL 2'yi kullanır.
-- Native Unreal başlatıcısı ve oturum entegrasyonu için yukarıdaki cihaz testleri geçerlidir.
+- Oyun, Unreal Engine 5.5 ile bağımsız bir native uygulama hedefler.
+- SwipeUp menüsündeki bilgi kartı proje durumunu gösterir.
+- Android ve iOS paketleme, imzalama ve gerçek cihaz testleri bekliyor.

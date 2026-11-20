@@ -17,11 +17,13 @@
 
 Fab paketleri ücretsiz listeleniyordu. Fab hesabı gerektiren indirmeler ve Unreal kurulumları bekliyor. Depoya eklenen yüzey dokuları ve bank modeli doğrudan [Poly Haven](https://polyhaven.com/license) kaynaklıdır.
 
+Mercan Limanı'nın açılış haritası özgün Blender modellerini kullanır. Fab içe aktarma aracı yerel olarak alınmış paketleri editörde hazırlar. Bir Fab modelini limana yerleştirmek ayrı bir sahne düzenlemesidir.
+
 ## Yerel içe aktarma
 
 1. FBX, GLB ve glTF arşivlerini proje içindeki `ExternalAssets/<paket>/` dizinine aç. glTF dosyasının yanındaki `.bin` ve doku dosyalarının dizin yapısını koru.
 2. Unreal **Tools → Execute Python Script → Scripts/prepare_city.py** yoluyla hazırlığı çalıştır. FBX, GLB ve glTF dosyaları `/Game/SwipeUpCity/ImportedFab/` altına alınır. Unreal formatındaki Fab paketlerini Fab penceresinden ekle.
-3. Content Browser'da istediğin **Static Mesh** için **Copy Reference** seçeneğini kullan. `Config/DefaultGame.ini` dosyasındaki `[SwipeUpCity.ImportedMeshes]` bölümüne yalnızca `/Game/.../Model.Model` nesne yolunu yaz. Desteklenen anahtarlar `Palm`, `StreetLamp`, `Bench`, `Car` ve `Boat`. Paketle gelen bankı değiştirmek için `Bench` satırını güncelle. Kent, eksik model olduğunda yerleşik modeli kullanır.
+3. Content Browser'da istediğin **Static Mesh** için **Copy Reference** seçeneğini kullan. `Config/DefaultGame.ini` dosyasındaki `[SwipeUpCity.ImportedMeshes]` bölümüne yalnızca `/Game/.../Model.Model` nesne yolunu yaz. Desteklenen anahtarlar `Palm`, `StreetLamp`, `Bench`, `Car` ve `Boat`. Paketle gelen bankı değiştirmek için `Bench` satırını güncelle. Bu anahtarlar eski şehir şablonu için geçerlidir.
 4. Bir paketli derlemede yerel içe aktarımları kullanacaksan **Project Settings → Packaging → Additional Asset Directories to Cook** listesine yalnızca seçili modellerin klasörlerini ekle. [Epic paketleme ayarları](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Developer/DeveloperToolSettings/Settings/UProjectPackagingSettings?application_version=5.5)
 
 Fab Standard lisanslı model kaynaklarını proje dışında yeniden dağıtma. `ExternalAssets/` ve `ImportedFab/` Git dışında tutulur. [Fab lisansı](https://www.fab.com/eula)

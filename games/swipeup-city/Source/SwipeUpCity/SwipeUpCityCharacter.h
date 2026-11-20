@@ -2,11 +2,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "SwipeUpCityAvatar.h"
 #include "SwipeUpCityCharacter.generated.h"
 
 class USpringArmComponent;
 class UCameraComponent;
-class UStaticMeshComponent;
 
 UCLASS()
 class SWIPEUPCITY_API ASwipeUpCityCharacter : public ACharacter
@@ -14,6 +14,8 @@ class SWIPEUPCITY_API ASwipeUpCityCharacter : public ACharacter
     GENERATED_BODY()
 public:
     ASwipeUpCityCharacter();
+    virtual void BeginPlay() override;
+    virtual void Tick(float DeltaTime) override;
     virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
     UFUNCTION(BlueprintCallable, Category="SwipeUp City|Controls")
@@ -29,8 +31,7 @@ private:
     UPROPERTY(VisibleAnywhere, Category="Camera")
     UCameraComponent* FollowCamera;
 
-    UPROPERTY(VisibleAnywhere, Category="Prototype")
-    UStaticMeshComponent* PlaceholderBody;
+    FSwipeUpCityAvatar Avatar;
 
     bool bSprinting = false;
 

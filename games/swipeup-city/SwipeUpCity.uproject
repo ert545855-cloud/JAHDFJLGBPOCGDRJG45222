@@ -2,7 +2,7 @@
   "FileVersion": 3,
   "EngineAssociation": "5.5",
   "Category": "Games",
-  "Description": "SwipeUp City mobile-first Unreal Engine 5 city prototype",
+  "Description": "SwipeUp City native stylized coastal open-world game",
   "Modules": [
     {
       "Name": "SwipeUpCity",
@@ -44,6 +44,10 @@
       "TargetAllowList": [
         "Editor"
       ]
+    },
+    {
+      "Name": "ProceduralMeshComponent",
+      "Enabled": true
     }
   ]
 }

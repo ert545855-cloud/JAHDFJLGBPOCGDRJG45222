@@ -1,4 +1,4 @@
-"""Generate the project materials, install the bundled bench, and import local art."""
+"""Prepare the native harbor materials and import any local art."""
 
 from pathlib import Path
 import runpy
@@ -31,6 +31,7 @@ def import_city_bench():
 
 
 if __name__ == "__main__":
+    runpy.run_path(str(SCRIPTS / "generate_harbor_materials.py"), run_name="__main__")
     runpy.run_path(str(SCRIPTS / "generate_city_materials.py"), run_name="__main__")
     import_city_bench()
     runpy.run_path(str(SCRIPTS / "import_local_fab_fbx.py"), run_name="__main__")

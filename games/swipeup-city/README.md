@@ -1,25 +1,27 @@
-# SwipeUp City
+# SwipeUp City · Mercan Limanı
 
-SwipeUp City, sahil meydanı, park, kafe, otopark ve marinadan oluşan tek oyunculu bir 3D keşif oyunudur. Dört durak dilediğin sırayla ziyaret edilebilir. Turun ardından serbestçe dolaşmaya devam edebilirsin.
+Unreal Engine 5.5 ile bağımsız Android ve iOS hedefleyen, üçüncü şahıs kameralı bir açık dünya prototipi. Mercan Limanı, kıyı pazarı, palmiyeli meydanı, çeşmeli parkı ve deniz feneriyle özgün bir semt. Oyuncu yürüyerek veya otomobille dolaşır. Dört durak ziyaret edildiğinde tur tamamlanır ve şehir serbest keşfe açık kalır.
 
-## Tarayıcıda
+[Meydan renderı](Docs/mercan-limani-meydan.webp) · [İskele renderı](Docs/mercan-limani-iskele.webp)
 
-Deponun kökünde `npm ci` ve `npm start` çalıştır. `http://localhost:3000/city-preview/` adresini aç ya da SwipeUp oyun menüsünden **SwipeUp City → 3D şehir turunu oyna** seçeneğini kullan.
+## Unreal Editor'de aç
 
-- **WASD** veya yön tuşlarıyla hareket et. **Shift** ile koş, **Space** ile zıpla ve kamerayı çevirmek için fareyi sürükle.
-- Dokunmatik ekranda hareket için sol çubuğu, kamera için sahnenin üzerindeki kaydırma hareketini kullan. **Koş** ve **Zıpla** ayrı düğmelerdir.
-- Sahilde matlara yaklaşınca **E** veya **Egzersize katıl** düğmesiyle gruba katıl. Yürümek veya zıplamak egzersizden çıkar.
-- Suya düşersen meydandan devam edersin ve ziyaretlerin o oturumda korunur. Baştan başlamak için **R** veya **Yeniden başla** düğmesini kullan.
+1. Unreal Engine 5.5 ve C++ araç zinciriyle `SwipeUpCity.uproject` dosyasını aç ve proje modüllerini derle.
+2. **Tools → Execute Python Script** ile `Scripts/prepare_city.py` dosyasını çalıştır. Betik, güneşli liman sahnesinin çizim malzemelerini üretir. Windows'ta `UE_EDITOR_CMD` yolunu ayarlayıp `Scripts/run_palette_windows.bat` ile de çalıştırabilirsin.
+3. **Play → Standalone Game** ile yerel oyun penceresini aç. Harita, araçlar ve yayalar oyun başladığında oluşturulur. Native mobil paket için uygun Android SDK veya iOS araç zinciri gerekir.
 
-Tarayıcı sürümü Three.js ve WebGL 2 kullanır. Işık, gölgeler, yüzey dokuları, 3D karakter animasyonları ve deniz yerelde çizilir. Üçüncü taraf görsel kaynaklar için [varlık listesi](Docs/ART_SOURCES.md).
+| İşlem | Klavye ve fare | Telefon |
+| --- | --- | --- |
+| Yürü ve kamerayı çevir | WASD ve fare | Sol ve sağ çubuk |
+| Koş veya zıpla | Shift veya Space | Koş veya Zıpla |
+| Araca bin veya in | Araç yanındayken E. İnmek için yavaşla. | Bin veya İn |
+| Araç kullan | WASD, Space ile fren | Sol çubuk, Fren düğmesi |
+| Duraklat veya baştan başla | Esc veya R | Duraklat veya Baştan Başla |
 
-## Unreal Engine 5.5
+Denize düşmek oyuncuyu meydan girişine geri getirir, tur ilerlemesi korunur. Araç şasisi binalar ve zeminle çarpışır. Dört araç farklı renklerle park halinde başlar. Meydan, park, kafe ve kıyıda 12 yaya kendi yürüyüş döngüsünü izler.
 
-1. `SwipeUpCity.uproject` dosyasını Unreal Engine 5.5 ve platforma uygun C++ araç zinciriyle aç.
-2. Editörde **Tools → Execute Python Script** ile `Scripts/prepare_city.py` dosyasını çalıştır. Windows'ta `UE_EDITOR_CMD` yolunu ayarlayıp `Scripts/run_palette_windows.bat` da kullanılabilir.
-3. **Play** ile giriş haritasını başlat. Şehir ve dört durak GameMode tarafından oluşturulur. `WASD`, fare, `Shift`, `Space` ve `R` ile turu dene.
-4. Yerel test paketinde oyuncunun meydanda doğduğunu, kaldırımlar ve iskelenin çarpışmalarını, dört durağın sayıldığını ve suya düşüşten dönüşü doğrula.
+[Dünya tasarımı ve kaynak üretimi](Docs/CITY_MAP.md) · [Fab ve yerel varlık kurulumu](Docs/FAB_FREE_ASSETS.md)
 
-Hazırlık betiği renk ve doku malzemelerini, paketle gelen bankı ve varsa yerel FBX, GLB veya glTF dosyalarını içe aktarır. [Fab ve yerel dosya kurulumu](Docs/FAB_FREE_ASSETS.md).
+## Doğrulama durumu
 
-Unreal kaynağı ayrı bir native prototiptir. Animasyonlu mahalle sakinleri ve plaj egzersizi bu sürümde tarayıcıda çalışır. UE 5.5 C++ derlemesi, Unreal Editor içe aktarma testi ve gerçek Android/iOS cihaz testi bu değişiklik için henüz bekliyor.
+Harita parçaları, otomobiller, insanlar ve çarpışma hacimleri Blender üretiminden doğrulandı. Görsel Blender'da, Unreal kaynak dosyalarındaki aynı modellerden alındı. Unreal 5.5 derlemesi, editör içe aktarma ve Android/iOS cihaz testleri bekliyor.
