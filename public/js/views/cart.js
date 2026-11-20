@@ -36,7 +36,7 @@ export default async function cartView(view) {
         <p class="muted shop-note">Ürünler ${iosShell() ? 'App Store' : 'mağaza'} üzerinden sırayla satın alınır; her biri için mağazanın kendi ödeme penceresi açılır. Fiyatlar ${iosShell() ? 'App Store' : 'Google Play'} fiyatlarıdır, tüm vergiler dahil.${p ? ` Kampanya hediyesi (her jeton paketinin %${p.pct}’i kadar jeton, her SwipeUp+ süresinin %${p.pct}’i kadar gün) en az ${p.minItems} ürün alındığında hesabına eklenir.` : ''}</p>`
       : `<div class="cart-sum"><div><span>Ara toplam</span><b>${TL(c.subtotal)}</b></div>${c.discount ? `<div class="disc"><span>Sepet indirimi (%${p.pct})</span><b>−${TL(c.discount)}</b></div>` : ''}<div class="tot"><span>Toplam</span><b>${TL(c.total)}</b></div></div>
         <p class="muted shop-note">Tüm vergiler dahil. Ödeme havale/EFT ile, tek sepet koduyla yapılır.${p ? ' İndirim, kampanya günü verilen siparişlere uygulanır.' : ''}</p>`}
-      <button class="btn primary block go">${gift ? `${iosShell() ? 'App Store' : 'Google Play'} ile öde · ${totalTxt(c)}` : `Sepeti onayla · ${TL(c.total)}`}</button>
+      <button class="btn primary block go">${gift ? `Öde · ${totalTxt(c)}` : `Sepeti onayla · ${TL(c.total)}`}</button>
       <button class="btn block clr" style="background:transparent">Sepeti boşalt</button>`;
     box.querySelectorAll('.q').forEach((b) => {
       b.onclick = async () => {
