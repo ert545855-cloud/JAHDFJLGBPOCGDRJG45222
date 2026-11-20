@@ -9,7 +9,7 @@
 namespace
 {
     const TCHAR* Materials[] = {TEXT("Matte"), TEXT("Glass"), TEXT("Lamp"),
-        TEXT("Fabric"), TEXT("Water"), TEXT("Sky")};
+        TEXT("Fabric"), TEXT("Water"), TEXT("Sky"), TEXT("Paint")};
 
     struct FHarborSection
     {

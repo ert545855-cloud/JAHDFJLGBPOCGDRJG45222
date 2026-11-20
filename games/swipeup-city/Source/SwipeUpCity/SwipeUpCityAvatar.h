@@ -8,7 +8,7 @@ class USceneComponent;
 struct FSwipeUpCityAvatar
 {
     void Attach(AActor& Owner, USceneComponent& Parent, const FVector& Feet, float Scale = 1.f, int32 Style = 0);
-    void Animate(float DeltaTime, float Speed);
+    void Animate(float DeltaTime, float Speed, bool bStretch = false);
 
 private:
     struct FLimbs

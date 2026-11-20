@@ -5,6 +5,7 @@
 #include "SwipeUpCityGameMode.generated.h"
 
 class ATextRenderActor;
+class ASwipeUpCityLife;
 
 UCLASS()
 class SWIPEUPCITY_API ASwipeUpCityGameMode : public AGameModeBase
@@ -20,6 +21,7 @@ public:
     int32 GetStopCount() const;
     FString GetClosestStop(const FVector& From) const;
     void RestartTour();
+    ASwipeUpCityLife* GetCityLife() const { return Life.Get(); }
 
 private:
     void UpdateTour();
@@ -28,6 +30,9 @@ private:
 
     UPROPERTY()
     TArray<TObjectPtr<ATextRenderActor>> Markers;
+
+    UPROPERTY()
+    TObjectPtr<ASwipeUpCityLife> Life;
 
     uint8 VisitedStops = 0;
     FTimerHandle TourTimer;

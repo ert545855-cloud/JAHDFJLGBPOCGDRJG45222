@@ -13,6 +13,7 @@ class SWIPEUPCITY_API ASwipeUpCityPedestrian : public AActor
 public:
     ASwipeUpCityPedestrian();
     void Configure(const TArray<FVector>& Route, float WalkSpeed, int32 StartIndex, float Scale, int32 Style);
+    void ConfigureActivity(const FVector& Location, const FRotator& Face, float Phase, int32 Style);
     virtual void Tick(float DeltaTime) override;
 
 private:
@@ -20,4 +21,5 @@ private:
     FSwipeUpCityAvatar Avatar;
     int32 NextStop = 0;
     float Speed = 0.f;
+    bool bActivity = false;
 };

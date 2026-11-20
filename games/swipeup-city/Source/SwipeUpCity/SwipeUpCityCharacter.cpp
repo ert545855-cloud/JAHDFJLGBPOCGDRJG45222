@@ -1,4 +1,7 @@
 #include "SwipeUpCityCharacter.h"
+#include "SwipeUpCityGameMode.h"
+#include "SwipeUpCityLife.h"
+#include "Engine/World.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -43,7 +46,10 @@ void ASwipeUpCityCharacter::BeginPlay()
 void ASwipeUpCityCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
-    if (!IsHidden()) Avatar.Animate(DeltaTime, GetVelocity().Size2D());
+    if (IsHidden()) return;
+    const ASwipeUpCityGameMode* Mode = GetWorld()->GetAuthGameMode<ASwipeUpCityGameMode>();
+    const ASwipeUpCityLife* Life = Mode ? Mode->GetCityLife() : nullptr;
+    Avatar.Animate(DeltaTime, GetVelocity().Size2D(), Life && Life->IsStretching() && GetVelocity().SizeSquared2D() < FMath::Square(65.));
 }
 
 void ASwipeUpCityCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)

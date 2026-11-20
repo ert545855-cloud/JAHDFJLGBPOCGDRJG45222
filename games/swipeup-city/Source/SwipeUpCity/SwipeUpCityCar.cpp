@@ -1,6 +1,8 @@
 #include "SwipeUpCityCar.h"
 #include "SwipeUpCityCharacter.h"
 #include "SwipeUpCityMesh.h"
+#include "SwipeUpCityLifeRules.h"
+#include "GameFramework/Controller.h"
 #include "Camera/CameraComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/InputComponent.h"
@@ -28,13 +30,21 @@ ASwipeUpCityCar::ASwipeUpCityCar()
     Camera->SetupAttachment(Arm, USpringArmComponent::SocketName);
 }
 
+void ASwipeUpCityCar::SetVehicleType(int32 Type)
+{
+    VehicleType = FMath::Clamp(Type, 0, static_cast<int32>(SwipeUpCityLife::Vehicles.size()) - 1);
+    const auto& Spec = SwipeUpCityLife::Vehicles[VehicleType];
+    Chassis->SetBoxExtent(FVector(Spec.HalfLength, Spec.HalfWidth, Spec.BodyHeight - 13.f));
+}
+
 void ASwipeUpCityCar::BeginPlay()
 {
     Super::BeginPlay();
     Parking = GetActorTransform();
     if (GetNetMode() == NM_DedicatedServer) return;
 
-    const FString Asset = FString::Printf(TEXT("CarBody%d"), PaintStyle);
+    const auto& Spec = SwipeUpCityLife::Vehicles[VehicleType];
+    const FString Asset = FString::Printf(TEXT("CarBody%d"), VehicleType);
     SwipeUpCityMesh::Add(*this, *Chassis, *Asset);
     for (int32 Axle : {-1, 1})
     {
@@ -42,11 +52,14 @@ void ASwipeUpCityCar::BeginPlay()
         {
             USceneComponent* Hub = NewObject<USceneComponent>(this);
             Hub->SetupAttachment(Chassis);
-            Hub->SetRelativeLocation(FVector(Axle * 128, Side * 94, -35));
+            Hub->SetRelativeLocation(FVector(Axle * Spec.Axle, Side * Spec.WheelSide,
+                Spec.WheelRadius - Spec.BodyHeight));
             AddInstanceComponent(Hub);
             Hub->RegisterComponent();
             WheelHubs.Add(Hub);
-            Wheels.Add(SwipeUpCityMesh::Add(*this, *Hub, TEXT("Wheel")));
+            UProceduralMeshComponent* Wheel = SwipeUpCityMesh::Add(*this, *Hub, TEXT("Wheel"));
+            if (Wheel) Wheel->SetRelativeScale3D(FVector(Spec.WheelRadius / 34.f, 1.f, Spec.WheelRadius / 34.f));
+            Wheels.Add(Wheel);
         }
     }
 }
@@ -73,14 +86,15 @@ void ASwipeUpCityCar::SetSteering(float Value)
 void ASwipeUpCityCar::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
-    if (!GetController()) return;
+    if (!GetController() || GetController()->IsMoveInputIgnored()) return;
 
+    const auto& Spec = SwipeUpCityLife::Vehicles[VehicleType];
     const bool bCoasting = FMath::IsNearlyZero(Throttle, .075f);
-    const float Target = bBraking || bCoasting ? 0.f : Throttle * (Throttle < 0 ? 590.f : 1800.f);
-    const float Acceleration = bBraking ? 2700.f : bCoasting ? 380.f : 820.f;
+    const float Target = bBraking || bCoasting ? 0.f : Throttle * (Throttle < 0 ? 590.f : Spec.TopSpeed);
+    const float Acceleration = bBraking ? 2700.f : bCoasting ? 380.f : Spec.Acceleration;
     Speed = FMath::FInterpConstantTo(Speed, Target, DeltaTime, Acceleration);
 
-    const float Turn = Steering * FMath::Clamp(Speed / 510.f, -1.f, 1.f) * 93.f * DeltaTime;
+    const float Turn = Steering * FMath::Clamp(Speed / 510.f, -1.f, 1.f) * Spec.TurnRate * DeltaTime;
     if (!FMath::IsNearlyZero(Turn))
     {
         const FRotator Heading = GetActorRotation() + FRotator(0, Turn, 0);
@@ -95,7 +109,7 @@ void ASwipeUpCityCar::Tick(float DeltaTime)
     FHitResult Impact;
     AddActorWorldOffset(GetActorForwardVector() * Speed * DeltaTime, true, &Impact);
     if (Impact.bBlockingHit) Speed = 0.f;
-    WheelRoll = FMath::Fmod(WheelRoll + FMath::RadiansToDegrees(Speed * DeltaTime / 34.f), 360.f);
+    WheelRoll = FMath::Fmod(WheelRoll + FMath::RadiansToDegrees(Speed * DeltaTime / Spec.WheelRadius), 360.f);
     for (int32 Index = 0; Index < WheelHubs.Num(); ++Index)
     {
         if (Index >= 2) WheelHubs[Index]->SetRelativeRotation(FRotator(0, Steering * 24.f, 0));

@@ -1,6 +1,7 @@
 #include "SwipeUpCityGameMode.h"
 #include "SwipeUpCityCar.h"
 #include "SwipeUpCityHarbor.h"
+#include "SwipeUpCityLife.h"
 #include "SwipeUpCityPedestrian.h"
 #include "SwipeUpCityCharacter.h"
 #include "SwipeUpCityHUD.h"
@@ -46,6 +47,7 @@ void ASwipeUpCityGameMode::StartPlay()
         return;
     }
     World->SpawnActor<ASwipeUpCityHarbor>();
+    Life = World->SpawnActor<ASwipeUpCityLife>();
     SpawnCityOccupants(*World);
     for (const FTourStop& Stop : Stops)
     {
@@ -117,26 +119,30 @@ void ASwipeUpCityGameMode::SpawnCityOccupants(UWorld& World) const
 {
     const auto SpawnCar = [&World](const FVector& Point, float Yaw, int32 Style)
     {
-        const FTransform Transform(FRotator(0, Yaw, 0), Point);
+        const float Height = SwipeUpCityLife::Vehicles[Style].BodyHeight;
+        const FTransform Transform(FRotator(0, Yaw, 0), FVector(Point.X, Point.Y, Height));
         if (ASwipeUpCityCar* Car = World.SpawnActorDeferred<ASwipeUpCityCar>(
             ASwipeUpCityCar::StaticClass(), Transform, nullptr, nullptr,
             ESpawnActorCollisionHandlingMethod::AlwaysSpawn))
         {
-            Car->SetPaintStyle(Style);
+            Car->SetVehicleType(Style);
             Car->FinishSpawning(Transform);
         }
     };
     SpawnCar(FVector(-500, -3190, 68), 0.f, 0);
     SpawnCar(FVector(1100, -3610, 68), 180.f, 1);
-    SpawnCar(FVector(4920, -5030, 68), 90.f, 2);
-    SpawnCar(FVector(-4900, -3310, 68), 0.f, 3);
+    SpawnCar(FVector(4900, -4880, 68), 90.f, 2);
+    SpawnCar(FVector(5220, -4880, 68), 90.f, 3);
+    SpawnCar(FVector(5540, -4880, 68), 90.f, 4);
+    SpawnCar(FVector(5860, -4880, 68), 90.f, 5);
 
     const TArray<FVector> PedestrianLoops[] = {
         { FVector(1700,-7710,18), FVector(2150,-7340,18), FVector(1920,-5420,18), FVector(1880,-5130,18) },
         { FVector(-1850,-7470,18), FVector(-2040,-5730,18), FVector(-1400,-5230,18), FVector(-920,-6830,18) },
-        { FVector(-5290,-6830,15), FVector(-3550,-6840,15), FVector(-3550,-4750,15), FVector(-5400,-4770,15) },
+        { FVector(-5330,-6910,15), FVector(-4860,-6820,15), FVector(-4860,-5210,15), FVector(-5500,-4860,15) },
         { FVector(4785,-1720,15), FVector(4790,-825,15), FVector(5290,-800,15), FVector(5500,-1790,15) },
-        { FVector(4700,-8280,10), FVector(5000,-8870,33), FVector(5030,-10150,34), FVector(4880,-8830,33) }
+        { FVector(4700,-8280,10), FVector(5000,-8870,33), FVector(5030,-10150,34), FVector(4880,-8830,33) },
+        { FVector(-4010,-6480,18), FVector(-4010,-5910,19), FVector(-4350,-5860,19), FVector(-4240,-6130,19), FVector(-4040,-6250,18) }
     };
     for (int32 Route = 0; Route < UE_ARRAY_COUNT(PedestrianLoops); ++Route)
     {
@@ -147,6 +153,13 @@ void ASwipeUpCityGameMode::SpawnCityOccupants(UWorld& World) const
                 Actor->Configure(Points, 135.f + ((Route * 17 + Person * 9) % 47),
                                  Person, .91f + ((Person + Route) % 4) * .043f, (Person + Route) % 4);
         }
+    }
+    const FVector SocialSpots[] = { FVector(306,-5190,21), FVector(530,-5180,21),
+        FVector(763,-5170,21), FVector(-2490,-7241,20), FVector(-2097,-7242,20), FVector(-1709,-7243,20) };
+    for (int32 Index = 0; Index < UE_ARRAY_COUNT(SocialSpots); ++Index)
+    {
+        if (ASwipeUpCityPedestrian* Participant = World.SpawnActor<ASwipeUpCityPedestrian>())
+            Participant->ConfigureActivity(SocialSpots[Index], FRotator(0, 90, 0), Index * .13f, Index % 4);
     }
 }
 
@@ -159,6 +172,7 @@ void ASwipeUpCityGameMode::ReturnToPlaza(APlayerController* Player) const
 void ASwipeUpCityGameMode::RestartTour()
 {
     VisitedStops = 0;
+    if (Life) Life->CancelActivity();
     for (ATextRenderActor* Marker : Markers)
     {
         if (Marker)
@@ -178,9 +192,11 @@ void ASwipeUpCityGameMode::UpdateTour()
     if (Position.Z < -150.f || FMath::Abs(Position.X) > 14150.f ||
         Position.Y > 11200.f || Position.Y < -13550.f || bCarInWater)
     {
+        if (Life) Life->CancelActivity();
         ReturnToPlaza(Player);
         return;
     }
+    if (Life) Life->UpdatePlayer(*Pawn);
 
     for (int32 Index = 0; Index < GetStopCount(); ++Index)
     {

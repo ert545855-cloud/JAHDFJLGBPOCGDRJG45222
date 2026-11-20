@@ -5,6 +5,7 @@
 #include "SwipeUpCityMobileController.generated.h"
 
 class ASwipeUpCityCar;
+class ASwipeUpCityLife;
 
 UCLASS()
 class SWIPEUPCITY_API ASwipeUpCityMobileController : public APlayerController
@@ -15,10 +16,20 @@ public:
     ASwipeUpCityMobileController();
     virtual void SetupInputComponent() override;
     bool HasNearbyCar() const;
+    bool IsLifeMenuOpen() const { return bLifeMenu; }
+    int32 GetLifeSelection() const { return LifeSelection; }
+    ASwipeUpCityLife* GetCityLife() const;
+    FString NearbyLockedCar() const;
     void RecoverTo(const FVector& Location, const FRotator& Heading);
 
 private:
-    ASwipeUpCityCar* FindNearbyCar() const;
+    ASwipeUpCityCar* FindNearbyCar(bool bOwns) const;
+    void InteractWithPlace();
+    void LifeUp();
+    void LifeDown();
+    void MoveLifeSelection(int32 Direction);
+    void SelectLifeChoice(int32 Index);
+    void CloseLifeMenu();
     void Interact();
     void ExitCar(ASwipeUpCityCar& Car, const FVector& Location, const FRotator& Heading);
     void TogglePause();
@@ -27,4 +38,6 @@ private:
     void OnTouchReleased(ETouchIndex::Type FingerIndex, FVector Location);
 
     TOptional<ETouchIndex::Type> HeldJumpOrBrake;
+    bool bLifeMenu = false;
+    int32 LifeSelection = 0;
 };

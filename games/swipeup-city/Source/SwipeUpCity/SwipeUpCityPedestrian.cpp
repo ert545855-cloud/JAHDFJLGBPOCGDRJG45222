@@ -20,9 +20,26 @@ void ASwipeUpCityPedestrian::Configure(const TArray<FVector>& Route, float WalkS
         Avatar.Attach(*this, *GetRootComponent(), FVector::ZeroVector, Scale, Style);
 }
 
+void ASwipeUpCityPedestrian::ConfigureActivity(const FVector& Location, const FRotator& Face,
+    float Phase, int32 Style)
+{
+    bActivity = true;
+    SetActorLocationAndRotation(Location, Face);
+    if (GetNetMode() != NM_DedicatedServer)
+    {
+        Avatar.Attach(*this, *GetRootComponent(), FVector::ZeroVector, 1.f, Style);
+        Avatar.Animate(Phase, 0.f, true);
+    }
+}
+
 void ASwipeUpCityPedestrian::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+    if (bActivity)
+    {
+        Avatar.Animate(DeltaTime, 0.f, true);
+        return;
+    }
     if (Waypoints.IsEmpty()) return;
     const FVector Delta = Waypoints[NextStop] - GetActorLocation();
     const double Step = Speed * DeltaTime;

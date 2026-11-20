@@ -10,6 +10,7 @@ MATERIALS = [
     ("Fabric", .74, .0, .0, False),
     ("Water", .34, .04, .0, False),
     ("Sky", .84, .0, 1.0, True),
+    ("Paint", .23, .23, .0, False),
 ]
 
 
@@ -83,4 +84,4 @@ if __name__ == "__main__":
     unreal.EditorAssetLibrary.make_directory(ROOT)
     for settings in MATERIALS:
         create_material(*settings)
-    unreal.log("SwipeUp City: six native harbor materials ready.")
+    unreal.log("SwipeUp City: seven native harbor materials ready.")

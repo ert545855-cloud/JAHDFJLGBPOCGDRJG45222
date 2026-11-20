@@ -22,7 +22,8 @@ public:
     void SetBrake(bool bPressed) { bBraking = bPressed; }
     bool CanExit() const { return FMath::Abs(Speed) <= 400.f; }
     float GetSpeedKmh() const { return FMath::Abs(Speed) * 0.036f; }
-    void SetPaintStyle(int32 Style) { PaintStyle = Style; }
+    void SetVehicleType(int32 Type);
+    int32 GetVehicleType() const { return VehicleType; }
     void Halt();
     void ResetToParking();
 
@@ -47,7 +48,7 @@ private:
     TArray<TObjectPtr<USceneComponent>> Wheels;
 
     FTransform Parking;
-    int32 PaintStyle = 0;
+    int32 VehicleType = 0;
     float Throttle = 0.f;
     float Steering = 0.f;
     float Speed = 0.f;

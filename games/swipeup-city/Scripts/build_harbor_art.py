@@ -413,10 +413,171 @@ def market_pavilion():
         planter(x+1.7,-77.9,.79)
 
 
+def sign_text(text, x, y, z, width, color, key=None):
+    font = bpy.data.curves.new("Harbor lettering", "FONT")
+    font.body = text
+    font.align_x = "CENTER"
+    font.align_y = "CENTER"
+    font.resolution_u = 4
+    ob = bpy.data.objects.new("Lettering", font)
+    bpy.context.collection.objects.link(ob)
+    graph = bpy.context.evaluated_depsgraph_get()
+    temp = ob.evaluated_get(graph)
+    mesh = temp.to_mesh()
+    if mesh.vertices:
+        extent = max(v.co.x for v in mesh.vertices) - min(v.co.x for v in mesh.vertices)
+        scale = width / max(extent, .01)
+        points = [(x + v.co.x*scale, y, z + v.co.y*scale) for v in mesh.vertices]
+        add(points, [tuple(poly.vertices) for poly in mesh.polygons], color, key=key, slot=3)
+    temp.to_mesh_clear()
+    bpy.data.objects.remove(ob, do_unlink=True)
+    bpy.data.curves.remove(font)
+
+
+def bollard(x, y, color=TEAL):
+    rod((x,y,.12),(x,y,.84),.09,.079,color,sides=10)
+    ellipsoid(x,y,.84,.079,.079,.05,"ecd69c")
+
+
+def coffee_table(x, y, key=None, tint_color="a6473c"):
+    rod((x,y,.17),(x,y,.81),.061,.061,DARK,key,sides=10)
+    rounded(x,y,.87,1.26,1.06,.11,.37,"bb8b66",key,bevel=.033)
+    rod((x-.22,y,.93),(x-.22,y,1.04),.067,.081,CREAM,key,sides=12)
+    box(x+.19,y+.07,.941,.22,.27,.019,"c9a078",key,yaw=.18)
+    for dy in (-.90,.90):
+        rounded(x,y+dy,.50,.48,.49,.10,.11,tint_color,key)
+        rounded(x,y+dy*1.17,.79,.48,.08,.48,.038,tint_color,key)
+        for dx in (-.19,.19):
+            rod((x+dx,y+dy,.17),(x+dx,y+dy,.48),.022,.036,DARK,key,sides=6)
+
+
+def cafe():
+    x,y=-40.1,-58.7
+    rounded(x,y,.12,15.45,10.4,.18,.46,"dcbf9d")
+    rounded(x,y,3.68,14.92,9.82,.28,.62,"294b50")
+    rounded(x,y,3.86,14.35,9.38,.16,.64,"679690")
+    rounded(x,y+1.7,4.08,5.5,2.75,.29,.44,"b7cdc1")
+    rounded(x,y+4.57,1.95,14.0,.23,3.54,.11,"b9d2c0")
+    solid(x,y+4.57,1.95,14.0,.21,3.54)
+    for dx in (-6.94,6.94):
+        rounded(x+dx,y,1.95,.22,9.09,3.54,.11,"93bbb0")
+        solid(x+dx,y,1.95,.2,9.09,3.54)
+        for yy in (-2.85,-.7,1.45):
+            rounded(x+dx+math.copysign(.12,dx),y+yy,2.1,.064,1.72,1.87,.028,"557d85",slot=1)
+    front=y-4.56
+    for dx in (-4.66,4.66):
+        rounded(x+dx,front,1.95,4.68,.25,3.54,.12,"bfd9c5")
+        solid(x+dx,front,1.95,4.65,.22,3.54)
+        rounded(x+dx,front-.162,2.13,4.13,.064,1.6,.029,"427685",slot=1)
+        for panel in (-1.32,0,1.32):
+            box(x+dx+panel,front-.216,2.12,.075,.065,1.59,CREAM)
+        box(x+dx,front-.214,1.52,4.12,.055,.064,CREAM)
+    for dx in (-2.31,2.31):
+        rounded(x+dx,front,1.87,.24,.33,3.37,.11,CREAM)
+    rounded(x,front,3.26,8.3,.66,.68,.29,"24585e")
+    sign_text("MERCAN KAFE",x,front-.335,3.28,5.71,CREAM)
+    for i in range(23):
+        offset=(i-11)*.61
+        color="d78167" if i%2==0 else CREAM
+        rounded(x+offset,front-.72,2.88,.609,1.31,.096,.036,color,bevel=.022)
+        rounded(x+offset,front-1.36,2.75,.605,.092,.257,.035,color)
+    for dx in (-6.3,6.3):
+        lamp(x+dx,front-.9)
+        planter(x+dx*.96,front-1.25,1.28)
+    counter=y+1.68
+    rounded(x,counter, .69, 7.56,1.13,1.05,.27,"436f6f")
+    rounded(x,counter,1.22,7.81,1.42,.14,.16,"c99563")
+    solid(x,counter,.70,7.48,1.12,1.06)
+    for i in range(14):
+        box(x-3.25+i*.5,counter-.576,.68,.305,.045,.87,"73a09c")
+    rounded(x-2.17,counter,1.57,1.22,.58,.57,.095,"b5c5b5",slot=1)
+    rounded(x-2.05,counter-.29,1.52,1.02,.094,.21,.04,DARK)
+    for dx in (-.20,.16):
+        rod((x-2.05+dx,counter-.35,1.50),(x-2.05+dx,counter-.42,1.35),.032,.023,"baac90",sides=8)
+    rounded(x+1.50,counter,1.56,2.48,.83,.61,.124,"80a5a1",slot=1)
+    for level in (1.48,1.99,2.49):
+        box(x,y+4.10,level,8.90,.81,.08,"b48060")
+        for i in range(18):
+            xx=x-4.1+i*.48
+            rod((xx,y+3.97,level+.04),(xx,y+3.97,level+.22),.098,.114,
+                (CREAM,CORAL,TEAL)[i%3],sides=8)
+    for xx,yy in [(-44.9,-58.8),(-35.6,-58.7),(-47.1,-69.1),(-33.0,-67.9)]:
+        coffee_table(xx,yy)
+    for xx,yy in [(-45.5,-72.0),(-37.8,-72.0),(-34.0,-72.5)]:
+        coffee_table(xx,yy,"CafeDecor2",TEAL)
+    for xx in (-45.7,-42.0,-38.3,-34.7):
+        for yy in (-73.87,-70.63):
+            rod((xx,yy,.13),(xx,yy,2.93),.077,.071,WOOD,"CafeDecor3")
+        rounded(xx,-72.28,2.91,.13,3.78,.13,.054,"7d6651","CafeDecor3")
+    for i in range(10):
+        yy=-73.9+i*.36
+        rounded(-40.2,yy,2.99,11.24,.112,.082,.035,"967050","CafeDecor3")
+    for xx in (-44.1,-40.1,-36.3):
+        ellipsoid(xx,-72.05,2.78,.12,.12,.076,"ffe3aa","CafeDecor3",slot=2)
+    for i in range(12):
+        ellipsoid(-45.7+i*1.0,-73.85,2.77-.095*math.sin(i*.34),.064,.064,.071,"ffd391","CafeDecor3",slot=2)
+    for xx in (-42.9,-38.2):
+        ellipsoid(xx,-57.85,2.92,.27,.25,.15,"cf9268")
+        ellipsoid(xx,-57.85,2.83,.10,.10,.085,"ffe3aa",slot=2)
+
+
+def kiosk(x, y, name, color):
+    rounded(x,y,.075,5.42,3.34,.14,.43,"d8bd9d")
+    for dx in (-2.05,2.05):
+        rod((x+dx,y-.89,.13),(x+dx,y-.89,3.27),.102,.094,WOOD,sides=12)
+    rounded(x,y+.89,1.55,4.28,.2,2.92,.10,color)
+    solid(x,y+.89,1.55,4.28,.17,2.92)
+    rounded(x,y-.30,3.26,4.91,2.84,.34,.52,color)
+    rounded(x,y-1.66,2.89,4.39,.19,.56,.085,"295660")
+    sign_text(name,x,y-1.765,2.89,3.62,CREAM)
+    rounded(x,y+.43,.71,3.55,.69,1.03,.24,color)
+    rounded(x,y+.43,1.22,3.7,.82,.13,.13,CREAM)
+    for side in (-1,1):
+        bollard(x+side*2.28,y-2.04,color)
+
+
+def social_district():
+    x,y=6.5,-47.8
+    rounded(x,y+.88,.24,10.95,7.04,.33,.99,"344d55")
+    rounded(x,y+.88,.424,10.81,6.88,.088,.95,"708c8b")
+    solid(x,y+.88,.23,10.78,6.8,.39)
+    for dx in (-5.04,5.04):
+        rod((x+dx,y+2.72,.38),(x+dx,y+2.72,4.05),.13,.105,"294654")
+        rounded(x+dx*.83,y+2.54,1.00,.68,.78,1.25,.21,"2e404b")
+        for z in (.77,1.18):
+            rod((x+dx*.83,y+2.13,z),(x+dx*.83,y+2.07,z),.143,.143,"3c575e",sides=14,slot=1)
+    rounded(x,y+2.72,4.08,10.38,.32,.29,.14,"2f5961")
+    sign_text("SAHIL SAHNESI",x,y+2.525,4.06,4.96,CREAM)
+    for index in range(12):
+        color=("e6a174","72beb9","dd86a2")[index%3]
+        x1=x-4.34+index*.79
+        ellipsoid(x1,y+2.62,3.87,.126,.124,.079,color,slot=2)
+    for ix in range(4):
+        for iy in range(2):
+            color=("bd727a","77aea8","c79b6b","ac939f")[(ix+iy)%4]
+            rounded(x-3.48+ix*2.35,y-4.03-iy*1.43,.178,2.2,1.25,.03,.14,color)
+    x,y=-21,-76.2
+    for i in range(6):
+        color=("74b2af","d9ab76","c68d92")[i%3]
+        xx=x-3.9 + (i%3)*3.9
+        yy=y-2.55+(i//3)*3.7
+        rounded(xx,yy,.196,1.99,.91,.034,.13,color,yaw=math.pi/2)
+        rod((xx+.90,yy-.29,.18),(xx+.90,yy-.29,.50),.070,.065,TEAL,sides=10)
+    for xx in (x-5.78,x+5.6):
+        for yy in (y-4.15,y+2.34):
+            bollard(xx,yy,"447a83")
+    kiosk(-64.20,-50.1,"PAKET", "5b8d90")
+    kiosk(31.30,-40.9,"TAKSI", "bd8050")
+    kiosk(59.50,-53.20,"LIMAN GARAJI", "527b87")
+    kiosk(67.40,-77.0,"FENER TERASI", "548277")
+
+
 def district():
     paving()
     market_pavilion()
     park()
+    cafe()
+    social_district()
     palettes = [(CORAL,"ebaf92","427e8b"),("efd4a0","c8aa80",TEAL),
                 ("91bab1","c5d7be",CORAL),("a9bdd4","d2dcea","db896c"),
                 ("e7ae79","f4cea2","618f91")]
@@ -430,9 +591,9 @@ def district():
                 for sign in (-1,1):
                     lamp(x+sign*9.7,y-15.2)
                     planter(x+sign*6.6,y-13.3)
-    for i in range(12):
-        x=-57+(i%4)*7.7
-        y=-65+(i//4)*7.9
+    for i in range(9):
+        x=-57+(i%2)*6.5
+        y=-70+(i//2)*5.6
         umbrella(x,y,(CORAL,TEAL,BLUE)[i%3])
     for x in (-58,-32):
         palm(x,-63,1.06)
@@ -440,27 +601,88 @@ def district():
     boats_and_coast()
 
 
+VEHICLE_SHAPES = (
+    (4.24,1.92,.68,1.13,.90,.34,2.35,.73,-.26,.39),
+    (5.04,1.98,.68,1.43,.94,.34,3.70,1.18,-.45,.54),
+    (4.52,1.98,.59,1.39,.93,.32,2.30,.45,-.15,.25),
+    (4.68,2.08,.76,1.36,.98,.40,2.90,.78,-.30,.41),
+    (5.10,2.06,.72,1.56,.97,.37,1.98,.82,.31,.36),
+    (4.72,2.02,.61,1.43,.95,.33,2.21,.62,-.29,.32),
+)
+
+
 def car(index, paint, accent):
+    length,width,_,_,_,_, cabin,sky,cabin_x,belt = VEHICLE_SHAPES[index]
     key="CarBody" + str(index)
-    rounded(0,0,.02,4.25,1.89,.67,.46,paint,key,bevel=.18)
-    rounded(0,0,.278,4.19,1.83,.11,.44,accent,key,bevel=.045)
-    rounded(-.23,0,.53,2.31,1.64,.74,.42,GLASS,key,slot=1,bevel=.24)
-    rounded(-.26,0,.87,2.16,1.53,.18,.39,CREAM if index != 3 else "7b94a8",key,bevel=.078)
-    for s in (-1,1):
-        rounded(1.99,s*.57,.10,.32,.48,.22,.14,"ffde98",key,slot=2)
-        rounded(-2.01,s*.62,.095,.24,.35,.18,.11,"c6544b",key,slot=2)
-        rounded(-.23,s*.83,.43,.13,.078,.58,.036,CREAM,key,yaw=.02)
-        rounded(.62,s*.98,.60,.31,.20,.15,.08,paint,key)
-        rounded(-.57,s*.968,.26,.16,.05,.048,.021,DARK,key)
-    rounded(2.12,0,-.16,.18,1.49,.17,.08,"c4b4a2",key)
-    rounded(-2.10,0,-.16,.18,1.55,.17,.08,"c4b4a2",key)
-    rounded(2.13,0,.045,.17,.61,.26,.07,DARK,key)
+    pick_up = index==4
+    open_top = index==2
+    sport = index==5
+    high_boot = index in (1,3,4)
+    nose = length/2
+    rounded(0,0,.015,length,width,.68 if high_boot else .59,.47,paint,key,slot=6,bevel=.136)
+    rounded(0,0,belt-.15,length-.10,width-.061,.14,.43,accent,key,slot=6,bevel=.045)
+    front = cabin_x+cabin/2
+    rear = cabin_x-cabin/2
+    if open_top:
+        rounded(cabin_x-.14,0,belt+.045,2.31,width*.79,.14,.24,"4c4143",key)
+        for xx in (-.64,.18):
+            for yy in (-.36,.36):
+                rounded(xx,yy,belt+.13,.515,.56,.31,.17,"b48570",key)
+                rounded(xx-.21,yy,belt+.37,.19,.52,.43,.083,"906258",key)
+        rod((front,-width*.39,belt),(front-.38,-width*.37,belt+sky),.054,.049,CREAM,key,sides=8)
+        rod((front,width*.39,belt),(front-.38,width*.37,belt+sky),.054,.049,CREAM,key,sides=8)
+        add([(front,-width*.384,belt),(front,width*.384,belt),
+             (front-.38,width*.368,belt+sky),(front-.38,-width*.368,belt+sky)],
+             [(0,1,2,3)],GLASS,key,slot=1)
+    else:
+        rounded(cabin_x,0,belt+sky*.48,cabin,width*.865,sky,.34,GLASS,key,slot=1,bevel=.155)
+        rounded(cabin_x-.08,0,belt+sky+.015,cabin-.26,width*.791,.15,.31,
+            CREAM if index==0 else paint,key,slot=6,bevel=.064)
+        for side in (-1,1):
+            rounded(cabin_x-.16,side*width*.436,belt+sky*.42,.11,.063,sky*.82,.029,
+                CREAM if index==0 else DARK,key)
+            if index==1:
+                rounded(rear+.66,side*width*.447,belt+sky*.43,1.29,.058,sky*.84,.028,paint,key,slot=6)
+    if pick_up:
+        rounded(-nose+.91,0,.34,1.60,width*.80,.14,.16,"42555a",key)
+        for side in (-1,1):
+            rounded(-nose+.91,side*width*.422,.49,1.62,.17,.28,.083,paint,key,slot=6)
+        rounded(-nose+.18,0,.45,.21,width-.24,.36,.101,accent,key,slot=6)
+    if index==3:
+        for side in (-1,1):
+            rod((rear+.13,side*width*.31,belt+sky+.12),(front-.15,side*width*.31,belt+sky+.12),
+                .037,.037,DARK,key,sides=8)
+            rounded(0,side*width*.465,-.14,length*.84,.16,.13,.076,DARK,key)
+    if sport:
+        rounded(-nose+.32,0,.55,.27,width*.88,.09,.041,DARK,key)
+        for side in (-1,1):
+            rounded(-nose+.33,side*width*.2,.41,.115,.09,.24,.03,DARK,key)
+    for side in (-1,1):
+        rounded(nose-.085,side*width*.32,.11,.21,.49,.22,.098,"fff0c7",key,slot=2)
+        rounded(-nose+.074,side*width*.32,.11,.17,.38,.20,.082,"b83d41",key,slot=2)
+        rounded(front-.06,side*width*.526,belt+.14,.32,.18,.16,.076,paint,key,slot=6)
+        rounded(-.47,side*width*.502,belt-.04,.21,.065,.049,.02,"d4c6ac",key)
+        if high_boot:
+            for dx in (-1,1):
+                rounded(dx*(VEHICLE_SHAPES[index][3]),side*width*.465,-.075,.96,.21,.23,.10,DARK,key)
+    rounded(nose+.031,0,-.16,.143,width*.83,.18,.078,"9daaa7",key)
+    rounded(-nose-.022,0,-.16,.159,width*.83,.18,.078,"9daaa7",key)
+    rounded(nose+.038,0,.018,.14,width*.45,.24,.088,"364a4d",key)
+    for ii in range(5):
+        box(nose+.112,0,.09-ii*.033,.023,width*.352,.012,"9aa6a7",key)
+    rounded(-nose-.111,0,.072,.085,.40,.16,.029,"e4d4b7",key)
     if index:
         return
-    rod((0,-.132,0),(0,.132,0),.34,.34,"333a40","Wheel",sides=20)
-    for s in (-1,1):
-        rod((0,s*.13,0),(0,s*.145,0),.225,.225,"a7b5b6","Wheel",sides=14)
-        rod((0,s*.145,0),(0,s*.157,0),.087,.087,"66777d","Wheel",sides=12)
+    rod((0,-.132,0),(0,.132,0),.34,.34,"293238","Wheel",sides=24)
+    for side in (-1,1):
+        rod((0,side*.13,0),(0,side*.145,0),.234,.234,"677879","Wheel",sides=24)
+        rod((0,side*.145,0),(0,side*.154,0),.198,.198,"bac9c9","Wheel",sides=24)
+        for i in range(7):
+            angle=i*math.tau/7
+            center=(math.cos(angle)*.116,side*.157,math.sin(angle)*.116)
+            end=(math.cos(angle)*.189,side*.157,math.sin(angle)*.189)
+            rod(center,end,.031,.032,"d9e1db","Wheel",sides=6)
+        rod((0,side*.158,0),(0,side*.171,0),.072,.072,"899797","Wheel",sides=12)
 
 
 def avatar(index, skin, shirt, trousers, hair):
@@ -537,7 +759,7 @@ def write_meshes(meshes):
 
 
 def render(meshes, output, view):
-    options = [(0.86,0.0),(0.31,0.16),(0.4,0.0),(0.73,0.0),(0.26,0.08)]
+    options = [(0.78,0.0),(0.22,0.20),(0.4,0.0),(0.73,0.0),(0.21,0.08),(0.84,0.0),(0.25,.22)]
     mats=[]
     for slot,(roughness,metal) in enumerate(options):
         mat=bpy.data.materials.new(f"Harbor {slot}")
@@ -546,6 +768,9 @@ def render(meshes, output, view):
         shader=nodes.get("Principled BSDF")
         shader.inputs["Roughness"].default_value=roughness
         shader.inputs["Metallic"].default_value=metal
+        if slot==6:
+            shader.inputs["Coat Weight"].default_value=.43
+            shader.inputs["Coat Roughness"].default_value=.13
         vertex=nodes.new("ShaderNodeVertexColor")
         vertex.layer_name="HarborColor"
         mat.node_tree.links.new(vertex.outputs["Color"],shader.inputs["Base Color"])
@@ -560,15 +785,26 @@ def render(meshes, output, view):
             bpy.context.collection.objects.link(obj)
             obj.location=position
             obj.rotation_euler=angles
-            obj.scale=(scale,)*3
+            obj.scale=scale if isinstance(scale,tuple) else (scale,)*3
             if not mesh.materials: mesh.materials.append(mats[slot])
     for key in sorted({name for name,_ in meshes if name.startswith("Harbor_") and name != "Harbor_Sky"}):
         instance(key,(0,0,0))
-    for index,(x,y,yaw) in enumerate([(-5,-31.9,.05),(11,-36,math.pi),(51,-49,math.pi/2),(-49,-34,.12),(25,-71,-.45)]):
-        instance("CarBody"+str(index%4),(x,y,.68),(0,0,yaw))
-        for dx in (-1.28,1.29):
-            for dy in (-.97,.97):
-                instance("Wheel",(x+dx*math.cos(yaw)-dy*math.sin(yaw),y+dx*math.sin(yaw)+dy*math.cos(yaw),.34),(0,0,yaw))
+    if view == "cafe":
+        for extra in ("CafeDecor2", "CafeDecor3"):
+            instance(extra,(0,0,0))
+    layouts = [
+        (-5,-31.9,0),(11,-36.1,math.pi),(49,-48.8,math.pi/2),
+        (52.2,-48.8,math.pi/2),(55.4,-48.8,math.pi/2),(58.6,-48.8,math.pi/2)
+    ]
+    if view == "garage":
+        layouts = [(41.2 + index * 4.05,-48.8,math.pi/2) for index in range(6)]
+    for index,(x,y,yaw) in enumerate(layouts):
+        _,_,height,axle,track,radius,*_=VEHICLE_SHAPES[index]
+        instance("CarBody"+str(index),(x,y,height),(0,0,yaw))
+        for dx in (-axle,axle):
+            for dy in (-track,track):
+                instance("Wheel",(x+dx*math.cos(yaw)-dy*math.sin(yaw),
+                    y+dx*math.sin(yaw)+dy*math.cos(yaw),radius),(0,0,yaw),(radius/.34,1,radius/.34))
     def person(x,y,angle,step,scale,index):
         suffix = str(index % 4)
         instance("AvatarBody"+suffix,(x,y,.18),(0,0,angle),scale)
@@ -587,9 +823,15 @@ def render(meshes, output, view):
                        (17,-52,-1,.48,1.04),(20,-79,2.4,.10,.97),(1,-70,.5,.41,1.02),
                        (-12,-63,2.4,.23,1.06),(16,-72,1.4,.3,1.02),(17.6,-73,2.4,.4,1.11)]):
         person(x,y,a,s,d,idx)
+    for idx,(x,y,angle) in enumerate([(-38.9,-66.6,2.3),(-37.7,-66.2,2.7),(-44.9,-68.9,1.31),
+                                    (-45.3,-71.9,.62),(-35.4,-68.6,-1.7),(-47.2,-66.3,.82),
+                                    (-38.3,-55.5,-1.6),(-36.6,-71.3,1.14),(49.5,-54.8,.90)]):
+        person(x,y,angle,.24,.97+idx%3*.04,idx)
     scene=bpy.context.scene
     scene.render.engine="CYCLES"
-    scene.cycles.samples=44
+    scene.cycles.samples=36
+    scene.cycles.use_adaptive_sampling=True
+    scene.cycles.adaptive_threshold=.065
     scene.cycles.use_denoising=False
     scene.world.use_nodes=True
     world=scene.world.node_tree
@@ -606,8 +848,20 @@ def render(meshes, output, view):
     sun.data.energy=2.5
     sun.data.angle=math.radians(5)
     sun.data.color=(1.0,.83,.63)
-    camera, focus, lens = ((33.2,-81.9,4.35), (13,-61,2.25), 27) if view == "plaza" else (
-        (79.5,-130.3,8.6), (58.0,-92.6,3.2), 30)
+    if view=="cafe":
+        for position in ((-42.9,-58.16,2.73),(-38.2,-58.16,2.73)):
+            bpy.ops.object.light_add(type="AREA",location=position)
+            light=bpy.context.object
+            light.data.energy=132
+            light.data.color=(1.0,.69,.43)
+            light.data.shape="DISK"
+            light.data.size=1.02
+    camera, focus, lens = {
+        "plaza": ((33.2,-81.9,4.35), (13,-61,2.25), 27),
+        "marina": ((79.5,-130.3,8.6), (58.0,-92.6,3.2), 30),
+        "cafe": ((-27.8,-71.9,3.35), (-41.4,-61.3,1.85), 30),
+        "garage": ((70,-31,7.4), (51.5,-48.0,1.6), 32),
+    }[view]
     bpy.ops.object.camera_add(location=camera)
     cam=bpy.context.object
     cam.rotation_euler=(Vector(focus)-cam.location).to_track_quat("-Z","Y").to_euler()
@@ -626,13 +880,13 @@ def render(meshes, output, view):
 if __name__=="__main__":
     parser=argparse.ArgumentParser()
     parser.add_argument("--render",type=Path)
-    parser.add_argument("--view", choices=["plaza", "marina"], default="plaza")
+    parser.add_argument("--view", choices=["plaza", "marina", "cafe", "garage"], default="plaza")
     args=parser.parse_args(sys.argv[sys.argv.index("--")+1:] if "--" in sys.argv else [])
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete(use_global=False)
     district()
     for index, (paint, accent) in enumerate([(CORAL,"f09f78"),(TEAL,"82c0bd"),
-            ("d9a34f","eac37c"),("647fa0","8ba0ba")]):
+            ("d7a043","f6d28b"),("497c97","8baeca"),("b66b53","e3a183"),("7669a4","ae9cd4")]):
         car(index, paint, accent)
     for index, (skin, shirt, trousers, hair) in enumerate([
             ("c88e63","428d90","61738d","483833"),("e1ae88","d98074","516380","8f6745"),

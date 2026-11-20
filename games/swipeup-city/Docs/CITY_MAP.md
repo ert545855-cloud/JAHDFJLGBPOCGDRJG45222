@@ -24,3 +24,11 @@ Game brief score 69/100. Otomatik metin kontrolü serbest gezi bitişini klasik 
 Blender 4.3 ile `blender -b -P Scripts/build_harbor_art.py` çalıştır. Betik `Content/SwipeUpCity/Meshes` içindeki üretim modellerini ve eşleşen C++ çarpışma tablosunu oluşturur. Render almak için komutun sonuna `-- --render /mutlak/yol/mercan-limani.png` ekle.
 
 `ProceduralMeshComponent` bir Unreal motor eklentisidir. Sahne modelleri, üçgenler ve renklerle paketlenen dosyalardan yüklenir. Sokak geometrisi ve çarpışma hacimleri aynı üretim betiğinden gelir. Yakın karakterler ve araçlar kendi hareketli bileşenlerini kullanır.
+
+## Yaşam alanlarının yerleşimi
+
+Oyuncu 280 şehir kredisi ve iki araçla başlar. Üç kurye vardiyası kafeyi satın almak için gereken 850 krediye ulaştırır. Kafe devralındığında kapalıdır ve ilk dört servis malzemesi satın alımla gelir. Açtıktan sonra her sekiz saniyede bir servis yapılabilir. Bölgedeki menü stok, yükseltme ve kepenk kontrollerini gösterir.
+
+Paket Merkezi ve kafe kıyı meydanının batısında, taksi durağı ve garaj doğusundadır. Kıyı koşusu Sahil Kulübü’nden Sahil Sahnesi, Fener Terası ve Yelken İskelesi’ne 42 saniyelik bir rotayı izler. Yoga 12 saniyelik hareketsiz katılım ister. Dans dört vuruşta isabet gerektirir. Etkinlikler sosyal puan ve kredi verir.
+
+Parlak araç boyası, ışıklı sahne tabelası, kafe içi servis tezgâhı ve yükseltme dekorları aynı sahne üretim betiğinin parçasıdır. Kafe veya garajı görmek için Blender komutuna `--view cafe` veya `--view garage` ekle.
