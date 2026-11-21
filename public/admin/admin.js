@@ -764,6 +764,7 @@ VIEWS.announce = async (main) => {
     ['Aktif ama ücretsiz üyeler', { activeDays: 3, plan: 'free' }],
   ];
   main.innerHTML = `${head('Bildirim gönder', 'Seçtiğin kişilere uygulama içi bildirim ve telefonlarına anlık bildirim (push) gönderir. İstersen uygulama açılınca duyuru penceresi de çıkar.')}
+    <details class="panel apns-p" hidden style="margin-bottom:14px"><summary class="pb" style="cursor:pointer"><b>iPhone uygulaması bildirimleri</b> <span class="muted apns-st" style="font-size:12.5px"></span></summary><div class="pb apns-b"></div></details>
     <div class="grid g21">
       <div class="panel"><div class="ph"><h3>Yeni bildirim</h3></div><form class="pb ann" style="display:grid;gap:12px">
         <label class="fl">Başlık<input class="field" name="title" maxlength="60" placeholder="SwipeUp"></label>
@@ -805,6 +806,22 @@ VIEWS.announce = async (main) => {
     <div class="panel" style="margin-top:14px"><div class="ph"><h3>Gönderilenler</h3><button class="btn sm rmpop">${icon('close')} Açılış duyurusunu kaldır</button></div><div class="tw">${list.length ? `<table class="tbl"><thead><tr><th>Bildirim</th><th>Kime</th><th class="num">Alıcı</th><th class="num">Push açık</th><th>Gönderen</th><th>Tarih</th></tr></thead><tbody>
       ${list.map((a) => `<tr><td style="max-width:420px"><b>${esc(a.title || 'SwipeUp')}</b>${a.popup ? ' <span class="chip info">Açılış duyurusu</span>' : ''}<div class="muted">${esc(a.text)}</div></td><td>${esc(a.audienceLabel || 'Herkes')}</td><td class="num">${a.reach}</td><td class="num">${a.pushReach ?? '—'}</td><td>${esc(a.by)}</td><td>${dt(a.at)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">Henüz bildirim gönderilmedi.</div>'}</div></div>`;
   const f = main.querySelector('form');
+  // iPhone uygulamasına Apple üzerinden bildirim (APNs) anahtarı: yalnız sahip görür
+  const ap = main.querySelector('.apns-p');
+  const apPaint = (r) => {
+    ap.hidden = false;
+    ap.querySelector('.apns-st').textContent = r.on ? `açık · ${r.devices} iPhone` : 'kapalı: uygulamaya bildirimler web üzerinden ("from swipeup") gider';
+    ap.querySelector('.apns-b').innerHTML = `<p class="muted" style="font-size:12.5px;margin:0 0 8px">developer.apple.com → Certificates, IDs &amp; Profiles → <b>Keys</b> → + → <b>Apple Push Notifications service (APNs)</b> seç, Environment: <b>Sandbox &amp; Production</b>. İndirdiğin .p8 dosyasını metin düzenleyiciyle açıp içeriğini aşağı yapıştır. Key ID anahtar sayfasında, Team ID sağ üstte yazar. Anahtar bir kez indirilebilir, güvenli bir yerde sakla.</p>
+      ${r.on ? `<p style="margin:0 0 8px"><span class="chip ok">açık</span> <span class="mono">${esc(r.keyId)}</span> · ekip <span class="mono">${esc(r.teamId)}</span> · ${esc(r.bundle)}${r.fromEnv ? ' · sunucu ortam değişkeninden' : ''}</p>` : ''}
+      <div style="display:grid;gap:6px"><div class="row" style="gap:6px;flex-wrap:wrap"><input class="field ak" placeholder="Key ID (10 karakter)" value="${esc(r.keyId || '')}" style="flex:1"><input class="field at" placeholder="Team ID (10 karakter)" value="${esc(r.teamId || '')}" style="flex:1"><input class="field ab" value="${esc(r.bundle || 'app.swipeup.ios')}" style="flex:1"></div>
+        <textarea class="field mono ap8" rows="4" placeholder="-----BEGIN PRIVATE KEY-----"></textarea>
+        <div class="row" style="gap:8px"><button type="button" class="btn sm primary aps">Kaydet</button>${r.on && !r.fromEnv ? '<button type="button" class="btn sm danger apd">Kaldır</button>' : ''}</div></div>`;
+    ap.querySelector('.aps').onclick = async () => {
+      try { apPaint(await api('/apns', { body: { keyId: ap.querySelector('.ak').value, teamId: ap.querySelector('.at').value, bundle: ap.querySelector('.ab').value, key: ap.querySelector('.ap8').value } })); toast('iPhone bildirim anahtarı kaydedildi.'); } catch (er) { toast(er.message); }
+    };
+    const d = ap.querySelector('.apd'); if (d) d.onclick = async () => { if (!confirm('Anahtar kaldırılsın mı? iPhone uygulamasına bildirimler durur.')) return; try { apPaint(await api('/apns', { method: 'DELETE' })); } catch (er) { toast(er.message); } };
+  };
+  api('/apns').then(apPaint).catch(() => {});
   const num = (v) => (v === '' ? undefined : +v);
   const filters = () => ({ city: f.fcity.value.trim() || undefined, ageMin: num(f.fmin.value), ageMax: num(f.fmax.value), gender: f.fgen.value || undefined, inactiveDays: num(f.fina.value), activeDays: num(f.fact.value), newDays: num(f.fnew.value), plan: f.fplan.value || undefined, verified: f.fver.value || undefined, zodiac: f.fzod.value || undefined, interest: f.fint.value.trim() || undefined, minCoins: num(f.fcoin.value), push: f.fpush.value || undefined });
   const body = () => ({ title: f.title.value, text: f.t.value, url: f.url.value, audience: f.aud.value, city: f.city.value, username: f.username.value, popup: f.popup.checked, marketing: f.marketing.checked, email: f.marketing.checked && f.email.checked, filters: f.aud.value === 'custom' ? filters() : undefined });

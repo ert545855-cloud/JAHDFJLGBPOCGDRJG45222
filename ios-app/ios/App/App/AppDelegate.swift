@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import UserNotifications
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,8 +8,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Bildirime dokunma olayları uygulama kapalıyken de yakalansın diye temsilci açılışta atanır (bkz. NativePushPlugin.swift)
+        UNUserNotificationCenter.current().delegate = PushHub.shared
         return true
+    }
+
+    // Apple'dan cihaz jetonu geldi: web tarafına (NativePush.register) iletilir, o da sunucuya kaydeder
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        PushHub.shared.didRegister(deviceToken)
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        PushHub.shared.didFail(error)
     }
 
     func applicationWillResignActive(_ application: UIApplication) {

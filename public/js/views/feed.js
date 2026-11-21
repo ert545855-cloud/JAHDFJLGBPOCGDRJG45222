@@ -1,6 +1,6 @@
 import { icon } from '../icons.js';
 import {
-  state, api, esc, on, isOn, toast, enablePush, pushSupported, pushEnabled, pushHint, logo, openChatWith, nm, setStoryMap, storyAllSeen,
+  state, api, esc, on, isOn, toast, enablePush, pushSupported, pushEnabled, pushHint, pushPermission, logo, openChatWith, nm, setStoryMap, storyAllSeen,
 } from '../core.js';
 import { postCard, wirePost, autoplay } from '../components.js';
 import { trackSeen } from '../insta.js';
@@ -164,7 +164,7 @@ export default async function feed(view) {
   (async () => {
     if (localStorage.getItem('su_push_dismiss')) return;
     if (pushSupported() && (await pushEnabled())) return;
-    if (pushSupported() && Notification.permission === 'denied') return;
+    if (pushSupported() && (await pushPermission()) === 'denied') return;
     const slot = view.querySelector('.push-slot');
     const hint = pushHint();
     slot.innerHTML = `<div class="push-card">${icon('bell')}<div class="grow"><b>Bildirimleri aç</b>

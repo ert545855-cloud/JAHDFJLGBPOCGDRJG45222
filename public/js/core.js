@@ -280,6 +280,8 @@ export async function logout(all = false, expired = false) {
   if (toks.length) {
     try {
       const reg = await Promise.race([navigator.serviceWorker?.ready, new Promise((r) => setTimeout(r, 800))]);
+      const at = apnsTok();
+      if (nativePush() && at) await Promise.race([Promise.allSettled(toks.map((t) => fetch('/api/push/apns/remove', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${t}` }, body: JSON.stringify({ token: at.token }) }))), new Promise((r) => setTimeout(r, 1500))]);
       const sub = await reg?.pushManager?.getSubscription();
       if (sub) {
         await Promise.race([Promise.allSettled(toks.map((t) => fetch('/api/push/unsubscribe', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${t}` }, body: JSON.stringify({ endpoint: sub.endpoint }) }))), new Promise((r) => setTimeout(r, 1500))]);
@@ -532,7 +534,25 @@ on('presence', ({ userId, online }) => {
 });
 
 // ---- Web push ----
-export const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+// iPhone uygulamasında (iosShell) bildirimler Apple'ın kendi sistemiyle (APNs) gelir: yerel eklenti NativePush cihaz jetonunu
+// verir, sunucuya /api/push/apns ile kaydedilir. Web bildirimi orada kullanılmaz (iPhone onları "from swipeup" diye gösterir).
+export const nativePush = () => (iosShell() ? window.Capacitor?.Plugins?.NativePush || null : null);
+const APNS_KEY = 'su_apns';
+const apnsTok = () => { try { return JSON.parse(localStorage.getItem(APNS_KEY) || 'null'); } catch { return null; } };
+async function nativeRegister() {
+  const r = await nativePush().register(); // ilk seferde iOS izin penceresi çıkar
+  if (!r?.token) throw new Error('Bildirim kaydı yapılamadı.');
+  try { localStorage.setItem(APNS_KEY, JSON.stringify({ token: r.token, env: r.env })); } catch { /* yok */ }
+  await api('/push/apns', { body: { token: r.token, env: r.env } });
+  return r;
+}
+// Bildirim izni durumu: 'granted' | 'denied' | 'default' (web ile aynı adlar)
+export async function pushPermission() {
+  const np = nativePush();
+  if (np) { try { const s = await np.status(); return s.permission === 'prompt' ? 'default' : s.permission; } catch { return 'default'; } }
+  return 'Notification' in window ? Notification.permission : 'denied';
+}
+export const pushSupported = () => !!nativePush() || ('serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window);
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone;
 export function pushHint() {
@@ -546,6 +566,10 @@ function b64ToU8(b64) {
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
 }
 export async function enablePush() {
+  if (nativePush()) {
+    try { await nativeRegister(); } catch (e) { throw new Error(e?.message || 'Bildirimler açılamadı.'); }
+    pushOff(false); return true;
+  }
   if (!pushSupported()) throw new Error(pushHint());
   const perm = await Notification.requestPermission();
   if (perm !== 'granted') throw new Error('Bildirim izni verilmedi. Tarayıcı ayarlarından açabilirsin.');
@@ -561,6 +585,7 @@ const offKey = () => `su_push_off:${state.me?.id || ''}`;
 function pushOff(v) { try { if (v) localStorage.setItem(offKey(), '1'); else localStorage.removeItem(offKey()); } catch { /* yok */ } }
 const isPushOff = () => { try { return !!localStorage.getItem(offKey()); } catch { return false; } };
 export async function disablePush() {
+  if (nativePush()) { const t = apnsTok(); if (t) await api('/push/apns/remove', { body: { token: t.token } }); pushOff(true); return; }
   const reg = await navigator.serviceWorker.ready;
   const sub = await reg.pushManager.getSubscription();
   if (!sub) return;
@@ -569,6 +594,7 @@ export async function disablePush() {
   if (others) pushOff(true); else await sub.unsubscribe();
 }
 export async function pushEnabled() {
+  if (nativePush()) return !isPushOff() && !!apnsTok() && (await pushPermission()) === 'granted';
   if (!pushSupported() || Notification.permission !== 'granted' || isPushOff()) return false;
   const reg = await navigator.serviceWorker.ready;
   return !!(await reg.pushManager.getSubscription());
@@ -576,6 +602,8 @@ export async function pushEnabled() {
 // Açılışta: cihazda bildirim izni ve abonelik varsa bu hesabı da abone et (hesap ekleyince/geçince bildirimler gelsin)
 export async function syncPush() {
   try {
+    // Uygulamada: izin verilmişse jeton her açılışta yenilenir (Apple jetonu değiştirebilir; hesap ekleyince/geçince de kaydolur)
+    if (nativePush()) { if (!isPushOff() && (await pushPermission()) === 'granted') await nativeRegister(); return; }
     if (!pushSupported() || Notification.permission !== 'granted' || isPushOff()) return;
     const reg = await Promise.race([navigator.serviceWorker.ready, new Promise((r) => setTimeout(r, 4000))]);
     let sub = await reg?.pushManager?.getSubscription();

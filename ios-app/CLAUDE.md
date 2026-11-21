@@ -21,7 +21,7 @@ Bu klasör SwipeUp'ın iPhone uygulamasıdır. Xcode'daki yapay zekâ asistanı 
 | Paket kimliği (Bundle ID) | `app.swipeup.ios` |
 | En düşük iOS | 15.0 |
 | Alan adı | `swipeup.live` |
-| Associated Domains | Henüz eklenmedi: ücretsiz (Personal Team) hesap desteklemiyor. Ücretli Apple Developer ekibi seçilince + Capability → Associated Domains → `applinks:swipeup.live` |
+| Associated Domains | Henüz eklenmedi. Ücretli Apple Developer ekibi seçilince + Capability → Associated Domains → `applinks:swipeup.live` |
 | Uygulamanın açtığı adres | `https://swipeup.live` (`capacitor.config.json` → `server.url`) |
 | Burç kartı verisi (widget için) | `GET https://swipeup.live/api/burc/widget?z=<burç>` — giriş gerektirmez, 15 dk önbelleklenebilir |
 
@@ -47,6 +47,12 @@ npm run open         # Xcode'da açar (ios/App/App.xcodeproj)
   `AppViewController` (aynı dosyada) eklentiyi köprüye kaydeder; `SceneDelegate` bu denetleyiciyi kullanır. Çalışması için
   ücretli ekip seçiliyken Signing & Capabilities → + Capability → **Sign in with Apple** eklenmeli (ücretsiz ekipte yok).
   Sunucu kimlik belgesini paket kimliği (`app.swipeup.ios`) ve tek kullanımlık nonce ile doğrular (`server/oidc.js`).
+- Bildirimler: yerel eklenti `ios/App/App/NativePushPlugin.swift` (web'den `Capacitor.Plugins.NativePush`: `status`, `register`,
+  olay `tap`). Cihaz jetonu sunucuya `POST /api/push/apns` ile kaydedilir; sunucu Apple'a (APNs) doğrudan gönderir (`server/apns.js`),
+  böylece bildirimde "from swipeup" yazmaz. Debug yapı `sandbox`, TestFlight / App Store `production` ortamını kullanır.
+  Yetkiler `ios/App/App/App.entitlements` dosyasında (`aps-environment`, Sign in with Apple); ücretli ekip seçili olmalı, ücretsiz
+  ekiple derleme imza hatası verir. APNs anahtarı (.p8) yönetim paneli → Bildirim gönder → iPhone uygulaması bildirimleri'nden girilir.
+  Capacitor köprüsü bildirim temsilcisini kendi `NotificationRouter`'ına alır; eklenti oraya `pushNotificationHandler` olarak bağlanır.
 - Pencere storyboard'suz, `SceneDelegate` içinde kurulur; iPad'de bölünmüş ekran kapalıdır (`UIRequiresFullScreen`).
 - Web görünümünde yalnızca `swipeup.live` açılır (`WKAppBoundDomains`); yeni bir alan adı gerekiyorsa hem `Info.plist`'e hem
   `capacitor.config.json` → `server.allowNavigation`'a ekle.

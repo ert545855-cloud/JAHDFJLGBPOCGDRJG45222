@@ -3,7 +3,7 @@ import { remember, accountSheet, switchFromUrl } from './accounts.js';
 import { icon } from './icons.js';
 import { initNav } from './nav.js';
 import {
-  state, api, on, emit, connectSocket, refreshBadges, toast, esc, el, logo, applySkin, currentSkin, setGameLook, notifHref, applyLogo, refreshStoryMap, syncPush, sheet, enablePush, pushSupported, pushEnabled,
+  state, api, on, emit, connectSocket, refreshBadges, toast, esc, el, logo, applySkin, currentSkin, setGameLook, notifHref, applyLogo, refreshStoryMap, syncPush, sheet, enablePush, pushSupported, pushEnabled, pushPermission, nativePush,
 } from './core.js';
 import { initCalls } from './calls.js';
 import { checkVersion, recover, afterBoot } from './update.js';
@@ -385,7 +385,7 @@ function keyboardFit() {
 // Bildirim izni (telefonun izni): bu cihazda bu hesap için bir kez sorulur; "Şimdi değil" denirse bir daha sorulmaz
 async function askPush() {
   try {
-    if (!state.me || !pushSupported() || Notification.permission !== 'default') return;
+    if (!state.me || !pushSupported() || (await pushPermission()) !== 'default') return;
     if (await pushEnabled()) return;
     const key = `su_push_ask:${state.me.id}`; if (localStorage.getItem(key)) return; // bir kez sorulur
     if (document.querySelector('.sheet, .terms-up, .cons-up') || !state.me.consentsDone) { setTimeout(askPush, 15000); return; }
@@ -468,17 +468,23 @@ async function boot() {
   try { applySkin(localStorage.getItem('su_skin') || 'gunbatimi', { save: false }); } catch {}
   try { const lg = localStorage.getItem('su_logo'); if (lg) document.documentElement.dataset.logo = lg; } catch {}
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
-  navigator.serviceWorker?.addEventListener('message', (e) => {
-    if (e.data?.type !== 'navigate' || !e.data.url) return;
-    const u = new URL(e.data.url); const as = u.searchParams.get('as');
+  // Bildirime dokunuldu: ilgili sayfa açılır; bildirim cihazdaki başka bir hesabınsa o hesapla yeniden açılır
+  const openPushUrl = (url, uid) => {
+    const u = new URL(url || '/', location.origin); const as = uid || u.searchParams.get('as');
     if (!as || as === state.me?.id) { u.searchParams.delete('as'); if (u.pathname === location.pathname && !u.search) { location.hash = u.hash || '#/'; return; } }
-    location.href = u.href; // başka hesabın bildirimi: o hesapla yeniden açılır
-  });
+    else u.searchParams.set('as', as);
+    location.href = u.href;
+  };
+  navigator.serviceWorker?.addEventListener('message', (e) => { if (e.data?.type === 'navigate' && e.data.url) openPushUrl(e.data.url); });
+  // Uygulama kapalıyken dokunulduysa olay açılışta gelir: hesap bilgisi yüklenince işlenir (gereksiz yeniden açılış olmasın)
+  let tapLater = null;
+  try { nativePush()?.addListener('tap', (d) => { if (state.me) openPushUrl(d?.url, d?.uid); else tapLater = d; }); } catch { /* eski uygulama sürümü */ }
   switchFromUrl(); // bildirimden gelindiyse o bildirimin hesabına geç
   if (state.token) {
     try {
       const [cfg, me] = await Promise.all([api('/config'), api('/me')]);
       state.config = cfg; state.me = me; remember(state.token, me);
+      if (tapLater) { const d = tapLater; tapLater = null; setTimeout(() => openPushUrl(d.url, d.uid), 0); }
       if (me.ban) state.ban = me.ban;
       if (me.skin && me.skin !== currentSkin()) applySkin(me.skin);
       applyLogo(me.plus ? me.logo : 'klasik');

@@ -15,6 +15,7 @@ const webpush = require('web-push');
 const { nanoid, customAlphabet } = require('nanoid');
 const { Server } = require('socket.io');
 const store = require('./server/store');
+const APNS = require('./server/apns').create(store); // iPhone uygulaması bildirimleri (Apple)
 const mail = require('./server/mail');
 const moderation = require('./server/moderation');
 const eco = require('./server/economy')(store);
@@ -246,7 +247,7 @@ async function notify(userId, n) {
     emitTo(userId, 'notification', { ...doc, from: n.type === 'liked' ? null : brief(from) });
   }
   const visible = [...(online.get(userId) || [])].some((s) => s.data.visible);
-  if (visible || !VAPID) return;
+  if (visible || (!VAPID && !APNS.ready())) return;
   const me = store.get('users', userId);
   // Kişinin bildirim tercihleri: kapattığı türler ve sessiz saatler (güvenlik, destek ve satın alma bildirimleri her zaman gider)
   if (!pushAllowed(me, n.type)) return;
@@ -259,10 +260,11 @@ async function notify(userId, n) {
     call: n.type === 'call',
     uid: userId,
   };
-  const subs = store.filter('pushSubs', (s) => s.userId === userId);
+  const subs = pushTargets(userId);
   // Bu cihazda başka hesap da kayıtlıysa bildirimin hangi hesaba geldiği yazılır
-  const shared = (s) => store.filter('pushSubs', (x) => x.sub?.endpoint === s.sub?.endpoint && x.userId !== userId).length > 0;
-  await Promise.all(subs.map((s) => webpush.sendNotification(s.sub, JSON.stringify(shared(s) && me ? { ...body, title: `@${me.username} · ${body.title}` } : body), { TTL: n.type === 'call' ? 30 : 3600, urgency: n.type === 'call' || n.type === 'message' ? 'high' : 'normal' })
+  const key = (x) => x.apns?.token || x.sub?.endpoint;
+  const shared = (s) => store.filter('pushSubs', (x) => key(x) === key(s) && x.userId !== userId).length > 0;
+  await Promise.all(subs.map((s) => pushSend(s, shared(s) && me ? { ...body, title: `@${me.username} · ${body.title}` } : body, { TTL: n.type === 'call' ? 30 : 3600, urgency: n.type === 'call' || n.type === 'message' ? 'high' : 'normal' })
     .then(() => pushResult(s, null)).catch((e) => pushResult(s, e))));
 }
 
@@ -1024,11 +1026,11 @@ app.post('/api/push/unsubscribe', auth, (req, res) => {
   res.json({ ok: true });
 });
 app.post('/api/push/test', auth, wrap(async (req, res) => {
-  const subs = store.filter('pushSubs', (s) => s.userId === req.user.id);
+  const subs = pushTargets(req.user.id);
   if (!subs.length) return res.status(400).json({ error: 'Bu cihazda bildirim aboneliği yok.' });
-  await Promise.all(subs.map((s) => webpush.sendNotification(s.sub, JSON.stringify({
+  await Promise.all(subs.map((s) => pushSend(s, {
     title: 'SwipeUp', body: 'Bildirimler çalışıyor 🎉', url: '/#/notifications', tag: 'test',
-  })).catch(() => {})));
+  }).catch(() => {})));
   res.json({ ok: true, count: subs.length });
 }));
 
@@ -2148,7 +2150,21 @@ app.post('/api/share', auth, (req, res) => {
 });
 
 // Bildirim sonucu: hata cihaz kaydına ve sunucu kayıtlarına yazılır (Apple / Google ne dediyse); geçersiz abonelik silinir
-const pushHost = (s) => { try { return new URL(s.sub.endpoint).hostname.replace(/^.*?(apple|fcm|mozilla|windows|wns)\..*$/, '$1'); } catch { return '?'; } };
+// Kullanıcının bildirim gönderilecek cihazları. iPhone uygulaması yüklüyse (APNs jetonu var) aynı telefondaki eski web
+// aboneliğine (Safari / ana ekran) ayrıca gönderilmez: yoksa bildirim iki kez gelir, biri "from swipeup" ibaresiyle
+function pushTargets(userId) {
+  let subs = store.filter('pushSubs', (s) => s.userId === userId);
+  if (APNS.ready() && subs.some((s) => s.apns)) subs = subs.filter((s) => s.apns || !/push\.apple\.com/.test(s.sub?.endpoint || ''));
+  if (!APNS.ready()) subs = subs.filter((s) => !s.apns);
+  if (!VAPID) subs = subs.filter((s) => s.apns);
+  return subs;
+}
+// Bir aboneliğe bildirim: iPhone uygulaması (APNs) ya da tarayıcı (web-push). Hata biçimi ikisinde aynı ({ statusCode, body })
+function pushSend(s, payload, opts = {}) {
+  if (s.apns) return APNS.send(s.apns, payload, { ttl: opts.TTL, urgent: opts.urgency !== 'low' && opts.urgency !== 'normal' });
+  return webpush.sendNotification(s.sub, JSON.stringify(payload), opts);
+}
+const pushHost = (s) => { if (s.apns) return `ios-app${s.apns.env === 'sandbox' ? ' (test)' : ''}`; try { return new URL(s.sub.endpoint).hostname.replace(/^.*?(apple|fcm|mozilla|windows|wns)\..*$/, '$1'); } catch { return '?'; } };
 const pushWarned = new Map();
 function pushResult(s, e) {
   if (!e) { if (s.lastErr || !s.lastOk || now() - s.lastOk > 3600000) store.update('pushSubs', s.id, { lastOk: now(), lastErr: null }); return; }
@@ -2161,10 +2177,10 @@ function pushResult(s, e) {
 // Yönetim → kullanıcı → Test bildirimi: görünürlük ve tercih fark etmeksizin bütün cihazlarına gönderir, sonucu döndürür
 app.post('/api/admin/users/:id/push-test', adminApi.adminAuth, async (req, res) => {
   const u = store.get('users', req.params.id); if (!u) return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
-  if (!VAPID) return res.status(400).json({ error: 'Bildirim anahtarı (VAPID) yok.' });
+  if (!VAPID && !APNS.ready()) return res.status(400).json({ error: 'Bildirim anahtarı (VAPID / APNs) yok.' });
   const subs = store.filter('pushSubs', (x) => x.userId === u.id);
-  const body = JSON.stringify({ title: 'SwipeUp', body: 'Test bildirimi: bildirimler çalışıyor 🎉', url: '/#/notifications', tag: `${u.id.slice(0, 8)}:test`, icon: '/icons/icon-192.png', uid: u.id });
-  const results = await Promise.all(subs.map((s) => webpush.sendNotification(s.sub, body, { TTL: 600, urgency: 'high' })
+  const body = { title: 'SwipeUp', body: 'Test bildirimi: bildirimler çalışıyor 🎉', url: '/#/notifications', tag: `${u.id.slice(0, 8)}:test`, icon: '/icons/icon-192.png', uid: u.id };
+  const results = await Promise.all(subs.map((s) => pushSend(s, body, { TTL: 600, urgency: 'high' })
     .then(() => { pushResult(s, null); return { device: pushHost(s), ok: true }; })
     .catch((e) => { pushResult(s, e); return { device: pushHost(s), ok: false, status: e.statusCode || 0, error: String(e.body || e.message || '').slice(0, 160) }; })));
   adminApi.audit?.(req.admin, 'test bildirimi gönderdi', u.id);
@@ -2254,6 +2270,7 @@ require('./server/minigames')(app, featureCtx); // sohbet içi mini oyunlar: XOX
 require('./server/kupa')(app, featureCtx); // Parti Kupası (3D)
 require('./server/farm')(app, featureCtx); // SwipeFarm: çiftlik oyunu
 require('./server/iap')(app, featureCtx);
+require('./server/apns').routes(app, { ...featureCtx, apns: APNS }); // iPhone uygulaması bildirim jetonu + anahtar ayarı
 require('./server/cart')(app, featureCtx); // sepet ve sepet kampanyaları (iap'tan sonra)
 require('./server/nudge')(app, featureCtx); // akıllı hatırlatmalar ve haftalık özet e-postası
 if (process.env.NODE_ENV === 'test') { // yalnız otomatik testlerde (test/): koleksiyonu oku, hatırlatma turunu hemen çalıştır
