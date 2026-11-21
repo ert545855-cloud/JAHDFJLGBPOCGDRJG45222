@@ -516,12 +516,12 @@ async function boot() {
   }
   if (!state.config) state.config = await fetch('/api/config').then((r) => r.json()).catch(() => ({}));
   if (state.config?.maintenance) { showMaintenance(state.config.maintenance); return; }
-  // Yönlendirmeli Google girişinden dönüş (?g=kod)
+  // Yönlendirmeli Google / Apple girişinden dönüş (?g=kod, ?a=kod)
   const gr = await takeGoogleReturn();
   if (gr?.purpose === 'link' && state.token && state.me) {
     location.hash = '#/settings';
     if (gr.error) setTimeout(() => toast(gr.error), 600);
-    else api('/me/logins', { body: { provider: 'google', credential: gr.credential } }).then(async () => { Object.assign(state.me, await api('/me')); toast('Google hesabın bağlandı.'); }).catch((er) => toast(er.message));
+    else api('/me/logins', { body: { provider: gr.provider || 'google', credential: gr.credential } }).then(async () => { Object.assign(state.me, await api('/me')); toast(`${gr.provider === 'apple' ? 'Apple' : 'Google'} hesabın bağlandı.`); }).catch((er) => toast(er.message));
   } else if (gr) { state.googleReturn = gr; if (!/^#\/(login|register)/.test(location.hash)) location.hash = '#/login'; }
   window.__suVer = state.config?.version || '';
   afterBoot(state.config?.version);

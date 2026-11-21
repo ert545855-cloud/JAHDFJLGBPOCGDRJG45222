@@ -719,21 +719,44 @@ const usernameFrom = (id) => {
 // Google'ın yönlendirmeli girişi (ana ekrana eklenmiş iPhone uygulamasında açılır pencere geri dönemez):
 // Google kimlik belgesini form olarak buraya yollar → kısa ömürlü tek kullanımlık kod → uygulama kodu belgeyle değiştirir
 const gCodes = new Map(); // kod → { credential, exp }
+// iPhone uygulamasında Google girişi Safari tabanlı güvenli pencerede (/auth/google.html) yapılır; o sayfa su_gapp çerezini koyar.
+// Dönüşte kod uygulamanın kendi adresine (swipeup://google?g=…) gönderilir, pencere kapanır ve uygulama girişi tamamlar.
+const fromApp = (req) => /(?:^|;\s*)su_gapp=1/.test(req.headers.cookie || '');
+const clearApp = (res) => res.append('Set-Cookie', 'su_gapp=; Max-Age=0; Path=/; Secure; SameSite=None');
 app.post('/api/auth/google/cb', express.urlencoded({ extended: false, limit: '20kb' }), (req, res) => {
+  const app_ = fromApp(req); if (app_) clearApp(res);
+  const fail = () => res.redirect(303, app_ ? 'swipeup://google?gerr=1' : '/?gerr=1#/login');
   const cred = String(req.body?.credential || '');
   const ck = /(?:^|;\s*)g_csrf_token=([^;]+)/.exec(req.headers.cookie || '')?.[1];
   const bodyTok = req.body?.g_csrf_token;
-  if (!cred || (ck && bodyTok && ck !== bodyTok)) { console.warn('[oauth] google yönlendirme: belge yok ya da csrf uyuşmadı'); return res.redirect(303, '/?gerr=1#/login'); }
+  if (!cred || (ck && bodyTok && ck !== bodyTok)) { console.warn('[oauth] google yönlendirme: belge yok ya da csrf uyuşmadı'); return fail(); }
   for (const [k, v] of gCodes) if (v.exp < Date.now()) gCodes.delete(k);
-  if (gCodes.size > 500) return res.redirect(303, '/?gerr=1#/login');
+  if (gCodes.size > 500) return fail();
   const code = crypto.randomBytes(18).toString('base64url');
   gCodes.set(code, { credential: cred, exp: Date.now() + 120000 });
-  res.redirect(303, `/?g=${code}#/login`);
+  res.redirect(303, app_ ? `swipeup://google?g=${code}` : `/?g=${code}#/login`);
+});
+// Apple ile giriş (web / Android): telefonlarda açılır pencere yerine yönlendirmeli giriş. Apple bu adrese form olarak
+// kimlik belgesini (id_token) ve ilk girişte adı (user) gönderir; tek kullanımlık kodla uygulamaya döner (?a=kod).
+// Apple Developer → Services ID → Return URL: https://swipeup.live/api/auth/apple/cb (APPLE_REDIRECT_URI ile aynı)
+app.post('/api/auth/apple/cb', express.urlencoded({ extended: false, limit: '20kb' }), (req, res) => {
+  const cred = String(req.body?.id_token || '');
+  // Başka birinin belgesiyle oturum açtırılmasın: istemcinin çereze koyduğu durum değeri Apple'dan dönenle aynı olmalı
+  const st = /(?:^|;\s*)su_ast=([\w-]+)/.exec(req.headers.cookie || '')?.[1];
+  res.append('Set-Cookie', 'su_ast=; Max-Age=0; Path=/; Secure; SameSite=None');
+  if (cred && (!st || st !== String(req.body?.state || ''))) { console.warn('[oauth] apple yönlendirme: durum uyuşmadı'); return res.redirect(303, '/?aerr=1#/login'); }
+  if (!cred) { console.warn('[oauth] apple yönlendirme: belge yok', String(req.body?.error || '')); return res.redirect(303, req.body?.error === 'user_cancelled_authorize' ? '/#/login' : '/?aerr=1#/login'); }
+  let name = ''; try { const u = JSON.parse(String(req.body?.user || '{}')); name = [u?.name?.firstName, u?.name?.lastName].filter(Boolean).join(' ').slice(0, 40); } catch { /* yok */ }
+  for (const [k, v] of gCodes) if (v.exp < Date.now()) gCodes.delete(k);
+  if (gCodes.size > 500) return res.redirect(303, '/?aerr=1#/login');
+  const code = crypto.randomBytes(18).toString('base64url');
+  gCodes.set(code, { credential: cred, name, provider: 'apple', exp: Date.now() + 120000 });
+  res.redirect(303, `/?a=${code}#/login`);
 });
 app.post('/api/auth/google/code', (req, res) => {
   const c = gCodes.get(String(req.body?.code || '')); gCodes.delete(String(req.body?.code || ''));
   if (!c || c.exp < Date.now()) return res.status(400).json({ error: 'Google girişinin süresi doldu. Tekrar dene.' });
-  res.json({ credential: c.credential });
+  res.json({ credential: c.credential, provider: c.provider || 'google', name: c.name || '' });
 });
 app.post('/api/auth/oauth', wrap(async (req, res) => {
   if (limited('oauth:' + ipOf(req), 30, 900000)) return res.status(429).json({ error: 'Çok fazla deneme. 15 dakika sonra tekrar dene.' });

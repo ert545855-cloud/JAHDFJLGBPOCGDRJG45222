@@ -254,7 +254,7 @@ export default function auth(view, mode) {
     </form>
     ${oauthCfg().google || oauthCfg().apple ? `<div class="oauth"><div class="or"><span>ya da</span></div>${oauthCfg().google ? '<div class="g-btn"></div>' : ''}${oauthCfg().apple ? '<button type="button" class="btn block ap-btn">Apple ile devam et</button>' : ''}</div>` : ''}
     ${reg ? '' : '<div class="forgot"><a class="muted" href="#/forgot">Şifreni mi unuttun?</a></div>'}
-    ${!reg && iosShell() ? '<p class="muted" style="font-size:12.5px;text-align:center;margin:4px 8px 0">Google ile kaydolduysan “Şifreni mi unuttun?” ile hesabına bir şifre belirleyip buradan girebilirsin.</p>' : ''}
+    ${!reg && iosShell() && !oauthCfg().google ? '<p class="muted" style="font-size:12.5px;text-align:center;margin:4px 8px 0">Google ile kaydolduysan “Şifreni mi unuttun?” ile hesabına bir şifre belirleyip buradan girebilirsin.</p>' : ''}
     ${reg ? '' : `<a class="ins-cta" href="#/install"><img src="/icons/icon-192.png" alt=""><span><b>Uygulamayı telefona yükle</b><small>iPhone ve Android · ücretsiz</small></span>${icon('download')}</a>`}
     ${reg ? '' : `<div class="legal-links"><a href="/tanitim">SwipeUp nedir?</a> · <a href="#/legal/gizlilik">Gizlilik</a> · <a href="#/legal/kosullar">Koşullar</a> · <a href="#/legal/kvkk">KVKK</a> · <a href="#/legal/cerez">Çerezler</a> · <a href="#/legal/kunye">Künye</a></div>`}
     <div class="lang-pick" data-noi18n>${LANGS.map(([k, n]) => `<button type="button" data-l="${k}" class="${getLang() === k ? 'on' : ''}">${n}</button>`).join('<span>·</span>')}</div>
@@ -288,7 +288,7 @@ export default function auth(view, mode) {
   if (gb) googleButton(gb, (c) => oauthSignIn(view, 'google', c, err), reg ? 'signup_with' : 'continue_with').catch((er) => { gb.textContent = er.message; gb.classList.add('muted'); });
   // Yönlendirmeli Google girişinden dönüldüyse (ana ekran iPhone uygulaması) kaldığı yerden devam et
   const gr = state.googleReturn; state.googleReturn = null;
-  if (gr?.error) err.textContent = gr.error; else if (gr?.credential) oauthSignIn(view, 'google', gr.credential, err);
+  if (gr?.error) err.textContent = gr.error; else if (gr?.credential) oauthSignIn(view, gr.provider || 'google', gr.credential, err);
   view.querySelector('.ap-btn')?.addEventListener('click', async () => { try { const c = await appleCredential(); if (c) oauthSignIn(view, 'apple', c, err); } catch (er) { if (er?.error !== 'popup_closed_by_user') err.textContent = er.message || 'Apple ile giriş tamamlanmadı.'; } });
   f.username.addEventListener('input', () => { if (reg) f.username.value = f.username.value.toLowerCase().replace(/\s/g, ''); });
   return null;
