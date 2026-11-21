@@ -1,5 +1,6 @@
 import Foundation
 import Capacitor
+import WebKit
 import AuthenticationServices
 
 // Apple ile giriş (yerel pencere). Web tarafı window.Capacitor.Plugins.AppleSignIn.authorize({ nonce }) ile çağırır
@@ -75,5 +76,29 @@ class AppViewController: CAPBridgeViewController {
         // Uzun basınca Safari'nin bağlantı önizlemesi (Open Link / Copy Link…) açılmasın: uygulama kendi menülerini kullanır
         // (ör. alt menüde profil sekmesine uzun basınca hesap seçici)
         webView?.allowsLinkPreview = false
+        // Klavyenin üstündeki ⌃ ⌄ ✓ şeridi (form gezinme çubuğu) gizlenir: uygulama kendi mesaj kutusunu kullanır
+        webView?.hideKeyboardAccessoryBar()
+    }
+}
+
+// WKWebView'in içerik görünümü klavye üstüne gezinme çubuğu ekler; görünümün sınıfı, bu çubuğu (inputAccessoryView) nil döndüren
+// bir alt sınıfla değiştirilir. Ionic/Capacitor klavye eklentilerinin de kullandığı yöntem.
+private final class NoAccessoryBar: NSObject {
+    @objc var inputAccessoryView: AnyObject? { return nil }
+}
+
+extension WKWebView {
+    func hideKeyboardAccessoryBar() {
+        guard let content = scrollView.subviews.first(where: { String(describing: type(of: $0)).hasPrefix("WKContent") }),
+              let base: AnyClass = object_getClass(content) else { return }
+        let name = "\(NSStringFromClass(base))_NoAccessoryBar"
+        var cls: AnyClass? = NSClassFromString(name)
+        if cls == nil, let made = objc_allocateClassPair(base, name, 0),
+           let m = class_getInstanceMethod(NoAccessoryBar.self, #selector(getter: NoAccessoryBar.inputAccessoryView)) {
+            class_addMethod(made, #selector(getter: UIResponder.inputAccessoryView), method_getImplementation(m), method_getTypeEncoding(m))
+            objc_registerClassPair(made)
+            cls = made
+        }
+        if let cls = cls { object_setClass(content, cls) }
     }
 }

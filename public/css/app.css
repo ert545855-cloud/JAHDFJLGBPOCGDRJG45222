@@ -4576,3 +4576,9 @@ html.land-game #fx-layer { display: none; }
 
 /* Alt menü: uzun basınca iPhone'un bağlantı önizlemesi / "Fotoğraflara kaydet" menüsü çıkmasın (profil sekmesinde hesap seçici açılır) */
 #tabbar, #tabbar a, #tabbar img { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+
+/* iPhone (WebKit): uzun gönderilen mesaj balonlarında "background-attachment: fixed" degrade boyanmıyor, balon soluk ve yazı
+   beyaz-üstüne-beyaz kalıyordu. iPhone'da degrade balonun kendisine çizilir. */
+@supports (-webkit-touch-callout: none) {
+  .me .msg, .gm.me .msg { background-attachment: scroll; }
+}

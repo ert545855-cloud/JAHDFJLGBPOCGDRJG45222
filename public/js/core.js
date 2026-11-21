@@ -41,7 +41,9 @@ export async function api(path, opts = {}) {
   });
   const data = await res.json().catch(() => ({}));
   if (res.status >= 500 && res.status !== 503) report({ kind: 'api', msg: `${opts.method || (opts.body ? 'POST' : 'GET')} ${path.split('?')[0].replace(/\/[\w-]{8,}/g, '/:id')} → ${res.status}${data.error ? ` · ${data.error}` : ''}`, src: '/api' + path.split('?')[0], status: res.status });
-  if (res.status === 401 && state.token) { logout(false, true); throw new Error(data.error); }
+  // 401: oturum anahtarı geçersiz → bu hesaptan çıkılır. Giriş/kayıt istekleri hariç: hesap eklerken yanlış şifre de 401 döner,
+  // o zaman açık olan hesap silinmemeli (eskiden "hesap ekleyince diğer hesap gidiyor" hatası buydu)
+  if (res.status === 401 && state.token && !/^\/auth\//.test(path)) { logout(false, true); throw new Error(data.error); }
   if (res.status === 423) { emit('banned', data); throw new Error(data.error); }
   if (res.status === 503 && data.maintenance) { emit('maintenance', data.maintenance); throw new Error(data.error); }
   if (!res.ok) { const er = new Error(data.error || 'Bir şeyler ters gitti.'); er.status = res.status; er.data = data; throw er; }
