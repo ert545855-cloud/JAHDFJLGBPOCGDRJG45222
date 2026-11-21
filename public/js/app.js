@@ -120,6 +120,10 @@ function renderTabbar(active) {
   tabbar.addEventListener('click', (e) => { if (fired && isMe(e)) { e.preventDefault(); fired = false; } }, true);
   tabbar.addEventListener('contextmenu', (e) => { if (isMe(e)) e.preventDefault(); });
 }
+// Aşağı çekip yenileme: listelerin olduğu sayfalarda, sayfa en baştayken aşağı çekilince sayfa yeniden yüklenir
+let curRoute = null;
+const PTR_PAGES = new Set(['feed', 'chats', 'notifications', 'profile', 'likes', 'post', 'tag', 'events', 'best', 'games', 'rooms', 'store', 'wallet', 'requests', 'quests', 'viewers', 'contests', 'streaks', 'insta', 'sans', 'level', 'fal']);
+import('./ptr.js').then((m) => m.initPtr({ enabled: () => !!state.me && PTR_PAGES.has(curRoute), refresh: () => router() })).catch(() => {});
 // Açık olan sekmeye tekrar dokununca: sayfa aşağıdaysa en başa kayar, zaten en baştaysa sayfa yenilenir (akış tazelenir)
 tabbar.addEventListener('click', (e) => {
   const a = e.target.closest?.('a[href^="#/"]');
@@ -225,6 +229,7 @@ async function router() {
   document.body.classList.toggle('dark-ui', !!match.opts.dark);
   setGameLook(!!match.opts.game); // oyunlarda uygulama teması kapalı
   tabbar.dataset.active = match.opts.tab || '';
+  curRoute = match.name;
   if (state.me) renderTabbar(match.opts.tab);
   // Her sayfada temiz bir kap: önceki sayfanın view üzerine eklediği dinleyiciler taşınmasın
   { const fresh = view.cloneNode(false); view.replaceWith(fresh); view = fresh; }

@@ -4582,3 +4582,10 @@ html.land-game #fx-layer { display: none; }
 @supports (-webkit-touch-callout: none) {
   .me .msg, .gm.me .msg { background-attachment: scroll; }
 }
+
+/* Aşağı çekip yenileme göstergesi (ptr.js) */
+.ptr { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 64px); z-index: 60; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--surface, #fff); color: var(--muted); box-shadow: 0 6px 18px -6px rgba(0,0,0,.28); opacity: 0; transform: translate(-50%, -56px); pointer-events: none; will-change: transform; }
+.ptr.ready { color: var(--uv, #e23e6d); }
+.ptr.back { transition: transform .25s ease, opacity .25s ease; }
+.ptr.spin svg { animation: ptrSpin .7s linear infinite; }
+@keyframes ptrSpin { to { transform: rotate(360deg); } }
