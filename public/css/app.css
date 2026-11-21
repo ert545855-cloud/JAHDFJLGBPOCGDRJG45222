@@ -4589,3 +4589,10 @@ html.land-game #fx-layer { display: none; }
 .ptr.back { transition: transform .25s ease, opacity .25s ease; }
 .ptr.spin svg { animation: ptrSpin .7s linear infinite; }
 @keyframes ptrSpin { to { transform: rotate(360deg); } }
+
+/* Beğeniler: "Seni beğenenler" / "Beğendiklerin" sekmeleri */
+.lk-tabs { margin: 4px 14px 12px; }
+.like-card.sent .t { bottom: 66px; }
+.like-card .lk-when { position: absolute; left: 10px; right: 10px; bottom: 48px; font-size: 12px; opacity: .8; }
+.like-card .lk-undo { position: absolute; left: 8px; right: 8px; bottom: 8px; height: 34px; border-radius: 999px; border: 0; background: rgba(255,255,255,.18); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); color: #fff; font: 650 13px/1 var(--font); }
+.like-card .lk-undo:disabled { opacity: .5; }

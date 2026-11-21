@@ -1764,6 +1764,25 @@ app.get('/api/likes', auth, (req, res) => {
   });
 });
 
+// Beğendiklerin: beğendiğin (ya da süper beğendiğin) ama henüz eşleşmediğin kişiler. Karşı tarafın seni geçip geçmediği
+// gösterilmez (yalnız eşleşince belli olur). Beğeni geri alınabilir.
+app.get('/api/likes/sent', auth, (req, res) => {
+  const me = req.user.id;
+  const items = store.filter('swipes', (s) => s.from === me && s.dir !== 'left' && !store.get('matches', [me, s.to].sort().join('_')) && !isBlocked(me, s.to))
+    .sort((a, b) => b.at - a.at).slice(0, 300)
+    .map((s) => { const u = store.get('users', s.to); return u && isActive(u) && { ...brief(u), age: shownAge(u), city: u.city, super: s.dir === 'super', at: s.at, photo: (u.photos || [])[0] || u.avatar }; })
+    .filter(Boolean);
+  res.json({ count: items.length, items });
+});
+app.delete('/api/likes/sent/:id', auth, (req, res) => {
+  const me = req.user.id; const to = req.params.id;
+  if (store.get('matches', [me, to].sort().join('_'))) return res.status(400).json({ error: 'Bu kişiyle eşleştiniz; beğeni geri alınamaz. Eşleşmeyi profilinden kaldırabilirsin.' });
+  const s = store.get('swipes', `${me}_${to}`);
+  // Silmek yerine "geç" olarak işaretlenir: kişi kaydırma destesine geri gelmez, onun 'Seni beğenenler' listesinden de çıkar
+  if (s && s.dir !== 'left') store.update('swipes', s.id, { dir: 'left', at: now(), unliked: true });
+  res.json({ ok: true });
+});
+
 app.post('/api/swipe', auth, (req, res) => {
   const { to, dir } = req.body || {};
   const t = store.get('users', to);
@@ -1795,6 +1814,8 @@ app.post('/api/swipe', auth, (req, res) => {
     if (!store.get('matches', mid)) {
       store.put('matches', { id: mid, users: [me.id, t.id], at: now() });
       const chat = chatBetween(me.id, t.id);
+      // Sohbetin başına karşılama notu (bildirim göndermez); daha önce yazışmışlarsa eklenmez
+      if (!store.filter('messages', (m) => m.chatId === chat.id).length) systemMsg(chat, '💘 Eşleştiniz! İlk mesajı atmaktan çekinme, bir selam yeter.');
       notify(t.id, { type: 'match', fromId: me.id, text: `${me.name} ile eşleştin! 💘`, url: `/#/chat/${chat.id}` });
       emitTo(t.id, 'match', { user: brief(me), chatId: chat.id });
       return res.json({ match: true, user: brief(t), chatId: chat.id });
