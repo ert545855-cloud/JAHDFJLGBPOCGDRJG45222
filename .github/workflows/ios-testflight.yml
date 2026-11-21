@@ -1,0 +1,109 @@
+name: iOS → App Store Connect (TestFlight)
+
+# İmzalı iOS derlemesi hazırlayıp App Store Connect'e yükler (TestFlight'ta görünür, oradan incelemeye gönderilir).
+# Elle çalıştırılır: GitHub → Actions → "iOS → App Store Connect" → Run workflow.
+# Gerekenler (bir kez):
+#   1) App Store Connect'te uygulama kaydı (Apps → + → New App, paket kimliği app.swipeup.ios)
+#   2) App Store Connect → Users and Access → Integrations → App Store Connect API → Team Keys → + (Access: Admin)
+#   3) GitHub → Settings → Secrets and variables → Actions → şu üç gizli değer:
+#        ASC_KEY_ID     anahtar kimliği (Key ID)
+#        ASC_ISSUER_ID  sayfanın üstündeki Issuer ID
+#        ASC_KEY_P8     indirilen .p8 dosyasının tüm içeriği
+# İmza sertifikası ve profil Apple tarafında otomatik oluşturulur (Xcode bulut imzası); bilgisayarda bir şey gerekmez.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Sürüm (App Store’da görünen), ör. 1.0'
+        required: true
+        default: '1.0'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-testflight
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: macos-latest
+    env:
+      TEAM_ID: 8Z85JH5W24
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - name: Gizli değerler var mı
+        env:
+          K: ${{ secrets.ASC_KEY_ID }}
+          I: ${{ secrets.ASC_ISSUER_ID }}
+          P: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          [ -n "$K" ] && [ -n "$I" ] && [ -n "$P" ] || { echo "::error::ASC_KEY_ID, ASC_ISSUER_ID ve ASC_KEY_P8 gizli değerleri eksik (dosyanın başındaki açıklamaya bak)."; exit 1; }
+
+      - name: Xcode
+        run: |
+          X=$(ls -d /Applications/Xcode_*.app 2>/dev/null | grep -vi beta | sort -V | tail -1); [ -n "$X" ] && sudo xcode-select -s "$X"
+          xcodebuild -version
+
+      - name: iOS projesini hazırla
+        run: |
+          cd ios-app
+          npm ci --no-audit --no-fund
+          npx cap sync ios
+
+      - name: App Store Connect anahtarı
+        env:
+          P: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/asc"
+          printf '%s\n' "$P" > "$RUNNER_TEMP/asc/key.p8"
+          chmod 600 "$RUNNER_TEMP/asc/key.p8"
+
+      - name: Arşivle (imzalı)
+        env:
+          K: ${{ secrets.ASC_KEY_ID }}
+          I: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          # Build numarası her yüklemede artmalı: çalıştırma numarası + 100 (Xcode'dan elle yüklenenlerle çakışmasın)
+          BUILD=$(( ${{ github.run_number }} + 100 ))
+          echo "BUILD=$BUILD" >> "$GITHUB_ENV"
+          cd ios-app/ios/App
+          xcodebuild archive -project App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/SwipeUp.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc/key.p8" -authenticationKeyID "$K" -authenticationKeyIssuerID "$I" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            MARKETING_VERSION="${{ inputs.version }}" CURRENT_PROJECT_VERSION="$BUILD" | tail -60
+          test -d "$RUNNER_TEMP/SwipeUp.xcarchive"
+
+      - name: App Store Connect'e yükle
+        env:
+          K: ${{ secrets.ASC_KEY_ID }}
+          I: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          cat > "$RUNNER_TEMP/export.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/SwipeUp.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/export.plist" -exportPath "$RUNNER_TEMP/out" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc/key.p8" -authenticationKeyID "$K" -authenticationKeyIssuerID "$I" | tail -40
+          echo "✅ Yüklendi: sürüm ${{ inputs.version }} (build $BUILD). 10-30 dk içinde App Store Connect → TestFlight'ta görünür."
+
+      - name: Anahtarı sil
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/asc"
