@@ -36,7 +36,8 @@ npm run open         # Xcode'da açar (ios/App/App.xcodeproj)
 
 ## Kurallar
 
-- Arayüz metinleri Türkçe. Kullanıcıya görünen hiçbir yerde yapay zekâ ya da sağlayıcı/marka adı geçmez.
+- Uygulamanın dili Türkçe (`CFBundleDevelopmentRegion` = tr, `CFBundleLocalizations` = [tr]); iOS'un kendi menüleri
+  (yazı seçince Kopyala / Çevir, izin pencereleri) bu yüzden Türkçe çıkar. Arayüz metinleri Türkçe. Kullanıcıya görünen hiçbir yerde yapay zekâ ya da sağlayıcı/marka adı geçmez.
 - Gizli anahtar, şifre, token koda yazılmaz.
 - `ios/App/App/PrivacyInfo.xcprivacy` Apple'ın gizlilik bildirimidir (App Store zorunlu tutar). Yeni veri türü toplanırsa ya da
   yeni izin eklenirse bu dosyayı da güncelle. Uygulama izleme (tracking) yapmaz; ATS açık, yalnız HTTPS.
