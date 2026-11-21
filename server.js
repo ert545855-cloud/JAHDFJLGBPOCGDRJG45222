@@ -2332,6 +2332,27 @@ require('./server/kupa')(app, featureCtx); // Parti Kupası (3D)
 require('./server/farm')(app, featureCtx); // SwipeFarm: çiftlik oyunu
 require('./server/iap')(app, featureCtx);
 require('./server/apns').routes(app, { ...featureCtx, apns: APNS }); // iPhone uygulaması bildirim jetonu + anahtar ayarı
+// Apple ile giriş (web / Android): Services ID ve dönüş adresi yönetim panelinden de girilebilir (sunucu ayar dosyası önceliklidir)
+oidc.configure(() => { const a = store.get('meta', 'secrets')?.appleWeb || {}; return { appleClientId: a.clientId, appleRedirect: a.redirect }; });
+{
+  const gate = [adminApi.adminAuth, adminApi.owner];
+  const out = () => { const a = store.get('meta', 'secrets')?.appleWeb || {}; return { on: !!oidc.publicConfig().apple, clientId: oidc.appleWeb()[0] || null, redirect: oidc.appleRedirect() || null, fromEnv: !!process.env.APPLE_CLIENT_ID, saved: !!a.clientId, at: a.at || null, suggest: `https://swipeup.live/api/auth/apple/cb` }; };
+  app.get('/api/admin/applesignin', ...gate, (req, res) => res.json(out()));
+  app.post('/api/admin/applesignin', ...gate, (req, res) => {
+    const clientId = String(req.body?.clientId || '').trim(); const redirect = String(req.body?.redirect || '').trim();
+    if (!/^[a-z][\w-]*(\.[\w-]+)+$/i.test(clientId)) return res.status(400).json({ error: 'Services ID geçersiz (ör. app.swipeup.web).' });
+    if (clientId === 'app.swipeup.ios') return res.status(400).json({ error: 'Buraya uygulamanın paket kimliği değil, web için oluşturduğun Services ID girilir (ör. app.swipeup.web).' });
+    let u; try { u = new URL(redirect); } catch { /* aşağıda */ }
+    if (!u || u.protocol !== 'https:' || u.pathname !== '/api/auth/apple/cb') return res.status(400).json({ error: 'Dönüş adresi https://alanadın/api/auth/apple/cb biçiminde olmalı.' });
+    const sec = store.get('meta', 'secrets') || { id: 'secrets' };
+    store.put('meta', { ...sec, id: 'secrets', appleWeb: { clientId, redirect: u.href, at: now() } });
+    adminApi.audit?.(req.admin, 'Apple ile giriş (web) ayarını kaydetti', null, clientId); res.json(out());
+  });
+  app.delete('/api/admin/applesignin', ...gate, (req, res) => {
+    const sec = store.get('meta', 'secrets') || { id: 'secrets' }; store.put('meta', { ...sec, id: 'secrets', appleWeb: null });
+    adminApi.audit?.(req.admin, 'Apple ile giriş (web) ayarını kaldırdı'); res.json(out());
+  });
+}
 require('./server/cart')(app, featureCtx); // sepet ve sepet kampanyaları (iap'tan sonra)
 require('./server/nudge')(app, featureCtx); // akıllı hatırlatmalar ve haftalık özet e-postası
 if (process.env.NODE_ENV === 'test') { // yalnız otomatik testlerde (test/): koleksiyonu oku, hatırlatma turunu hemen çalıştır

@@ -5,10 +5,15 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 
 const list = (v) => String(v || '').split(',').map((s) => s.trim()).filter(Boolean);
+// Yönetim panelinden girilen ayarlar (sunucu ayar dosyasındakilere ek): { appleClientId, appleRedirect }
+let dyn = () => ({});
+const configure = (fn) => { dyn = fn; };
+const appleWeb = () => [...new Set([...list(process.env.APPLE_CLIENT_ID), ...list(dyn().appleClientId)])];
+const appleRedirect = () => process.env.APPLE_REDIRECT_URI || dyn().appleRedirect || '';
 const P = {
   google: { jwks: () => process.env.GOOGLE_JWKS_URL || 'https://www.googleapis.com/oauth2/v3/certs', iss: ['accounts.google.com', 'https://accounts.google.com'], aud: () => list(process.env.GOOGLE_CLIENT_ID) },
   // Apple: web (Services ID) + iOS uygulaması (paket kimliği; yerel "Apple ile giriş" penceresi)
-  apple: { jwks: () => process.env.APPLE_JWKS_URL || 'https://appleid.apple.com/auth/keys', iss: ['https://appleid.apple.com'], aud: () => list(process.env.APPLE_CLIENT_ID), native: () => list(process.env.IOS_BUNDLE || 'app.swipeup.ios') },
+  apple: { jwks: () => process.env.APPLE_JWKS_URL || 'https://appleid.apple.com/auth/keys', iss: ['https://appleid.apple.com'], aud: appleWeb, native: () => list(process.env.IOS_BUNDLE || 'app.swipeup.ios') },
 };
 
 const cache = {}; // sağlayıcı → { keys: Map(kid → KeyObject), at }
@@ -31,7 +36,7 @@ const enabled = (name) => audAll(name).length > 0;
 function publicConfig() {
   return {
     google: enabled('google') ? P.google.aud()[0] : null,
-    apple: enabled('apple') && process.env.APPLE_REDIRECT_URI ? { clientId: P.apple.aud()[0], redirectURI: process.env.APPLE_REDIRECT_URI } : null,
+    apple: enabled('apple') && appleWeb().length && appleRedirect() ? { clientId: appleWeb()[0], redirectURI: appleRedirect() } : null,
   };
 }
 
@@ -58,4 +63,4 @@ async function verify(name, token, opts = {}) {
   return { provider: name, sub: String(p.sub), email: p.email && verified ? String(p.email).toLowerCase() : null, name: p.name ? String(p.name).slice(0, 40) : null };
 }
 
-module.exports = { verify, enabled, publicConfig };
+module.exports = { verify, enabled, publicConfig, configure, appleWeb, appleRedirect };

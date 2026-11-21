@@ -2055,6 +2055,7 @@ VIEWS.settings = async (main) => {
   const saleNow = (list) => list.filter((p) => p.was).map((p) => `<span class="chip ok">${esc(p.id)}: ${tl(p.was)} → ${tl(p.now)} (%${p.off}) · ${esc(p.saleUntil)}</span>`).join(' ');
   const GIFT = [['em', 'Emoji', '70px'], ['name', 'Ad', '120px'], ['coins', 'Jeton', '90px', 'number']];
   main.innerHTML = `${head('Ayarlar', owner ? 'Uygulamadaki mağaza, fiyatlar ve yasal iletişim bilgileri.' : 'Bu ayarları sadece sahip yönetici değiştirebilir.')}
+    <details class="panel asw-p" hidden style="margin-bottom:14px"><summary class="pb" style="cursor:pointer"><b>Apple ile giriş (web / Android)</b> <span class="muted asw-st" style="font-size:12.5px"></span></summary><div class="pb asw-b"></div></details>
     <form class="grid g2 eco">
       <div class="panel"><div class="ph"><h3>Havale / EFT bilgileri</h3></div><div class="pb fgrid">
         <label>IBAN<input class="field" name="iban" value="${esc(e.bank.iban)}" placeholder="TR00 0000 0000 0000 0000 0000 00"></label>
@@ -2105,6 +2106,22 @@ VIEWS.settings = async (main) => {
     </form>
     ${evs ? eventPanel(evs, owner) : ''}
     <div class="rooms-panel"></div>`;
+  // Apple ile giriş (web): Services ID + dönüş adresi. Yalnız sahip görür; sunucu ayar dosyasında varsa o geçerlidir.
+  const asw = main.querySelector('.asw-p');
+  const aswPaint = (r) => {
+    asw.hidden = false;
+    asw.querySelector('.asw-st').textContent = r.on ? `açık · ${r.clientId}` : 'kapalı: Android ve tarayıcıda Apple düğmesi görünmez';
+    asw.querySelector('.asw-b').innerHTML = `<p class="muted" style="font-size:12.5px;margin:0 0 8px">developer.apple.com → Identifiers → <b>Services IDs</b> → kimliğini aç → Sign in with Apple → Configure: Primary App ID <b>app.swipeup.ios</b>, Domains <b>swipeup.live</b>, Return URL aşağıdaki dönüş adresi. iPhone uygulamasındaki Apple girişi bu ayardan bağımsız çalışır.</p>
+      ${r.fromEnv ? '<p class="muted" style="font-size:12.5px;margin:0 0 8px">Sunucu ayar dosyasında (APPLE_CLIENT_ID) değer var; o geçerli.</p>' : ''}
+      <div style="display:grid;gap:6px"><label class="muted" style="font-size:12.5px">Services ID<input class="field asi" placeholder="app.swipeup.web" value="${esc(r.clientId || '')}"></label>
+        <label class="muted" style="font-size:12.5px">Dönüş adresi (Return URL)<input class="field asr" value="${esc(r.redirect || r.suggest)}"></label>
+        <div class="row" style="gap:8px"><button type="button" class="btn sm primary ass">Kaydet</button>${r.saved ? '<button type="button" class="btn sm danger asd">Kaldır</button>' : ''}</div></div>`;
+    asw.querySelector('.ass').onclick = async () => {
+      try { aswPaint(await api('/applesignin', { body: { clientId: asw.querySelector('.asi').value, redirect: asw.querySelector('.asr').value } })); toast('Apple ile giriş ayarı kaydedildi.'); } catch (er) { toast(er.message); }
+    };
+    const d = asw.querySelector('.asd'); if (d) d.onclick = async () => { if (!confirm('Apple ile giriş (web) ayarı kaldırılsın mı?')) return; try { aswPaint(await api('/applesignin', { method: 'DELETE' })); } catch (er) { toast(er.message); } };
+  };
+  api('/applesignin').then(aswPaint).catch(() => {});
   if (evs) wireEventPanel(main, evs);
   roomsPanel(main.querySelector('.rooms-panel'), owner);
   const f = main.querySelector('form');
