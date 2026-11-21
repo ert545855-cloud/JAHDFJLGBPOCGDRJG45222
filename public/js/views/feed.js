@@ -35,6 +35,8 @@ export default async function feed(view) {
     <div class="push-slot"></div>
     <div class="people"></div>
     <div class="posts"><div class="spinner"></div></div>`;
+  // Üstteki swipeup yazısına dokununca akışın en başına kayılır
+  const wm = view.querySelector('.home-top .wordmark'); if (wm) { wm.style.cursor = 'pointer'; wm.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
   const offs = [];
   const storiesEl = view.querySelector('.stories');

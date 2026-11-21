@@ -120,6 +120,24 @@ function renderTabbar(active) {
   tabbar.addEventListener('click', (e) => { if (fired && isMe(e)) { e.preventDefault(); fired = false; } }, true);
   tabbar.addEventListener('contextmenu', (e) => { if (isMe(e)) e.preventDefault(); });
 }
+// Açık olan sekmeye tekrar dokununca: sayfa aşağıdaysa en başa kayar, zaten en baştaysa sayfa yenilenir (akış tazelenir)
+tabbar.addEventListener('click', (e) => {
+  const a = e.target.closest?.('a[href^="#/"]');
+  if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey) return;
+  const cur = location.hash.replace(/^#/, '') || '/'; const to = a.getAttribute('href').slice(1);
+  if (to !== cur) return;
+  e.preventDefault();
+  // Sayfanın kendi kaydırma kutuları (ör. Vitrin, mesaj listesi) da en başa alınır
+  const boxes = [...view.querySelectorAll('*')].filter((el) => el.scrollTop > 0 && /(auto|scroll)/.test(getComputedStyle(el).overflowY));
+  const down = window.scrollY > 40 || boxes.some((el) => el.scrollTop > 40);
+  if (down) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    boxes.forEach((el) => el.scrollTo({ top: 0, behavior: 'smooth' }));
+  } else {
+    navigator.vibrate?.(8);
+    router();
+  }
+});
 on('badges', () => renderTabbar(tabbar.dataset.active));
 
 function showBan(ban) {
