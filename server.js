@@ -1754,7 +1754,7 @@ app.get('/api/likes', auth, (req, res) => {
   const mySwipes = new Set(store.filter('swipes', (s) => s.from === me).map((s) => s.to));
   const list = store.filter('swipes', (s) => s.to === me && s.dir !== 'left' && !mySwipes.has(s.from) && !isBlocked(me, s.from))
     .sort((a, b) => b.at - a.at)
-    .map((s) => { const u = store.get('users', s.from); return u && isActive(u) && { ...brief(u), age: shownAge(u), city: u.city, super: s.dir === 'super', at: s.at, photo: (u.photos || [])[0] || u.avatar }; })
+    .map((s) => { const u = store.get('users', s.from); return u && isActive(u) && { ...brief(u), age: shownAge(u), city: u.city, super: s.dir === 'super', note: s.dir === 'super' ? s.note || null : null, at: s.at, photo: (u.photos || [])[0] || u.avatar }; })
     .filter(Boolean);
   if (eco.isPlus(req.user)) return res.json({ plus: true, count: list.length, items: list });
   // Ücretsiz üyeler: süper beğeniler açık, diğerleri bulanık ve kimliksiz
@@ -1770,7 +1770,7 @@ app.get('/api/likes/sent', auth, (req, res) => {
   const me = req.user.id;
   const items = store.filter('swipes', (s) => s.from === me && s.dir !== 'left' && !store.get('matches', [me, s.to].sort().join('_')) && !isBlocked(me, s.to))
     .sort((a, b) => b.at - a.at).slice(0, 300)
-    .map((s) => { const u = store.get('users', s.to); return u && isActive(u) && { ...brief(u), age: shownAge(u), city: u.city, super: s.dir === 'super', at: s.at, photo: (u.photos || [])[0] || u.avatar }; })
+    .map((s) => { const u = store.get('users', s.to); return u && isActive(u) && { ...brief(u), age: shownAge(u), city: u.city, super: s.dir === 'super', note: s.note || null, at: s.at, photo: (u.photos || [])[0] || u.avatar }; })
     .filter(Boolean);
   res.json({ count: items.length, items });
 });
@@ -1788,6 +1788,18 @@ app.post('/api/swipe', auth, (req, res) => {
   const t = store.get('users', to);
   if (!t || t.id === req.user.id || !['left', 'right', 'super'].includes(dir) || isBlocked(req.user.id, to)) return res.status(400).json({ error: 'Geçersiz istek.' });
   const me = req.user;
+  // Süper beğeniye isteğe bağlı kısa not (en çok 140 karakter). Hakaret/tehdit içeren not gönderilmez, yönetime düşer.
+  const note = dir === 'super' ? String(req.body?.note || '').replace(/\s+/g, ' ').trim().slice(0, 140) : '';
+  if (note) {
+    // Tanımadığın birine gidiyor: tek bir küfür/hakaret de engellenir; ağır olanlar (tehdit, ağır küfür) ayrıca yönetime düşer.
+    // Telefon numarası, e-posta ve sosyal medya kullanıcı adı da gönderilmez (eşleşmeden iletişim bilgisi paylaşılmaz).
+    const fl = moderation.flag(note);
+    if (fl) store.put('flags', { id: nanoid(12), kind: 'super_note', userId: me.id, toId: t.id, text: note, level: fl.level, reason: fl.reason, status: 'open', at: now() });
+    const contact = /(\+?\d[\d\s().-]{8,}\d)|([\w.+-]+@[\w-]+\.[\w.]+)|(^|\s)@[\w.]{3,}|\b(insta|instagram|ig|snap|snapchat|telegram|whatsapp|wp|tiktok)\b/i.test(note);
+    if (fl || moderation.warn(note) || contact) {
+      return res.status(400).json({ error: contact ? 'Notta telefon, e-posta ya da sosyal medya hesabı paylaşılamaz. Eşleşince sohbetten paylaşabilirsin.' : 'Bu not gönderilemedi: topluluk kurallarına uymuyor. Notu değiştir ya da notsuz gönder.', noteRejected: true });
+    }
+  }
   if (dir !== 'left') {
     const q = eco.quota(me);
     if (dir === 'super' && q.supersLeft <= 0) return res.status(402).json({ buySupers: true, error: q.plus ? 'Bugünkü süper beğeni hakkın bitti.' : 'Bugünkü süper beğeni hakkın bitti. SwipeUp+ ile her gün 5 süper beğeni.', limit: 'super' });
@@ -1796,7 +1808,7 @@ app.post('/api/swipe', auth, (req, res) => {
     const d = { ...q.d, likes: q.d.likes + (dir === 'right' ? 1 : 0), supers: q.d.supers + (dir === 'super' && !fromBank ? 1 : 0) };
     store.update('users', me.id, { daily: d, ...(fromBank ? { superBank: Math.max(0, (me.superBank || 0) - 1) } : {}) });
   }
-  store.put('swipes', { id: `${me.id}_${t.id}`, from: me.id, to: t.id, dir, at: now() });
+  store.put('swipes', { id: `${me.id}_${t.id}`, from: me.id, to: t.id, dir, at: now(), ...(note ? { note } : {}) });
   if (dir !== 'left') featureCtx.quest?.(me.id, 'begeni', 1, t.id);
   featureCtx.onSwipe?.(me.id, dir);
   store.update('users', me.id, { lastSwipe: t.id });
@@ -1805,7 +1817,7 @@ app.post('/api/swipe', auth, (req, res) => {
   const back = () => store.get('swipes', `${t.id}_${me.id}`);
   if (!back() || back().dir === 'left') {
     notify(t.id, dir === 'super'
-      ? { type: 'super', fromId: me.id, text: `${me.username} sana süper beğeni gönderdi ⭐️`, url: '/#/likes' }
+      ? { type: 'super', fromId: me.id, text: note ? `${me.username} sana süper beğeni gönderdi ⭐️ “${note}”` : `${me.username} sana süper beğeni gönderdi ⭐️`, url: '/#/likes' }
       : { type: 'liked', fromId: me.id, text: 'Biri seni beğendi 💜 Kim olduğunu görmek için dokun.', url: '/#/likes' });
     emitTo(t.id, 'likes:new', {});
   }
@@ -1815,7 +1827,12 @@ app.post('/api/swipe', auth, (req, res) => {
       store.put('matches', { id: mid, users: [me.id, t.id], at: now() });
       const chat = chatBetween(me.id, t.id);
       // Sohbetin başına karşılama notu (bildirim göndermez); daha önce yazışmışlarsa eklenmez
-      if (!store.filter('messages', (m) => m.chatId === chat.id).length) systemMsg(chat, '💘 Eşleştiniz! İlk mesajı atmaktan çekinme, bir selam yeter.');
+      if (!store.filter('messages', (m) => m.chatId === chat.id).length) {
+        systemMsg(chat, '💘 Eşleştiniz! İlk mesajı atmaktan çekinme, bir selam yeter.');
+        // Süper beğeni notları sohbetin ilk mesajı olur (önce gönderilen önce)
+        [store.get('swipes', `${t.id}_${me.id}`), store.get('swipes', `${me.id}_${t.id}`)].filter((x) => x?.note && x.dir === 'super')
+          .sort((a, b) => a.at - b.at).forEach((x) => sendMessage(chat, x.from, { text: `⭐️ ${x.note}` }));
+      }
       notify(t.id, { type: 'match', fromId: me.id, text: `${me.name} ile eşleştin! 💘`, url: `/#/chat/${chat.id}` });
       emitTo(t.id, 'match', { user: brief(me), chatId: chat.id });
       return res.json({ match: true, user: brief(t), chatId: chat.id });

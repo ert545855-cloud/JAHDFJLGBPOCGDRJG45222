@@ -60,3 +60,28 @@ export async function themeSection(box, onChange) {
     }
   };
 }
+
+// Süper beğeniden önce isteğe bağlı kısa not sorulur. Döner: null (vazgeçti), '' (notsuz), ya da not metni.
+// Not karşı tarafın bildiriminde ve "Seni beğenenler" kartında görünür; eşleşirseniz sohbetin ilk mesajı olur.
+export function askSuperNote(name) {
+  return new Promise((resolve) => {
+    let done = false; const fin = (v) => { if (done) return; done = true; resolve(v); };
+    sheet(null, `<div class="sn-sheet">
+      <div class="sp-hero">${icon('star')}</div>
+      <h2>Süper beğeni${name ? ` · ${esc(name)}` : ''}</h2>
+      <p class="muted">İstersen kısa bir not ekle. Not bildiriminde görünür; eşleşirseniz sohbetinizin ilk mesajı olur.</p>
+      <textarea class="field sn-t" maxlength="140" rows="3" placeholder="Ör. Fotoğraftaki yer neresi, çok güzelmiş!"></textarea>
+      <div class="sn-c muted">0/140</div>
+      <button class="btn primary block sn-go">${icon('star')} Süper beğeni gönder</button>
+      <p class="muted sn-rule">Hakaret, taciz ya da iletişim bilgisi içeren notlar gönderilmez.</p>
+    </div>`, {
+      onClose: () => fin(null),
+      onMount: (sh, close) => {
+        const t = sh.querySelector('.sn-t'); const c = sh.querySelector('.sn-c');
+        t.oninput = () => { c.textContent = `${t.value.length}/140`; };
+        sh.querySelector('.sn-go').onclick = () => { fin(t.value.replace(/\s+/g, ' ').trim()); close(); };
+        setTimeout(() => t.focus(), 250);
+      },
+    });
+  });
+}

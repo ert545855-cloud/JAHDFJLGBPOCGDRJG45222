@@ -4596,3 +4596,11 @@ html.land-game #fx-layer { display: none; }
 .like-card .lk-when { position: absolute; left: 10px; right: 10px; bottom: 48px; font-size: 12px; opacity: .8; }
 .like-card .lk-undo { position: absolute; left: 8px; right: 8px; bottom: 8px; height: 34px; border-radius: 999px; border: 0; background: rgba(255,255,255,.18); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); color: #fff; font: 650 13px/1 var(--font); }
 .like-card .lk-undo:disabled { opacity: .5; }
+/* Süper beğeni notu (kartta) ve not penceresi */
+.like-card .lk-note { position: absolute; left: 8px; right: 8px; top: 38px; margin: 0; padding: 7px 9px; border-radius: 12px; background: rgba(10,10,16,.55); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); font-size: 12.5px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.sn-sheet { padding: 4px 18px 18px; display: grid; gap: 10px; text-align: center; }
+.sn-sheet h2 { margin: 0; }
+.sn-sheet .muted { margin: 0; font-size: 13.5px; }
+.sn-sheet .sn-t { resize: none; text-align: left; font-size: 16px; }
+.sn-sheet .sn-c { font-size: 12px; text-align: right; margin-top: -6px; }
+.sn-sheet .sn-rule { font-size: 12px; }

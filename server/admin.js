@@ -1016,7 +1016,7 @@ module.exports = function mountAdmin(app, ctx) {
       const chat = store.get('chats', f.chatId);
       return {
         ...f, user: store.get('users', f.userId) ? userRow(store.get('users', f.userId)) : null,
-        to: f.chatId === 'genel' ? [{ username: 'genel-sohbet' }] : chat ? chat.members.filter((x) => x !== f.userId).map((x) => brief(store.get('users', x))).filter(Boolean).slice(0, 3) : [],
+        to: f.chatId === 'genel' ? [{ username: 'genel-sohbet' }] : chat ? chat.members.filter((x) => x !== f.userId).map((x) => brief(store.get('users', x))).filter(Boolean).slice(0, 3) : f.toId ? [brief(store.get('users', f.toId))].filter(Boolean) : [], // süper beğeni notu: alıcı
         context: ctxMsgs, userFlags: store.filter('flags', (x) => x.userId === f.userId).length,
       };
     }));

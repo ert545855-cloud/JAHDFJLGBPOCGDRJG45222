@@ -3,6 +3,7 @@ import { icon } from '../icons.js';
 import { api, esc, toast, state, nm, plusSheet } from '../core.js';
 import { showMatch } from '../app.js';
 import { egi } from '../eg-icons.js';
+import { askSuperNote } from '../supers.js';
 
 const left = (t) => {
   const ms = Math.max(0, t - Date.now());
@@ -40,9 +41,11 @@ export default async function picks(view) {
     const b = e.target.closest('.pk-b'); if (!b) return;
     const c = b.closest('[data-id]'); const u = d.items.find((x) => x.id === c.dataset.id);
     const dir = b.dataset.dir;
+    let note = '';
+    if (dir === 'super') { note = await askSuperNote((u.name || '').split(' ')[0]); if (note === null) return; }
     c.querySelectorAll('.pk-b').forEach((x) => { x.disabled = true; });
     try {
-      const r = await api('/swipe', { body: { to: u.id, dir } });
+      const r = await api('/swipe', { body: { to: u.id, dir, ...(note ? { note } : {}) } });
       u.swiped = dir; navigator.vibrate?.(12);
       c.outerHTML = card(u);
       if (r.match) showMatch(r.user, r.chatId);

@@ -1,4 +1,4 @@
-import { superSheet } from '../supers.js';
+import { superSheet, askSuperNote } from '../supers.js';
 import { icon } from '../icons.js';
 import { api, esc, toast, isOn, state, sheet, on, tick, plusSheet, needCoins } from '../core.js';
 import { withOrientation } from '../consent.js';
@@ -134,8 +134,20 @@ export default async function swipe(view) {
     card.addEventListener('pointercancel', end);
     card._fling = fling;
 
-    async function fling(dir) {
+    async function fling(dir, note) {
       if (busy) return;
+      // Süper beğeniden önce isteğe bağlı not sorulur; vazgeçilirse kart yerine döner
+      if (dir === 'super' && note === undefined) {
+        busy = true;
+        const n = await askSuperNote((u.name || '').split(' ')[0]);
+        busy = false;
+        if (n === null) {
+          card.style.transition = 'transform .35s cubic-bezier(.2,.9,.3,1.3)'; card.style.transform = '';
+          Object.values(stamps).forEach((s) => { s.style.opacity = 0; });
+          return;
+        }
+        return fling('super', n);
+      }
       busy = true;
       stamps[dir === 'right' ? 'like' : dir === 'left' ? 'nope' : 'super'].style.opacity = 1;
       const w = window.innerWidth;
@@ -148,10 +160,10 @@ export default async function swipe(view) {
       deck.shift();
       setTimeout(() => { busy = false; render(); }, 280);
       try {
-        const r = await api('/swipe', { body: { to: u.id, dir } });
+        const r = await api('/swipe', { body: { to: u.id, dir, ...(note ? { note } : {}) } });
         if (r.match) showMatch(r.user, r.chatId);
       } catch (er) {
-        if (/hakkın bitti/.test(er.message)) {
+        if (er.data?.noteRejected) { history.pop(); deck.unshift(u); setTimeout(render, 300); toast(er.message); } else if (/hakkın bitti/.test(er.message)) {
           // Sınır doldu: kartı geri koy
           history.pop(); deck.unshift(u);
           setTimeout(render, 300);

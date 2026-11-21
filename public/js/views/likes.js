@@ -23,6 +23,7 @@ export default async function likes(view) {
       <div class="likes-grid">${list.map((u) => (u.locked ? `<button class="like-card locked"><img src="${esc(u.photo)}" alt=""><div class="g"></div><span class="lk">${icon('lock')}</span></button>` : `<div class="like-card" data-id="${esc(u.id)}">
           <img src="${esc(u.photo)}" alt=""><div class="g"></div>
           ${u.super ? '<span class="sup">SÜPER BEĞENİ</span>' : ''}
+          ${u.note ? `<p class="lk-note">“${esc(u.note)}”</p>` : ''}
           <a class="t ellipsis" href="#/u/${esc(u.username)}">${esc(u.name.split(' ')[0])}${u.age ? `, ${u.age}` : ''}${tick(u)}</a>
           <div class="acts"><button class="no" aria-label="Geç">${icon('x')}</button><button class="yes" aria-label="Beğen">${icon('heart', '', 'fill="currentColor"')}</button></div>
         </div>`)).join('')}</div>`
@@ -34,6 +35,7 @@ export default async function likes(view) {
       <div class="likes-grid">${sent.map((u) => `<div class="like-card sent" data-id="${esc(u.id)}">
           <img src="${esc(u.photo)}" alt=""><div class="g"></div>
           ${u.super ? '<span class="sup">SÜPER BEĞENİ</span>' : ''}
+          ${u.note ? `<p class="lk-note">“${esc(u.note)}”</p>` : ''}
           <a class="t ellipsis" href="#/u/${esc(u.username)}">${esc(u.name.split(' ')[0])}${u.age ? `, ${u.age}` : ''}${tick(u)}</a>
           <small class="lk-when">${ago(u.at)} beğendin</small>
           <button class="lk-undo">Beğeniyi geri al</button>
