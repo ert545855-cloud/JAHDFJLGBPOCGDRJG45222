@@ -122,7 +122,7 @@ function renderTabbar(active) {
 }
 // Aşağı çekip yenileme: listelerin olduğu sayfalarda, sayfa en baştayken aşağı çekilince sayfa yeniden yüklenir
 let curRoute = null;
-const PTR_PAGES = new Set(['feed', 'chats', 'notifications', 'profile', 'likes', 'post', 'tag', 'events', 'best', 'games', 'rooms', 'store', 'wallet', 'requests', 'quests', 'viewers', 'contests', 'streaks', 'insta', 'sans', 'level', 'fal']);
+const PTR_PAGES = new Set(['feed', 'chats', 'notifications', 'profile', 'likes', 'post', 'tag', 'events', 'best', 'rooms', 'store', 'wallet', 'requests', 'quests', 'viewers', 'contests', 'streaks', 'insta', 'sans', 'level', 'fal']);
 import('./ptr.js').then((m) => m.initPtr({ enabled: () => !!state.me && PTR_PAGES.has(curRoute), refresh: () => router() })).catch(() => {});
 // Açık olan sekmeye tekrar dokununca: sayfa aşağıdaysa en başa kayar, zaten en baştaysa sayfa yenilenir (akış tazelenir)
 tabbar.addEventListener('click', (e) => {
